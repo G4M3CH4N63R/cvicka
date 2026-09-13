@@ -172,6 +172,17 @@ textarea { line-height: 1.45; }
 .kv:first-child { border-top: 0; }
 .kv b { font-family: var(--fm); font-size: 12px; font-weight: 600; color: var(--ink-2); }
 
+.updbar {
+  position: fixed; left: 12px; right: 12px; bottom: calc(74px + var(--safe-b));
+  background: var(--accent); color: var(--on-accent); border-radius: 10px;
+  padding: 10px 12px; display: flex; align-items: center; gap: 10px;
+  font-size: 13.5px; z-index: 45; box-shadow: 0 6px 20px rgba(0,0,0,.18);
+}
+.updbar button {
+  appearance: none; border: 1px solid currentColor; background: none; color: inherit;
+  border-radius: 8px; padding: 6px 12px; font-weight: 600; font-size: 13px; cursor: pointer;
+  margin-left: auto; flex: 0 0 auto;
+}
 .toast {
   position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(72px + var(--safe-b));
   background: var(--ink); color: var(--ground); padding: 9px 15px; border-radius: 99px;
@@ -331,11 +342,16 @@ textarea { line-height: 1.45; }
   <button role="tab" data-tab="nastaveni" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>Nastavení</button>
 </nav>
 
+<div class="updbar" id="updBar" hidden>
+  <span>Je k dispozici nová verze Cvičky.</span>
+  <button type="button" id="updBtn">Načíst</button>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
 "use strict";
-const APP = { ver: "0.2", db: null };
+const APP = { ver: "0.3", db: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -1068,7 +1084,22 @@ async function boot() {
   if (prazdno) toast("Začni načtením rozvrhu a žáků");
 
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-    navigator.serviceWorker.register("sw.js").catch(() => {});
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then((reg) => {
+      const zkusAktualizaci = () => reg.update().catch(() => {});
+      zkusAktualizaci();
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) zkusAktualizaci(); });
+      const nabidni = () => { $("#updBar").hidden = false; };
+      if (reg.waiting && navigator.serviceWorker.controller) nabidni();
+      reg.addEventListener("updatefound", () => {
+        const novy = reg.installing;
+        if (!novy) return;
+        novy.addEventListener("statechange", () => {
+          // nová verze je připravená; stránku ale přenačte až Karel, ať mu to neskočí uprostřed zápisu
+          if (novy.state === "installed" && navigator.serviceWorker.controller) nabidni();
+        });
+      });
+    }).catch(() => {});
+    $("#updBtn").addEventListener("click", () => { $("#updBar").hidden = true; location.reload(); });
   }
 }
 boot().catch((e) => {

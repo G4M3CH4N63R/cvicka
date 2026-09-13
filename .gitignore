@@ -1,3 +1,7 @@
+# data se jmény žáků a zálohy do repa nepatří
 *.csv
-*-zaloha-*.json
+*.json
+!manifest.webmanifest
+Záloha/
+zaloha/
 .DS_Store

@@ -57,6 +57,19 @@ V repozitáři nesmí být CSV se jmény žáků ani záloha. `.gitignore` na to
 - `sw.js` service worker pro offline
 - `manifest.webmanifest` ikona a název na ploše
 
+## Aktualizace (v0.3)
+
+Service worker jede network-first pro HTML: když je signál, dostaneš vždy čerstvou verzi,
+cache slouží jako záloha pro offline. Ostatní soubory jdou z cache a obnovují se na pozadí.
+
+Aplikace kontroluje novou verzi při startu a pokaždé, když ji vrátíš do popředí. Když ji najde,
+ukáže dole lištu s tlačítkem Načíst. Přenačtení spouštíš ty, aby to neskočilo uprostřed zápisu.
+
+Registrace používá `updateViaCache: "none"`, takže se `sw.js` nebere z HTTP cache (GitHub Pages
+na něj posílá `max-age=600`).
+
+Při každém nasazení je nutné zvýšit `CACHE` v `sw.js`, jinak zařízení novou verzi nepozná.
+
 ## Datové úložiště
 
 Object stores: `meta`, `skupiny`, `zaci`, `rozvrh`, `hodiny`, `zaznamy`.
