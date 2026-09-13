@@ -1,0 +1,797 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#274690">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cvička">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Cvička</title>
+<style>
+:root {
+  --ground: #f1f3f7; --surface: #fff; --surface-2: #e8ebf2; --surface-3: #dfe3ed;
+  --ink: #141821; --ink-2: #4a5263; --ink-3: #757e91;
+  --line: #d7dce7; --line-strong: #b9c0d0;
+  --accent: #274690; --accent-soft: #e3e9f9; --on-accent: #fff;
+  --good: #2e7d4f; --good-soft: #e0f0e6;
+  --warn: #a9760f; --warn-soft: #f8eed8;
+  --crit: #ad3527; --crit-soft: #fae4e1;
+  --chalk: #c99a1e; --chalk-soft: #f7eed6;
+  --r: 10px;
+  --fd: "Archivo", "Helvetica Neue", -apple-system, Arial, sans-serif;
+  --fb: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --fm: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0f1219; --surface: #171b24; --surface-2: #1f242f; --surface-3: #272d3a;
+    --ink: #e7eaf1; --ink-2: #a7aebe; --ink-3: #7b8496;
+    --line: #2b3140; --line-strong: #3c4354;
+    --accent: #93aaea; --accent-soft: #1e2740; --on-accent: #111621;
+    --good: #6bbd8b; --good-soft: #17291f;
+    --warn: #d7a343; --warn-soft: #2c2315;
+    --crit: #e4877b; --crit-soft: #2e1a18;
+    --chalk: #e0b950; --chalk-soft: #2b2412;
+  }
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--ground); color: var(--ink);
+  font-family: var(--fb); font-size: 16px; line-height: 1.5;
+  display: flex; flex-direction: column; overscroll-behavior-y: contain;
+}
+h1, h2, h3 { font-family: var(--fd); font-weight: 700; margin: 0; line-height: 1.2; letter-spacing: -.01em; }
+button, input, textarea, select { font: inherit; color: inherit; }
+.mono { font-family: var(--fm); font-variant-numeric: tabular-nums; }
+.eyebrow { font-family: var(--fm); font-size: 10.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+
+/* app bar */
+header {
+  background: var(--surface); border-bottom: 1px solid var(--line);
+  padding: 10px 14px 9px; padding-top: calc(10px + env(safe-area-inset-top, 0px));
+  display: flex; align-items: center; gap: 10px; flex: 0 0 auto;
+}
+header .ttl { flex: 1; min-width: 0; }
+header h1 { font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+header .sub { font-size: 12.5px; color: var(--ink-3); }
+.iconbtn {
+  appearance: none; border: 1px solid var(--line); background: var(--surface-2);
+  border-radius: 9px; width: 38px; height: 34px; cursor: pointer; color: var(--ink-2);
+  font-size: 15px; line-height: 1; display: grid; place-items: center; flex: 0 0 auto;
+}
+.iconbtn:active { background: var(--surface-3); }
+
+main { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px 12px 18px; }
+.screen { display: none; }
+.screen.on { display: block; }
+.wrap { max-width: 720px; margin: 0 auto; }
+
+/* tabbar */
+nav {
+  flex: 0 0 auto; background: var(--surface); border-top: 1px solid var(--line);
+  display: grid; grid-template-columns: repeat(4, 1fr); padding-bottom: var(--safe-b);
+}
+nav button {
+  appearance: none; border: 0; background: none; cursor: pointer; color: var(--ink-3);
+  font-size: 11px; font-weight: 600; padding: 8px 2px 10px; display: grid; gap: 3px;
+  justify-items: center; border-top: 2px solid transparent; margin-top: -1px;
+}
+nav button svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+nav button[aria-selected="true"] { color: var(--accent); border-top-color: var(--accent); }
+
+/* cards */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.card + .card { margin-top: 11px; }
+.card-h { padding: 11px 13px 9px; display: flex; align-items: center; gap: 8px; }
+.card-h h3 { font-size: 13.5px; }
+.card-h .eyebrow { margin-left: auto; }
+.card-b { padding: 0 13px 13px; }
+.empty { padding: 22px 14px; text-align: center; color: var(--ink-3); font-size: 14px; }
+
+/* lesson rows */
+.row {
+  display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; align-items: center;
+  width: 100%; text-align: left; padding: 12px 13px; border: 0; border-top: 1px solid var(--line);
+  background: none; cursor: pointer; font-size: 14.5px; color: inherit;
+}
+.row > * { min-width: 0; }
+.row:first-child { border-top: 0; }
+.row:active { background: var(--surface-2); }
+.row .t { font-family: var(--fm); font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.row .g { font-family: var(--fd); font-weight: 600; font-size: 15px; }
+.row .m { font-size: 12.5px; color: var(--ink-3); }
+.row .note { font-size: 12.5px; color: var(--ink-2); display: block; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pill { font-family: var(--fm); font-size: 10px; font-weight: 600; padding: 3px 7px; border-radius: 99px; text-transform: uppercase; white-space: nowrap; }
+.pill.ok { background: var(--good-soft); color: var(--good); }
+.pill.no { background: var(--warn-soft); color: var(--warn); }
+.pill.plan { background: var(--accent-soft); color: var(--accent); }
+
+/* pupils */
+.pupil { display: grid; grid-template-columns: 22px 1fr auto auto; gap: 7px; align-items: center; padding: 6px 13px; border-top: 1px solid var(--line); }
+.pupil:first-child { border-top: 0; }
+.pupil .n { font-family: var(--fm); font-size: 11px; color: var(--ink-3); }
+.pupil .nm { font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st {
+  appearance: none; cursor: pointer; font-family: var(--fd); font-weight: 700; font-size: 13px;
+  width: 42px; height: 36px; border-radius: 8px; border: 1px solid var(--line-strong);
+  background: var(--surface-2); color: var(--ink-3);
+}
+.st[data-s="ok"] { background: var(--good-soft); border-color: transparent; color: var(--good); }
+.st[data-s="X"] { background: var(--crit-soft); border-color: transparent; color: var(--crit); }
+.st[data-s="N"] { background: var(--surface-3); border-color: transparent; color: var(--ink-2); }
+.st[data-s="U"] { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
+.lead { appearance: none; cursor: pointer; width: 32px; height: 36px; border-radius: 8px; border: 1px dashed var(--line-strong); background: none; color: var(--ink-3); font-size: 15px; line-height: 1; }
+.lead[aria-pressed="true"] { border: 1px solid transparent; background: var(--chalk-soft); color: var(--chalk); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 13px; padding: 8px 13px 2px; font-size: 11.5px; color: var(--ink-3); }
+.legend b { font-family: var(--fd); }
+
+/* forms */
+.field { display: grid; gap: 5px; margin-top: 11px; }
+.field:first-child { margin-top: 0; }
+.field label { font-family: var(--fm); font-size: 10.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+textarea, input[type="text"], input[type="date"], input[type="file"] {
+  font-size: 16px; background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 8px; padding: 9px 10px; width: 100%; resize: vertical; font-family: inherit;
+}
+textarea { line-height: 1.45; }
+.btn {
+  appearance: none; cursor: pointer; font-family: var(--fd); font-weight: 600; font-size: 14.5px;
+  padding: 11px 14px; border-radius: 9px; border: 1px solid var(--accent);
+  background: var(--accent); color: var(--on-accent); width: 100%;
+}
+.btn.ghost { background: none; color: var(--accent); }
+.btn.danger { background: none; border-color: var(--crit); color: var(--crit); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btns { display: grid; gap: 8px; margin-top: 11px; }
+.btns.two { grid-template-columns: 1fr 1fr; }
+
+.hist { display: grid; }
+.hist div { display: grid; grid-template-columns: 52px 1fr; gap: 9px; font-size: 13.5px; padding: 8px 0; border-top: 1px solid var(--line); }
+.hist div:first-child { border-top: 0; }
+.hist .d { font-family: var(--fm); font-size: 11px; color: var(--ink-3); padding-top: 2px; }
+.hist .x { color: var(--ink-2); }
+
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 8px; font-size: 14px; padding: 7px 0; border-top: 1px solid var(--line); }
+.kv:first-child { border-top: 0; }
+.kv b { font-family: var(--fm); font-size: 12px; font-weight: 600; color: var(--ink-2); }
+
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(72px + var(--safe-b));
+  background: var(--ink); color: var(--ground); padding: 9px 15px; border-radius: 99px;
+  font-size: 13.5px; z-index: 40; opacity: 0; pointer-events: none; transition: opacity .18s;
+  max-width: 90vw; text-align: center;
+}
+.toast.on { opacity: 1; }
+.hint { font-size: 12.5px; color: var(--ink-3); margin-top: 8px; }
+.err { color: var(--crit); font-size: 13.5px; margin-top: 8px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<header>
+  <button class="iconbtn" id="navBack" hidden aria-label="Zpět">‹</button>
+  <div class="ttl"><h1 id="hTitle">Cvička</h1><div class="sub" id="hSub">načítám</div></div>
+  <button class="iconbtn" id="hAction" hidden aria-label="Akce"></button>
+</header>
+
+<main>
+  <!-- DNES -->
+  <section class="screen" id="s-dnes"><div class="wrap">
+    <div class="card">
+      <div class="card-h">
+        <h3 id="dnesDen">Dnes</h3>
+        <button class="iconbtn" id="dPrev" aria-label="Předchozí den" style="width:30px;height:28px">‹</button>
+        <button class="iconbtn" id="dToday" aria-label="Dnes" style="width:auto;height:28px;padding:0 9px;font-size:12px">dnes</button>
+        <button class="iconbtn" id="dNext" aria-label="Další den" style="width:30px;height:28px">›</button>
+      </div>
+      <div id="dnesList"></div>
+    </div>
+    <div class="card" id="dnesTodoCard" hidden>
+      <div class="card-h"><h3>Chybí zápis</h3><span class="eyebrow" id="dnesTodoCnt"></span></div>
+      <div id="dnesTodo"></div>
+    </div>
+  </div></section>
+
+  <!-- TYDEN -->
+  <section class="screen" id="s-tyden"><div class="wrap">
+    <div class="card">
+      <div class="card-h">
+        <h3 id="tydenTtl">Týden</h3>
+        <button class="iconbtn" id="tPrev" aria-label="Předchozí týden" style="width:30px;height:28px">‹</button>
+        <button class="iconbtn" id="tThis" aria-label="Tento týden" style="width:auto;height:28px;padding:0 9px;font-size:12px">teď</button>
+        <button class="iconbtn" id="tNext" aria-label="Další týden" style="width:30px;height:28px">›</button>
+      </div>
+      <div id="tydenList"></div>
+    </div>
+    <div class="card" id="histCard" hidden>
+      <div class="card-h"><h3 id="histTtl">Historie</h3><span class="eyebrow">poslední hodiny</span></div>
+      <div class="card-b"><div class="hist" id="histList"></div></div>
+    </div>
+  </div></section>
+
+  <!-- HODINA -->
+  <section class="screen" id="s-hodina"><div class="wrap">
+    <div class="card">
+      <div class="card-h"><h3>Docházka</h3><span class="eyebrow" id="attSum"></span></div>
+      <div class="legend">
+        <span><b>ok</b> cvičí</span><span><b>X</b> nepřítomen</span><span><b>N</b> necvičí</span><span><b>Ú</b> bez úboru</span><span>☆ vedl rozcvičku</span>
+      </div>
+      <div id="pupilList"></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h3>Náplň hodiny</h3><span class="eyebrow">jen pro tebe</span></div>
+      <div class="card-b">
+        <div class="field"><label for="fPlan">Plán (co chci dělat)</label><textarea id="fPlan" rows="2" placeholder="Úvod: … Hlavní část: …"></textarea></div>
+        <div class="field"><label for="fNapln">Co se dělalo</label><textarea id="fNapln" rows="3" placeholder="Prázdné znamená, že proběhlo podle plánu"></textarea></div>
+        <div class="field"><label for="fZapis">Zápis do Školy OnLine</label><textarea id="fZapis" rows="3" placeholder="Jedna věta v jednotném čísle"></textarea></div>
+        <div class="btns two">
+          <button class="btn ghost" id="bCopy" type="button">Kopírovat zápis</button>
+          <button class="btn" id="bClose" type="button">Uzavřít hodinu</button>
+        </div>
+      </div>
+    </div>
+  </div></section>
+
+  <!-- NASTAVENI -->
+  <section class="screen" id="s-nastaveni"><div class="wrap">
+    <div class="card">
+      <div class="card-h"><h3>Data</h3><span class="eyebrow" id="statLine"></span></div>
+      <div class="card-b">
+        <div class="field"><label for="fRozvrh">Rozvrh (CSV ze ŠOL)</label><input type="file" id="fRozvrh" accept=".csv,text/csv"></div>
+        <div class="field"><label for="fZaci">Žáci ve skupinách (CSV ze ŠOL)</label><input type="file" id="fZaci" accept=".csv,text/csv"></div>
+        <div class="btns"><button class="btn" id="bImport" type="button">Načíst a vygenerovat hodiny</button></div>
+        <div class="hint">Oba soubory zůstávají v tomhle zařízení. Nic se nikam neodesílá.</div>
+        <div id="importMsg"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h3>Školní rok</h3><span class="eyebrow" id="rokLine"></span></div>
+      <div class="card-b">
+        <div class="field"><label for="fOd">První den</label><input type="date" id="fOd"></div>
+        <div class="field"><label for="fDo">Poslední den</label><input type="date" id="fDo"></div>
+        <div class="field"><label for="fVolno">Volné dny (jeden na řádek, formát 2026-10-29 nebo rozsah 2026-12-23..2027-01-01)</label><textarea id="fVolno" rows="6"></textarea></div>
+        <div class="btns"><button class="btn ghost" id="bRegen" type="button">Přegenerovat hodiny</button></div>
+        <div class="hint">Přegenerování přidá chybějící hodiny a odebere ty, které padly na nově zadané volno. Zapsané hodiny zůstanou.</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h3>Záloha</h3></div>
+      <div class="card-b">
+        <div class="btns two">
+          <button class="btn ghost" id="bExport" type="button">Stáhnout zálohu</button>
+          <button class="btn ghost" id="bRestore" type="button">Obnovit ze zálohy</button>
+        </div>
+        <input type="file" id="fRestore" accept=".json,application/json" hidden>
+        <div class="btns"><button class="btn danger" id="bWipe" type="button">Smazat všechna data</button></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h3>O aplikaci</h3><span class="eyebrow" id="verLine">v0.1</span></div>
+      <div class="card-b" style="font-size:13.5px;color:var(--ink-2)">
+        Cvička, fáze F0 a F1. Data leží v tomhle prohlížeči (IndexedDB) a nikam se neodesílají.
+        Synchronizace mezi zařízeními přijde ve fázi F5, do té doby přenášej data zálohou.
+      </div>
+    </div>
+  </div></section>
+</main>
+
+<nav role="tablist">
+  <button role="tab" data-tab="dnes" aria-selected="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>Dnes</button>
+  <button role="tab" data-tab="tyden" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M9 4v17M15 4v17"/></svg>Týden</button>
+  <button role="tab" data-tab="hodina" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>Hodina</button>
+  <button role="tab" data-tab="nastaveni" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>Nastavení</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const APP = { ver: "0.1", db: null };
+const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
+const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
+const STAVY = ["ok", "X", "N", "U"];
+const POPIS = { ok: "ok", X: "X", N: "N", U: "Ú" };
+const VOLNO_DEFAULT = [
+  "2026-09-28", "2026-10-28..2026-10-30", "2026-11-17",
+  "2026-12-23..2027-01-01", "2027-01-29", "2027-02-22..2027-02-26",
+  "2027-03-25..2027-03-26", "2027-03-29"
+];
+
+/* ---------- util ---------- */
+const $ = (s) => document.querySelector(s);
+const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const parseISO = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+const cz = (s) => { const d = parseISO(s); return `${DNY[d.getDay()]} ${d.getDate()}. ${d.getMonth() + 1}.`; };
+const czFull = (s) => { const d = parseISO(s); return `${DNY[d.getDay()]} ${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()}`; };
+const addDays = (s, n) => { const d = parseISO(s); d.setDate(d.getDate() + n); return iso(d); };
+const mondayOf = (s) => { const d = parseISO(s); const w = (d.getDay() + 6) % 7; d.setDate(d.getDate() - w); return iso(d); };
+// v sobotu a v neděli se plánuje nadcházející týden, ne ten končící
+const planWeek = (s) => { const dow = parseISO(s).getDay(); return (dow === 0 || dow === 6) ? addDays(mondayOf(s), 7) : mondayOf(s); };
+const dm = (s) => { const d = parseISO(s); return `${d.getDate()}. ${d.getMonth() + 1}.`; };
+const uid = (p) => p + "_" + Math.random().toString(16).slice(2, 10);
+
+function toast(msg) {
+  const t = $("#toast"); t.textContent = msg; t.classList.add("on");
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("on"), 2200);
+}
+
+/* ---------- IndexedDB ---------- */
+const STORES = {
+  meta: { keyPath: "k" },
+  skupiny: { keyPath: "id" },
+  zaci: { keyPath: "id", idx: [["skupinaId", "skupinaId"]] },
+  rozvrh: { keyPath: "id" },
+  hodiny: { keyPath: "id", idx: [["datum", "datum"], ["skupinaId", "skupinaId"]] },
+  zaznamy: { keyPath: "id", idx: [["hodinaId", "hodinaId"], ["zakId", "zakId"]] }
+};
+
+function openDB() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open("cvicka", 1);
+    r.onupgradeneeded = () => {
+      const db = r.result;
+      for (const [name, def] of Object.entries(STORES)) {
+        if (db.objectStoreNames.contains(name)) continue;
+        const st = db.createObjectStore(name, { keyPath: def.keyPath });
+        (def.idx || []).forEach(([n, kp]) => st.createIndex(n, kp));
+      }
+    };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+function tx(stores, mode) { return APP.db.transaction(stores, mode); }
+function req(r) { return new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+const dbAll = (store) => req(tx([store], "readonly").objectStore(store).getAll());
+const dbGet = (store, key) => req(tx([store], "readonly").objectStore(store).get(key));
+const dbPut = (store, val) => req(tx([store], "readwrite").objectStore(store).put(val));
+const dbDel = (store, key) => req(tx([store], "readwrite").objectStore(store).delete(key));
+const dbClear = (store) => req(tx([store], "readwrite").objectStore(store).clear());
+const dbBy = (store, index, key) => req(tx([store], "readonly").objectStore(store).index(index).getAll(key));
+function dbPutMany(store, items) {
+  return new Promise((res, rej) => {
+    const t = tx([store], "readwrite"); const os = t.objectStore(store);
+    items.forEach((i) => os.put(i));
+    t.oncomplete = res; t.onerror = () => rej(t.error);
+  });
+}
+const metaGet = async (k, dflt) => { const r = await dbGet("meta", k); return r === undefined ? dflt : r.v; };
+const metaSet = (k, v) => dbPut("meta", { k, v });
+
+/* ---------- CSV ---------- */
+function parseCSV(text) {
+  const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter((l) => l.trim());
+  if (!lines.length) return [];
+  const sep = (lines[0].match(/;/g) || []).length >= (lines[0].match(/,/g) || []).length ? ";" : ",";
+  const head = lines[0].split(sep).map((h) => h.trim().toLowerCase());
+  return lines.slice(1).map((l) => {
+    const c = l.split(sep);
+    const o = {};
+    head.forEach((h, i) => { o[h] = (c[i] || "").trim(); });
+    return o;
+  });
+}
+const normTrida = (s) => s.replace(/\s+/g, " ").trim();
+const normTyp = (s) => s.replace(/\s+/g, " ").trim().toLowerCase();
+
+/* ---------- import ---------- */
+async function importData(rozvrhText, zaciText) {
+  const rRows = parseCSV(rozvrhText);
+  const zRows = parseCSV(zaciText);
+  if (!rRows.length) throw new Error("Rozvrh je prázdný nebo má jiné sloupce.");
+  if (!zRows.length) throw new Error("Seznam žáků je prázdný nebo má jiné sloupce.");
+
+  const zaciParsed = zRows.map((r) => {
+    const raw = r.skupina || r["trida - skupina"] || "";
+    const m = raw.split(" - ");
+    return { trida: normTrida(m[0] || ""), typ: normTyp(m.slice(1).join(" - ") || "celá třída"), prijmeni: r.prijmeni || r["příjmení"] || "", jmeno: r.jmeno || r["jméno"] || "" };
+  }).filter((z) => z.prijmeni && z.trida);
+
+  const skupiny = new Map();
+  const rozvrh = [];
+  for (const r of rRows) {
+    const tridy = normTrida(r.trida).split(/\s*\+\s*/).map(normTrida).filter(Boolean);
+    const typ = normTyp(r.skupina || "celá třída");
+    const key = tridy.join(" + ") + "|" + typ;
+    if (!skupiny.has(key)) {
+      const nazev = tridy.join(" + ") + (typ === "celá třída" ? "" : " " + typ);
+      skupiny.set(key, { id: uid("sk"), nazev, tridy, typ, key });
+    }
+    const sk = skupiny.get(key);
+    rozvrh.push({
+      id: uid("rz"), skupinaId: sk.id, den: DNY.indexOf((r.den || "").trim()),
+      poradi: Number(r.hodina), cas: r.cas || HODINY_CAS[Number(r.hodina)] || "", mistnost: r.mistnost || ""
+    });
+  }
+
+  const zaci = [];
+  const nesparovano = [];
+  for (const z of zaciParsed) {
+    let sk = null;
+    for (const s of skupiny.values()) {
+      if (s.typ === z.typ && s.tridy.includes(z.trida)) { sk = s; break; }
+    }
+    if (!sk) { nesparovano.push(`${z.trida} ${z.prijmeni}`); continue; }
+    zaci.push({ id: uid("z"), skupinaId: sk.id, trida: z.trida, prijmeni: z.prijmeni, jmeno: z.jmeno });
+  }
+  zaci.sort((a, b) => a.prijmeni.localeCompare(b.prijmeni, "cs") || a.jmeno.localeCompare(b.jmeno, "cs"));
+
+  await dbClear("skupiny"); await dbClear("zaci"); await dbClear("rozvrh");
+  await dbPutMany("skupiny", [...skupiny.values()]);
+  await dbPutMany("zaci", zaci);
+  await dbPutMany("rozvrh", rozvrh);
+  return { skupin: skupiny.size, zaku: zaci.length, slotu: rozvrh.length, nesparovano };
+}
+
+/* ---------- generovani hodin ---------- */
+function parseVolno(text) {
+  const out = new Set();
+  (text || "").split(/\r?\n/).map((l) => l.trim()).filter(Boolean).forEach((l) => {
+    if (l.includes("..")) {
+      const [a, b] = l.split("..").map((x) => x.trim());
+      let d = a; let guard = 0;
+      while (d <= b && guard++ < 400) { out.add(d); d = addDays(d, 1); }
+    } else out.add(l);
+  });
+  return out;
+}
+
+async function generujHodiny(od, doD, volnoText) {
+  const rozvrh = await dbAll("rozvrh");
+  if (!rozvrh.length) throw new Error("Nejdřív načti rozvrh.");
+  const volno = parseVolno(volnoText);
+  const stare = await dbAll("hodiny");
+  const mapa = new Map(stare.map((h) => [h.id, h]));
+  const chtene = new Set();
+  const nove = [];
+  let d = od; let guard = 0;
+  while (d <= doD && guard++ < 500) {
+    const den = parseISO(d).getDay();
+    if (den >= 1 && den <= 5 && !volno.has(d)) {
+      for (const r of rozvrh.filter((x) => x.den === den)) {
+        const id = d + "|" + r.id;
+        chtene.add(id);
+        if (!mapa.has(id)) {
+          nove.push({ id, datum: d, skupinaId: r.skupinaId, poradi: r.poradi, cas: r.cas, mistnost: r.mistnost, napln: "", plan: "", zapis: "", stav: "plan", updatedAt: Date.now() });
+        }
+      }
+    }
+    d = addDays(d, 1);
+  }
+  const smazat = stare.filter((h) => !chtene.has(h.id) && h.stav === "plan" && !h.napln && !h.plan);
+  for (const h of smazat) await dbDel("hodiny", h.id);
+  if (nove.length) await dbPutMany("hodiny", nove);
+  return { pridano: nove.length, smazano: smazat.length, celkem: chtene.size };
+}
+
+/* ---------- stav aplikace ---------- */
+const S = { tab: "dnes", den: iso(new Date()), tyden: planWeek(iso(new Date())), hodinaId: null, backTo: null, histSkupina: null, cache: {} };
+
+async function refreshCache() {
+  const [skupiny, zaci] = await Promise.all([dbAll("skupiny"), dbAll("zaci")]);
+  S.cache.skupiny = new Map(skupiny.map((s) => [s.id, s]));
+  S.cache.zaciBySk = new Map();
+  zaci.forEach((z) => {
+    if (!S.cache.zaciBySk.has(z.skupinaId)) S.cache.zaciBySk.set(z.skupinaId, []);
+    S.cache.zaciBySk.get(z.skupinaId).push(z);
+  });
+  S.cache.pocty = { skupin: skupiny.length, zaku: zaci.length };
+}
+const skName = (id) => (S.cache.skupiny.get(id) || {}).nazev || "?";
+
+/* ---------- render: DNES ---------- */
+async function skocNaNejblizsiDen() {
+  for (let i = 0; i < 8; i++) {
+    const d = addDays(iso(new Date()), i);
+    if ((await dbBy("hodiny", "datum", d)).length) { S.den = d; return; }
+  }
+}
+
+async function renderDnes() {
+  $("#dnesDen").textContent = czFull(S.den);
+  const list = $("#dnesList"); list.innerHTML = "";
+  const hod = (await dbBy("hodiny", "datum", S.den)).sort((a, b) => a.poradi - b.poradi);
+  if (!hod.length) {
+    list.appendChild(el("div", "empty", "Tenhle den nemáš žádnou hodinu TV."));
+  } else {
+    hod.forEach((h) => list.appendChild(lessonRow(h)));
+  }
+  const vse = await dbAll("hodiny");
+  const dnes = iso(new Date());
+  const chybi = vse.filter((h) => h.datum < dnes && h.stav !== "uzavrena" && !h.zapis).sort((a, b) => b.datum.localeCompare(a.datum)).slice(0, 6);
+  $("#dnesTodoCard").hidden = chybi.length === 0;
+  $("#dnesTodoCnt").textContent = chybi.length ? chybi.length + "×" : "";
+  const todo = $("#dnesTodo"); todo.innerHTML = "";
+  chybi.forEach((h) => todo.appendChild(lessonRow(h, true)));
+}
+
+function stavPill(h, tyden) {
+  if (h.stav === "uzavrena") return el("span", "pill ok", "zapsáno");
+  if (h.napln || h.zapis) return el("span", "pill no", "rozepsáno");
+  if (h.plan) return el("span", "pill plan", "plán");
+  return el("span", "pill no", tyden ? "bez plánu" : "prázdná");
+}
+
+function lessonRow(h, showDate) {
+  const b = el("button", "row"); b.type = "button";
+  const t = el("span", "t", showDate ? cz(h.datum) : (h.cas || h.poradi + "."));
+  const mid = el("span");
+  mid.appendChild(el("span", "g", skName(h.skupinaId)));
+  mid.appendChild(document.createTextNode(" "));
+  mid.appendChild(el("span", "m", (h.poradi + ". hodina") + (h.mistnost ? " · " + h.mistnost : "")));
+  const txt = h.napln || h.plan;
+  if (txt) mid.appendChild(el("span", "note", txt));
+  b.append(t, mid, stavPill(h));
+  b.addEventListener("click", () => openHodina(h.id, "dnes"));
+  return b;
+}
+
+/* ---------- render: TYDEN ---------- */
+async function renderTyden() {
+  const konec = addDays(S.tyden, 4);
+  $("#tydenTtl").textContent = `${dm(S.tyden)} až ${dm(konec)}`;
+  const list = $("#tydenList"); list.innerHTML = "";
+  let n = 0;
+  for (let i = 0; i < 5; i++) {
+    const d = addDays(S.tyden, i);
+    const hod = (await dbBy("hodiny", "datum", d)).sort((a, b) => a.poradi - b.poradi);
+    hod.forEach((h) => {
+      n++;
+      const b = el("button", "row"); b.type = "button";
+      b.append(el("span", "t", DNY[parseISO(d).getDay()].toLowerCase() + " " + h.poradi + "."));
+      const mid = el("span");
+      mid.appendChild(el("span", "g", skName(h.skupinaId)));
+      const txt = h.plan || h.napln;
+      if (txt) mid.appendChild(el("span", "note", txt));
+      b.append(mid, stavPill(h, true));
+      b.addEventListener("click", () => { S.histSkupina = h.skupinaId; openHodina(h.id, "tyden"); });
+      list.appendChild(b);
+    });
+  }
+  if (!n) list.appendChild(el("div", "empty", "V tomhle týdnu nejsou žádné hodiny. Zkontroluj v nastavení rozsah školního roku."));
+  await renderHist();
+}
+
+async function renderHist() {
+  const card = $("#histCard");
+  if (!S.histSkupina) { card.hidden = true; return; }
+  card.hidden = false;
+  $("#histTtl").textContent = "Co " + skName(S.histSkupina) + " naposledy měla";
+  const box = $("#histList"); box.innerHTML = "";
+  const zapsane = (await dbBy("hodiny", "skupinaId", S.histSkupina))
+    .filter((h) => h.napln || h.zapis)
+    .sort((a, b) => b.datum.localeCompare(a.datum));
+  const dnesI = iso(new Date());
+  const minule = zapsane.filter((h) => h.datum <= dnesI);
+  const hod = (minule.length ? minule : zapsane).slice(0, 5);
+  if (!hod.length) { box.appendChild(el("div", "empty", "Zatím žádný zápis.")); return; }
+  hod.forEach((h) => {
+    const r = el("div");
+    r.append(el("span", "d", cz(h.datum)), el("span", "x", h.napln || h.zapis));
+    box.appendChild(r);
+  });
+}
+
+/* ---------- render: HODINA ---------- */
+async function openHodina(id, odkud) {
+  S.hodinaId = id;
+  S.backTo = odkud || null;
+  await switchTab("hodina");
+}
+
+async function renderHodina() {
+  const h = S.hodinaId ? await dbGet("hodiny", S.hodinaId) : null;
+  const list = $("#pupilList"); list.innerHTML = "";
+  if (!h) {
+    $("#attSum").textContent = "";
+    list.appendChild(el("div", "empty", "Vyber hodinu na obrazovce Dnes nebo Týden."));
+    $("#fPlan").value = ""; $("#fNapln").value = ""; $("#fZapis").value = "";
+    $("#hTitle").textContent = "Hodina"; $("#hSub").textContent = "nic nevybráno";
+    return;
+  }
+  $("#hTitle").textContent = skName(h.skupinaId) + " · " + h.poradi + ". hodina";
+  $("#hSub").textContent = czFull(h.datum) + (h.mistnost ? " · " + h.mistnost : "");
+  $("#fPlan").value = h.plan || "";
+  $("#fNapln").value = h.napln || "";
+  $("#fZapis").value = h.zapis || "";
+
+  const zaci = (S.cache.zaciBySk.get(h.skupinaId) || []);
+  const zazn = await dbBy("zaznamy", "hodinaId", h.id);
+  const mapa = new Map(zazn.map((z) => [z.zakId, z]));
+  zaci.forEach((z, i) => {
+    const rec = mapa.get(z.id) || { id: h.id + "|" + z.id, hodinaId: h.id, zakId: z.id, stav: "ok", vedl: false };
+    const row = el("div", "pupil");
+    row.append(el("span", "n mono", String(i + 1)), el("span", "nm", z.prijmeni + " " + z.jmeno));
+    const st = el("button", "st"); st.type = "button"; st.dataset.s = rec.stav; st.textContent = POPIS[rec.stav];
+    st.setAttribute("aria-label", "stav: " + z.prijmeni);
+    st.addEventListener("click", async () => {
+      rec.stav = STAVY[(STAVY.indexOf(rec.stav) + 1) % STAVY.length];
+      st.dataset.s = rec.stav; st.textContent = POPIS[rec.stav];
+      await dbPut("zaznamy", rec); updateSum();
+    });
+    const ld = el("button", "lead"); ld.type = "button";
+    ld.textContent = rec.vedl ? "★" : "☆"; ld.setAttribute("aria-pressed", String(!!rec.vedl));
+    ld.setAttribute("aria-label", "vedl rozcvičku: " + z.prijmeni);
+    ld.addEventListener("click", async () => {
+      rec.vedl = !rec.vedl; ld.textContent = rec.vedl ? "★" : "☆";
+      ld.setAttribute("aria-pressed", String(rec.vedl));
+      await dbPut("zaznamy", rec);
+    });
+    row.append(st, ld);
+    row.dataset.stav = rec.stav;
+    list.appendChild(row);
+  });
+  if (!zaci.length) list.appendChild(el("div", "empty", "Tahle skupina nemá načtené žáky."));
+  updateSum();
+
+  function updateSum() {
+    const btns = list.querySelectorAll(".st");
+    let ok = 0; btns.forEach((b) => { if (b.dataset.s === "ok") ok++; });
+    $("#attSum").textContent = btns.length ? `cvičí ${ok} / ${btns.length}` : "";
+  }
+}
+
+async function saveHodinaPole() {
+  if (!S.hodinaId) return;
+  const h = await dbGet("hodiny", S.hodinaId);
+  if (!h) return;
+  h.plan = $("#fPlan").value.trim();
+  h.napln = $("#fNapln").value.trim();
+  h.zapis = $("#fZapis").value.trim();
+  h.updatedAt = Date.now();
+  if (h.stav === "plan" && (h.napln || h.zapis)) h.stav = "zapsana";
+  await dbPut("hodiny", h);
+}
+
+/* ---------- nastaveni ---------- */
+async function renderNastaveni() {
+  await refreshCache();
+  const hod = await dbAll("hodiny");
+  $("#statLine").textContent = `${S.cache.pocty.skupin} skupin · ${S.cache.pocty.zaku} žáků · ${hod.length} hodin`;
+  $("#fOd").value = await metaGet("od", "2026-09-01");
+  $("#fDo").value = await metaGet("do", "2027-06-30");
+  $("#fVolno").value = await metaGet("volno", VOLNO_DEFAULT.join("\n"));
+  const zapsane = hod.filter((h) => h.stav === "uzavrena").length;
+  $("#rokLine").textContent = zapsane ? zapsane + " uzavřených" : "";
+  $("#verLine").textContent = "v" + APP.ver;
+}
+
+async function doImport() {
+  const msg = $("#importMsg"); msg.textContent = ""; msg.className = "";
+  const fR = $("#fRozvrh").files[0], fZ = $("#fZaci").files[0];
+  if (!fR || !fZ) { msg.className = "err"; msg.textContent = "Vyber oba soubory."; return; }
+  try {
+    const [tR, tZ] = await Promise.all([fR.text(), fZ.text()]);
+    const r = await importData(tR, tZ);
+    await metaSet("od", $("#fOd").value); await metaSet("do", $("#fDo").value); await metaSet("volno", $("#fVolno").value);
+    await dbClear("hodiny"); await dbClear("zaznamy");
+    const g = await generujHodiny($("#fOd").value, $("#fDo").value, $("#fVolno").value);
+    await refreshCache();
+    await skocNaNejblizsiDen();
+    S.tyden = planWeek(iso(new Date()));
+    msg.className = "hint";
+    msg.textContent = `Načteno: ${r.skupin} skupin, ${r.zaku} žáků, ${r.slotu} hodin v rozvrhu. Vygenerováno ${g.celkem} hodin do konce roku.`
+      + (r.nesparovano.length ? ` Nespárováno: ${r.nesparovano.length} žáků (${r.nesparovano.slice(0, 3).join(", ")}…).` : "");
+    await renderNastaveni(); toast("Hotovo");
+  } catch (e) {
+    msg.className = "err"; msg.textContent = "Nepovedlo se: " + e.message;
+  }
+}
+
+async function doRegen() {
+  try {
+    await metaSet("od", $("#fOd").value); await metaSet("do", $("#fDo").value); await metaSet("volno", $("#fVolno").value);
+    const g = await generujHodiny($("#fOd").value, $("#fDo").value, $("#fVolno").value);
+    await renderNastaveni();
+    toast(`Přidáno ${g.pridano}, odebráno ${g.smazano}`);
+  } catch (e) { toast("Chyba: " + e.message); }
+}
+
+async function doExport() {
+  const dump = { app: "cvicka", ver: APP.ver, kdy: new Date().toISOString(), data: {} };
+  for (const s of Object.keys(STORES)) dump.data[s] = await dbAll(s);
+  const blob = new Blob([JSON.stringify(dump)], { type: "application/json" });
+  const a = el("a"); a.href = URL.createObjectURL(blob);
+  a.download = "cvicka-zaloha-" + iso(new Date()) + ".json";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  toast("Záloha stažena");
+}
+
+async function doRestore(file) {
+  try {
+    const dump = JSON.parse(await file.text());
+    if (dump.app !== "cvicka") throw new Error("tohle není záloha Cvičky");
+    for (const s of Object.keys(STORES)) {
+      await dbClear(s);
+      if (dump.data[s] && dump.data[s].length) await dbPutMany(s, dump.data[s]);
+    }
+    await refreshCache(); await renderNastaveni(); await renderDnes();
+    toast("Obnoveno ze zálohy");
+  } catch (e) { toast("Chyba: " + e.message); }
+}
+
+/* ---------- navigace ---------- */
+async function switchTab(name) {
+  S.tab = name;
+  document.querySelectorAll(".screen").forEach((s) => s.classList.toggle("on", s.id === "s-" + name));
+  document.querySelectorAll("nav button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
+  $("#navBack").hidden = !(name === "hodina" && S.backTo);
+  const titles = { dnes: ["Cvička", "přehled dne"], tyden: ["Příprava na týden", "plán a historie"], nastaveni: ["Nastavení", "data a záloha"] };
+  if (titles[name]) { $("#hTitle").textContent = titles[name][0]; $("#hSub").textContent = titles[name][1]; }
+  if (name === "dnes") await renderDnes();
+  if (name === "tyden") await renderTyden();
+  if (name === "hodina") await renderHodina();
+  if (name === "nastaveni") await renderNastaveni();
+  document.querySelector("main").scrollTop = 0;
+}
+
+/* ---------- start ---------- */
+async function boot() {
+  APP.db = await openDB();
+  await refreshCache();
+  if (!(await metaGet("volno"))) await metaSet("volno", VOLNO_DEFAULT.join("\n"));
+
+  document.querySelectorAll("nav button").forEach((b) => b.addEventListener("click", () => switchTab(b.dataset.tab)));
+  $("#navBack").addEventListener("click", async () => { const t = S.backTo; S.backTo = null; await switchTab(t || "dnes"); });
+
+  $("#dPrev").addEventListener("click", () => { S.den = addDays(S.den, -1); renderDnes(); });
+  $("#dNext").addEventListener("click", () => { S.den = addDays(S.den, 1); renderDnes(); });
+  $("#dToday").addEventListener("click", () => { S.den = iso(new Date()); renderDnes(); });
+  $("#tPrev").addEventListener("click", () => { S.tyden = addDays(S.tyden, -7); renderTyden(); });
+  $("#tNext").addEventListener("click", () => { S.tyden = addDays(S.tyden, 7); renderTyden(); });
+  $("#tThis").addEventListener("click", () => { S.tyden = planWeek(iso(new Date())); renderTyden(); });
+
+  let saveTimer;
+  ["#fPlan", "#fNapln", "#fZapis"].forEach((sel) => $(sel).addEventListener("input", () => {
+    clearTimeout(saveTimer); saveTimer = setTimeout(saveHodinaPole, 600);
+  }));
+  $("#bCopy").addEventListener("click", async () => {
+    const t = $("#fZapis").value.trim();
+    if (!t) { toast("Zápis je prázdný"); return; }
+    try { await navigator.clipboard.writeText(t); toast("Zkopírováno"); }
+    catch { $("#fZapis").select(); toast("Zkopíruj ručně"); }
+  });
+  $("#bClose").addEventListener("click", async () => {
+    await saveHodinaPole();
+    if (!S.hodinaId) return;
+    const h = await dbGet("hodiny", S.hodinaId);
+    h.stav = "uzavrena"; h.updatedAt = Date.now();
+    await dbPut("hodiny", h);
+    toast("Hodina uzavřena");
+    await switchTab(S.backTo || "dnes"); S.backTo = null;
+  });
+
+  $("#bImport").addEventListener("click", doImport);
+  $("#bRegen").addEventListener("click", doRegen);
+  $("#bExport").addEventListener("click", doExport);
+  $("#bRestore").addEventListener("click", () => $("#fRestore").click());
+  $("#fRestore").addEventListener("change", (e) => { if (e.target.files[0]) doRestore(e.target.files[0]); });
+  $("#bWipe").addEventListener("click", async () => {
+    if (!confirm("Opravdu smazat všechna data v tomhle zařízení?")) return;
+    for (const s of Object.keys(STORES)) await dbClear(s);
+    await refreshCache(); await renderNastaveni(); toast("Smazáno");
+  });
+
+  const prazdno = S.cache.pocty.skupin === 0;
+  if (!prazdno) await skocNaNejblizsiDen();
+  await switchTab(prazdno ? "nastaveni" : "dnes");
+  if (prazdno) toast("Začni načtením rozvrhu a žáků");
+
+  if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+}
+boot().catch((e) => {
+  document.querySelector("main").innerHTML = '<div class="wrap"><div class="card"><div class="card-b"><p class="err">Aplikace se nespustila: ' + e.message + '</p></div></div></div>';
+});
+</script>
+</body>
+</html>
