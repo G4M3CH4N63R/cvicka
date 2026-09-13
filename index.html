@@ -149,8 +149,21 @@ textarea { line-height: 1.45; }
 .btns { display: grid; gap: 8px; margin-top: 11px; }
 .btns.two { grid-template-columns: 1fr 1fr; }
 
+.gaps { display: grid; gap: 7px; }
+.gap { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; font-size: 13.5px; }
+.gap .w { font-family: var(--fm); font-size: 11px; padding: 2px 7px; border-radius: 99px; white-space: nowrap; background: var(--good-soft); color: var(--good); }
+.gap .w.stred { background: var(--warn-soft); color: var(--warn); }
+.gap .w.dlouho { background: var(--crit-soft); color: var(--crit); }
+.slib { display: grid; grid-template-columns: auto 1fr auto; gap: 9px; align-items: center; padding: 9px 13px; border-top: 1px solid var(--line); font-size: 14px; }
+.slib:first-child { border-top: 0; }
+.slib .cls { font-family: var(--fm); font-size: 11px; color: var(--ink-3); }
+.slib .txt { min-width: 0; }
+.slib .done {
+  appearance: none; cursor: pointer; border: 1px solid var(--line-strong); background: none;
+  width: 32px; height: 30px; border-radius: 8px; color: var(--good); font-size: 14px; line-height: 1;
+}
 .hist { display: grid; }
-.hist div { display: grid; grid-template-columns: 52px 1fr; gap: 9px; font-size: 13.5px; padding: 8px 0; border-top: 1px solid var(--line); }
+.hist div { display: grid; grid-template-columns: 64px 1fr; gap: 9px; font-size: 13.5px; padding: 8px 0; border-top: 1px solid var(--line); }
 .hist div:first-child { border-top: 0; }
 .hist .d { font-family: var(--fm); font-size: 11px; color: var(--ink-3); padding-top: 2px; }
 .hist .x { color: var(--ink-2); }
@@ -192,6 +205,10 @@ textarea { line-height: 1.45; }
       </div>
       <div id="dnesList"></div>
     </div>
+    <div class="card" id="slibyCard" hidden>
+      <div class="card-h"><h3>Sliby, které máš splnit</h3><span class="eyebrow" id="slibyCnt"></span></div>
+      <div id="slibyList"></div>
+    </div>
     <div class="card" id="dnesTodoCard" hidden>
       <div class="card-h"><h3>Chybí zápis</h3><span class="eyebrow" id="dnesTodoCnt"></span></div>
       <div id="dnesTodo"></div>
@@ -212,6 +229,17 @@ textarea { line-height: 1.45; }
     <div class="card" id="histCard" hidden>
       <div class="card-h"><h3 id="histTtl">Historie</h3><span class="eyebrow">poslední hodiny</span></div>
       <div class="card-b"><div class="hist" id="histList"></div></div>
+    </div>
+    <div class="card" id="gapsCard" hidden>
+      <div class="card-h"><h3>Dlouho nebylo</h3><span class="eyebrow" id="gapsCls"></span></div>
+      <div class="card-b">
+        <div class="eyebrow" style="margin-bottom:7px">Okruhy</div>
+        <div class="gaps" id="gapsOkruhy"></div>
+        <div class="eyebrow" style="margin:13px 0 7px">Úvodní hry</div>
+        <div class="gaps" id="gapsHry"></div>
+        <div class="eyebrow" style="margin:13px 0 7px">Hlavní část</div>
+        <div class="gaps" id="gapsHlavni"></div>
+      </div>
     </div>
   </div></section>
 
@@ -234,6 +262,21 @@ textarea { line-height: 1.45; }
           <button class="btn ghost" id="bCopy" type="button">Kopírovat zápis</button>
           <button class="btn" id="bClose" type="button">Uzavřít hodinu</button>
         </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h3>Zásobník</h3><span class="eyebrow" id="zasFiltr">tapni a vloží se do plánu</span></div>
+      <div class="card-b">
+        <div class="chips" id="zasTypy"></div>
+        <div class="chips" id="zasList" style="margin-top:9px"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h3>Slib třídě</h3><span class="eyebrow" id="slibCnt"></span></div>
+      <div class="card-b">
+        <div id="slibHodinaList"></div>
+        <div class="field"><label for="fSlib">Co jsi slíbil</label><input type="text" id="fSlib" placeholder="Florbal, až bude volná tělocvična"></div>
+        <div class="btns"><button class="btn ghost" id="bSlib" type="button">Přidat slib</button></div>
       </div>
     </div>
   </div></section>
@@ -292,7 +335,7 @@ textarea { line-height: 1.45; }
 
 <script>
 "use strict";
-const APP = { ver: "0.1", db: null };
+const APP = { ver: "0.2", db: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -302,6 +345,67 @@ const VOLNO_DEFAULT = [
   "2026-12-23..2027-01-01", "2027-01-29", "2027-02-22..2027-02-26",
   "2027-03-25..2027-03-26", "2027-03-29"
 ];
+
+/* ---------- zásobník činností (vytěženo z historie) ---------- */
+const SEED_VERZE = 1;
+const OKRUHY = ["Pohybové hry", "Sportovní hry", "Gymnastika", "Atletika", "Rytmické a kondiční činnosti", "Pohybové učení"];
+// [název, typ, okruh, klíčová slova pro hledání ve starých zápisech]
+const CINNOSTI_SEED = [
+  ["Oheň, voda, vítr", "uvod", 0, "oheň, voda|oheň voda"],
+  ["Želvičky", "uvod", 0, "želvičk"],
+  ["Tarantule", "uvod", 0, "tarantul"],
+  ["Ocásky", "uvod", 0, "ocásk"],
+  ["Mrazík", "uvod", 0, "mrazík"],
+  ["Rybičky", "uvod", 0, "rybičk"],
+  ["Zombíci", "uvod", 0, "zombíc"],
+  ["Myslivci", "uvod", 0, "myslivc"],
+  ["Kouzelníci", "uvod", 0, "kouzelníc"],
+  ["Dotkni se…", "uvod", 0, "dotkni se"],
+  ["Přes barevné moře", "uvod", 0, "barevné moře"],
+  ["Dostihy", "uvod", 0, "dostih"],
+  ["Lovci pokladu", "uvod", 0, "lovci poklad"],
+  ["Lovci bez ocásku", "uvod", 0, "lovci bez"],
+  ["Formule", "uvod", 0, "formule"],
+  ["Jelen", "uvod", 0, "jelen"],
+  ["Bludišťák", "uvod", 0, "bludišťák"],
+  ["Laser", "uvod", 0, "laser"],
+  ["Kámen, nůžky, papír", "uvod", 0, "kámen"],
+  ["Fotbal", "hlavni", 1, "fotbal"],
+  ["Florbal", "hlavni", 1, "florbal"],
+  ["Vybíjená", "hlavni", 1, "vybíjen"],
+  ["Vybíjená s překážkami", "hlavni", 1, "vybíjená s překážkami|painball"],
+  ["Vlajkovaná", "hlavni", 1, "vlajkovan"],
+  ["Miniházená", "hlavni", 1, "házen"],
+  ["Přehazovaná", "hlavni", 1, "přehazovan"],
+  ["Basketbal", "hlavni", 1, "basketbal|košíkov"],
+  ["Ultimate", "hlavni", 1, "ultimate|ringo"],
+  ["Branball", "hlavni", 1, "branball"],
+  ["Badminton", "hlavni", 1, "badminton"],
+  ["Lakros", "hlavni", 1, "lakros"],
+  ["Kapitán", "hlavni", 1, "kapitán"],
+  ["Na počet přihrávek", "hlavni", 1, "počet přihrávek"],
+  ["Kotouly", "hlavni", 2, "kotoul"],
+  ["Stojky", "hlavni", 2, "stojk"],
+  ["Přemety", "hlavni", 2, "přemet"],
+  ["Kruhy", "hlavni", 2, "kruh"],
+  ["Hrazda", "hlavni", 2, "hrazd"],
+  ["Kladina", "hlavni", 2, "kladin"],
+  ["Šplh", "hlavni", 2, "šplh"],
+  ["Air-track", "hlavni", 2, "air-track|airtrack"],
+  ["Přeskok přes bednu", "hlavni", 2, "bedn"],
+  ["Švihadlo", "hlavni", 2, "švihadl"],
+  ["Překážková dráha", "hlavni", 2, "překážkov"],
+  ["Běh 60 m", "hlavni", 3, "60 m"],
+  ["Skok daleký", "hlavni", 3, "skok dalek"],
+  ["Vytrvalý běh", "hlavni", 3, "vytrval"],
+  ["Hod míčkem", "hlavni", 3, "hod míčk|raketkou"],
+  ["Štafeta 4×60 m", "hlavni", 3, "štafet"],
+  ["Běžecká abeceda", "pruprava", 3, "běžecká abc|běžeckou abc|abeceda"],
+  ["Rytmická cvičení", "hlavni", 4, "rytmick|tanec|aerobik"],
+  ["Kondiční cvičení", "pruprava", 4, "kondičn|posilov|kruhový trénink"],
+  ["Testování FMS", "mereni", 5, "testování fms|fms"]
+];
+const TYPY = { uvod: "Úvodní hry", pruprava: "Průprava", hlavni: "Hlavní část", mereni: "Měření" };
 
 /* ---------- util ---------- */
 const $ = (s) => document.querySelector(s);
@@ -329,12 +433,14 @@ const STORES = {
   zaci: { keyPath: "id", idx: [["skupinaId", "skupinaId"]] },
   rozvrh: { keyPath: "id" },
   hodiny: { keyPath: "id", idx: [["datum", "datum"], ["skupinaId", "skupinaId"]] },
-  zaznamy: { keyPath: "id", idx: [["hodinaId", "hodinaId"], ["zakId", "zakId"]] }
+  zaznamy: { keyPath: "id", idx: [["hodinaId", "hodinaId"], ["zakId", "zakId"]] },
+  cinnosti: { keyPath: "id" },
+  sliby: { keyPath: "id", idx: [["skupinaId", "skupinaId"]] }
 };
 
 function openDB() {
   return new Promise((res, rej) => {
-    const r = indexedDB.open("cvicka", 1);
+    const r = indexedDB.open("cvicka", 2);
     r.onupgradeneeded = () => {
       const db = r.result;
       for (const [name, def] of Object.entries(STORES)) {
@@ -367,7 +473,7 @@ const metaSet = (k, v) => dbPut("meta", { k, v });
 
 /* ---------- CSV ---------- */
 function parseCSV(text) {
-  const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter((l) => l.trim());
+  const lines = text.replace(/^﻿/, "").split(/\r?\n/).filter((l) => l.trim());
   if (!lines.length) return [];
   const sep = (lines[0].match(/;/g) || []).length >= (lines[0].match(/,/g) || []).length ? ";" : ",";
   const head = lines[0].split(sep).map((h) => h.trim().toLowerCase());
@@ -388,12 +494,14 @@ async function importData(rozvrhText, zaciText) {
   if (!rRows.length) throw new Error("Rozvrh je prázdný nebo má jiné sloupce.");
   if (!zRows.length) throw new Error("Seznam žáků je prázdný nebo má jiné sloupce.");
 
+  // zaci: sloupec "skupina" ve tvaru "III. A - celá třída"
   const zaciParsed = zRows.map((r) => {
     const raw = r.skupina || r["trida - skupina"] || "";
     const m = raw.split(" - ");
     return { trida: normTrida(m[0] || ""), typ: normTyp(m.slice(1).join(" - ") || "celá třída"), prijmeni: r.prijmeni || r["příjmení"] || "", jmeno: r.jmeno || r["jméno"] || "" };
   }).filter((z) => z.prijmeni && z.trida);
 
+  // skupiny z rozvrhu: trida muze byt "VI. A + VI. B"
   const skupiny = new Map();
   const rozvrh = [];
   for (const r of rRows) {
@@ -411,14 +519,15 @@ async function importData(rozvrhText, zaciText) {
     });
   }
 
+  // zaci -> skupiny
   const zaci = [];
-  const nesparovano = [];
+  const nespárováno = [];
   for (const z of zaciParsed) {
     let sk = null;
     for (const s of skupiny.values()) {
       if (s.typ === z.typ && s.tridy.includes(z.trida)) { sk = s; break; }
     }
-    if (!sk) { nesparovano.push(`${z.trida} ${z.prijmeni}`); continue; }
+    if (!sk) { nespárováno.push(`${z.trida} ${z.prijmeni}`); continue; }
     zaci.push({ id: uid("z"), skupinaId: sk.id, trida: z.trida, prijmeni: z.prijmeni, jmeno: z.jmeno });
   }
   zaci.sort((a, b) => a.prijmeni.localeCompare(b.prijmeni, "cs") || a.jmeno.localeCompare(b.jmeno, "cs"));
@@ -427,7 +536,7 @@ async function importData(rozvrhText, zaciText) {
   await dbPutMany("skupiny", [...skupiny.values()]);
   await dbPutMany("zaci", zaci);
   await dbPutMany("rozvrh", rozvrh);
-  return { skupin: skupiny.size, zaku: zaci.length, slotu: rozvrh.length, nesparovano };
+  return { skupin: skupiny.size, zaku: zaci.length, slotu: rozvrh.length, nespárováno };
 }
 
 /* ---------- generovani hodin ---------- */
@@ -465,14 +574,71 @@ async function generujHodiny(od, doD, volnoText) {
     }
     d = addDays(d, 1);
   }
+  // odstranit prazdne hodiny, ktere uz v rozvrhu nejsou
   const smazat = stare.filter((h) => !chtene.has(h.id) && h.stav === "plan" && !h.napln && !h.plan);
   for (const h of smazat) await dbDel("hodiny", h.id);
   if (nove.length) await dbPutMany("hodiny", nove);
   return { pridano: nove.length, smazano: smazat.length, celkem: chtene.size };
 }
 
+/* ---------- zásobník a výpočet dlouho nebylo ---------- */
+async function seedCinnosti() {
+  const verze = await metaGet("seedVerze", 0);
+  const stav = await dbAll("cinnosti");
+  if (verze >= SEED_VERZE && stav.length) return;
+  const maji = new Set(stav.map((c) => c.nazev));
+  const nove = CINNOSTI_SEED
+    .filter(([nazev]) => !maji.has(nazev))
+    .map(([nazev, typ, okruh, klice]) => ({ id: uid("c"), nazev, typ, okruh: OKRUHY[okruh], klice: klice.split("|"), vlastni: false }));
+  if (nove.length) await dbPutMany("cinnosti", nove);
+  await metaSet("seedVerze", SEED_VERZE);
+}
+
+function textHodiny(h) {
+  return ((h.napln || "") + " " + (h.zapis || "") + " " + (h.plan || "")).toLowerCase();
+}
+
+// vrátí činnosti seřazené podle toho, jak dlouho je skupina neměla;
+// činnost, kterou u téhle skupiny nikdy nebyla, se řadí podle toho, jak často ji učíš jinde
+async function dlouhoNebylo(skupinaId) {
+  const [cinnosti, vse] = await Promise.all([dbAll("cinnosti"), dbAll("hodiny")]);
+  const dnesI = iso(new Date());
+  const texty = vse
+    .filter((h) => h.datum <= dnesI && (h.napln || h.zapis))
+    .map((h) => ({ datum: h.datum, sk: h.skupinaId, t: textHodiny(h), ids: h.cinnosti || [] }));
+  return cinnosti.map((c) => {
+    let posledni = null, jinde = 0;
+    for (const h of texty) {
+      if (!(h.ids.includes(c.id) || c.klice.some((k) => k && h.t.includes(k)))) continue;
+      if (h.sk === skupinaId) { if (!posledni || h.datum > posledni) posledni = h.datum; }
+      else jinde++;
+    }
+    const tydnu = posledni ? Math.floor((parseISO(dnesI) - parseISO(posledni)) / 604800000) : null;
+    return { ...c, posledni, tydnu, jinde };
+  }).sort((a, b) => {
+    if (a.posledni && b.posledni) return a.posledni.localeCompare(b.posledni);
+    if (a.posledni) return -1;
+    if (b.posledni) return 1;
+    return b.jinde - a.jinde || a.nazev.localeCompare(b.nazev, "cs");
+  });
+}
+
+function okruhyZeSeznamu(seznam) {
+  const m = new Map();
+  seznam.forEach((c) => {
+    const cur = m.get(c.okruh);
+    if (!cur || (c.posledni && (!cur.posledni || c.posledni > cur.posledni))) m.set(c.okruh, { okruh: c.okruh, posledni: c.posledni, tydnu: c.tydnu });
+    if (cur && !cur.posledni && c.posledni) m.set(c.okruh, { okruh: c.okruh, posledni: c.posledni, tydnu: c.tydnu });
+  });
+  return [...m.values()].sort((a, b) => {
+    if (!a.posledni) return -1;
+    if (!b.posledni) return 1;
+    return a.posledni.localeCompare(b.posledni);
+  });
+}
+
 /* ---------- stav aplikace ---------- */
-const S = { tab: "dnes", den: iso(new Date()), tyden: planWeek(iso(new Date())), hodinaId: null, backTo: null, histSkupina: null, cache: {} };
+const S = { tab: "dnes", den: iso(new Date()), tyden: planWeek(iso(new Date())), hodinaId: null, backTo: null, histSkupina: null, zasTyp: "uvod", cache: {} };
 
 async function refreshCache() {
   const [skupiny, zaci] = await Promise.all([dbAll("skupiny"), dbAll("zaci")]);
@@ -503,6 +669,8 @@ async function renderDnes() {
   } else {
     hod.forEach((h) => list.appendChild(lessonRow(h)));
   }
+  await renderSliby();
+  // nedodelky: zapsane dny v minulosti bez zapisu
   const vse = await dbAll("hodiny");
   const dnes = iso(new Date());
   const chybi = vse.filter((h) => h.datum < dnes && h.stav !== "uzavrena" && !h.zapis).sort((a, b) => b.datum.localeCompare(a.datum)).slice(0, 6);
@@ -510,6 +678,33 @@ async function renderDnes() {
   $("#dnesTodoCnt").textContent = chybi.length ? chybi.length + "×" : "";
   const todo = $("#dnesTodo"); todo.innerHTML = "";
   chybi.forEach((h) => todo.appendChild(lessonRow(h, true)));
+}
+
+async function renderSliby() {
+  const sliby = (await dbAll("sliby")).filter((s) => !s.splneno).sort((a, b) => a.vytvoreno - b.vytvoreno);
+  $("#slibyCard").hidden = sliby.length === 0;
+  $("#slibyCnt").textContent = sliby.length ? sliby.length + "×" : "";
+  const box = $("#slibyList"); box.innerHTML = "";
+  sliby.forEach((sl) => box.appendChild(slibRow(sl, true)));
+}
+
+function slibRow(sl, sCislem) {
+  const r = el("div", "slib");
+  const dny = Math.floor((Date.now() - sl.vytvoreno) / 86400000);
+  r.append(el("span", "cls", sCislem ? skName(sl.skupinaId) : (dny ? "před " + dny + " d" : "dnes")));
+  const t = el("span", "txt", sl.text);
+  r.append(t);
+  const b = el("button", "done"); b.type = "button"; b.textContent = "✓";
+  b.setAttribute("aria-label", "splněno: " + sl.text);
+  b.addEventListener("click", async () => {
+    sl.splneno = Date.now();
+    await dbPut("sliby", sl);
+    toast("Splněno");
+    await renderSliby();
+    if (S.tab === "hodina") await renderSlibyHodina();
+  });
+  r.append(b);
+  return r;
 }
 
 function stavPill(h, tyden) {
@@ -557,6 +752,36 @@ async function renderTyden() {
   }
   if (!n) list.appendChild(el("div", "empty", "V tomhle týdnu nejsou žádné hodiny. Zkontroluj v nastavení rozsah školního roku."));
   await renderHist();
+  await renderGaps();
+}
+
+function gapRow(nazev, posledni, tydnu) {
+  const r = el("div", "gap");
+  r.append(el("span", "", nazev));
+  let txt, cls = "";
+  if (!posledni) { txt = "u téhle ne"; cls = "dlouho"; }
+  else if (tydnu === 0) { txt = "tento týden"; }
+  else { txt = tydnu + (tydnu === 1 ? " týden" : (tydnu < 5 ? " týdny" : " týdnů")); cls = tydnu >= 8 ? "dlouho" : (tydnu >= 4 ? "stred" : ""); }
+  r.append(el("span", "w " + cls, txt));
+  return r;
+}
+
+async function renderGaps() {
+  const card = $("#gapsCard");
+  if (!S.histSkupina) { card.hidden = true; return; }
+  card.hidden = false;
+  $("#gapsCls").textContent = skName(S.histSkupina);
+  const seznam = await dlouhoNebylo(S.histSkupina);
+  S.cache.gaps = seznam;
+  const chybi = (c) => c.posledni === null || c.tydnu >= 3;
+  const fill = (sel, items) => {
+    const box = $(sel); box.innerHTML = "";
+    if (!items.length) { box.appendChild(el("div", "empty", "všechno měli nedávno")); return; }
+    items.forEach((c) => box.appendChild(gapRow(c.nazev, c.posledni, c.tydnu)));
+  };
+  fill("#gapsOkruhy", okruhyZeSeznamu(seznam).filter(chybi).slice(0, 4).map((o) => ({ nazev: o.okruh, posledni: o.posledni, tydnu: o.tydnu })));
+  fill("#gapsHry", seznam.filter((c) => c.typ === "uvod" && chybi(c)).slice(0, 4));
+  fill("#gapsHlavni", seznam.filter((c) => (c.typ === "hlavni" || c.typ === "pruprava") && chybi(c)).slice(0, 4));
 }
 
 async function renderHist() {
@@ -594,6 +819,7 @@ async function renderHodina() {
     list.appendChild(el("div", "empty", "Vyber hodinu na obrazovce Dnes nebo Týden."));
     $("#fPlan").value = ""; $("#fNapln").value = ""; $("#fZapis").value = "";
     $("#hTitle").textContent = "Hodina"; $("#hSub").textContent = "nic nevybráno";
+    $("#zasTypy").innerHTML = ""; $("#zasList").innerHTML = ""; $("#slibHodinaList").innerHTML = "";
     return;
   }
   $("#hTitle").textContent = skName(h.skupinaId) + " · " + h.poradi + ". hodina";
@@ -630,12 +856,55 @@ async function renderHodina() {
   });
   if (!zaci.length) list.appendChild(el("div", "empty", "Tahle skupina nemá načtené žáky."));
   updateSum();
+  await renderZasobnik(h);
+  await renderSlibyHodina();
 
   function updateSum() {
     const btns = list.querySelectorAll(".st");
     let ok = 0; btns.forEach((b) => { if (b.dataset.s === "ok") ok++; });
     $("#attSum").textContent = btns.length ? `cvičí ${ok} / ${btns.length}` : "";
   }
+}
+
+async function renderZasobnik(h) {
+  const typy = $("#zasTypy"); const list = $("#zasList");
+  typy.innerHTML = ""; list.innerHTML = "";
+  if (!h) return;
+  const seznam = await dlouhoNebylo(h.skupinaId);
+  const aktivni = S.zasTyp || "uvod";
+  Object.entries(TYPY).forEach(([k, popis]) => {
+    const b = el("button", "chip", popis); b.type = "button";
+    b.setAttribute("aria-pressed", String(k === aktivni));
+    b.addEventListener("click", async () => { S.zasTyp = k; await renderZasobnik(await dbGet("hodiny", S.hodinaId)); });
+    typy.appendChild(b);
+  });
+  const vFiltru = seznam.filter((c) => c.typ === aktivni);
+  const serazene = [...vFiltru.filter((c) => c.tydnu !== 0), ...vFiltru.filter((c) => c.tydnu === 0)];
+  serazene.slice(0, 14).forEach((c) => {
+    const b = el("button", "chip"); b.type = "button";
+    b.textContent = c.nazev + (c.posledni ? " · " + (c.tydnu === 0 ? "teď" : c.tydnu + " t") : (c.jinde ? " · jinde" : " · ještě ne"));
+    b.addEventListener("click", async () => {
+      const hod = await dbGet("hodiny", S.hodinaId);
+      const pole = $("#fPlan");
+      pole.value = pole.value.trim() ? pole.value.trim() + ", " + c.nazev : c.nazev;
+      hod.cinnosti = [...new Set([...(hod.cinnosti || []), c.id])];
+      hod.plan = pole.value;
+      if (hod.stav === "plan" && !hod.napln) hod.okruh = c.okruh;
+      await dbPut("hodiny", hod);
+      toast(c.nazev + " přidáno do plánu");
+    });
+    list.appendChild(b);
+  });
+  if (!list.children.length) list.appendChild(el("div", "empty", "V téhle kategorii nic není."));
+}
+
+async function renderSlibyHodina() {
+  const box = $("#slibHodinaList"); box.innerHTML = "";
+  const h = S.hodinaId ? await dbGet("hodiny", S.hodinaId) : null;
+  if (!h) { $("#slibCnt").textContent = ""; return; }
+  const sliby = (await dbBy("sliby", "skupinaId", h.skupinaId)).filter((s) => !s.splneno).sort((a, b) => a.vytvoreno - b.vytvoreno);
+  $("#slibCnt").textContent = sliby.length ? sliby.length + " nesplněno" : "";
+  sliby.forEach((sl) => box.appendChild(slibRow(sl, false)));
 }
 
 async function saveHodinaPole() {
@@ -654,7 +923,8 @@ async function saveHodinaPole() {
 async function renderNastaveni() {
   await refreshCache();
   const hod = await dbAll("hodiny");
-  $("#statLine").textContent = `${S.cache.pocty.skupin} skupin · ${S.cache.pocty.zaku} žáků · ${hod.length} hodin`;
+  const cin = await dbAll("cinnosti");
+  $("#statLine").textContent = `${S.cache.pocty.skupin} skupin · ${S.cache.pocty.zaku} žáků · ${hod.length} hodin · ${cin.length} činností`;
   $("#fOd").value = await metaGet("od", "2026-09-01");
   $("#fDo").value = await metaGet("do", "2027-06-30");
   $("#fVolno").value = await metaGet("volno", VOLNO_DEFAULT.join("\n"));
@@ -678,7 +948,7 @@ async function doImport() {
     S.tyden = planWeek(iso(new Date()));
     msg.className = "hint";
     msg.textContent = `Načteno: ${r.skupin} skupin, ${r.zaku} žáků, ${r.slotu} hodin v rozvrhu. Vygenerováno ${g.celkem} hodin do konce roku.`
-      + (r.nesparovano.length ? ` Nespárováno: ${r.nesparovano.length} žáků (${r.nesparovano.slice(0, 3).join(", ")}…).` : "");
+      + (r.nespárováno.length ? ` Nespárováno: ${r.nespárováno.length} žáků (${r.nespárováno.slice(0, 3).join(", ")}…).` : "");
     await renderNastaveni(); toast("Hotovo");
   } catch (e) {
     msg.className = "err"; msg.textContent = "Nepovedlo se: " + e.message;
@@ -737,6 +1007,7 @@ async function switchTab(name) {
 async function boot() {
   APP.db = await openDB();
   await refreshCache();
+  await seedCinnosti();
   if (!(await metaGet("volno"))) await metaSet("volno", VOLNO_DEFAULT.join("\n"));
 
   document.querySelectorAll("nav button").forEach((b) => b.addEventListener("click", () => switchTab(b.dataset.tab)));
@@ -767,6 +1038,17 @@ async function boot() {
     await dbPut("hodiny", h);
     toast("Hodina uzavřena");
     await switchTab(S.backTo || "dnes"); S.backTo = null;
+  });
+
+  $("#bSlib").addEventListener("click", async () => {
+    const text = $("#fSlib").value.trim();
+    if (!text) { toast("Napiš, co jsi slíbil"); return; }
+    if (!S.hodinaId) { toast("Nejdřív vyber hodinu"); return; }
+    const h = await dbGet("hodiny", S.hodinaId);
+    await dbPut("sliby", { id: uid("sl"), skupinaId: h.skupinaId, text, vytvoreno: Date.now(), splneno: null });
+    $("#fSlib").value = "";
+    await renderSlibyHodina();
+    toast("Slib uložen");
   });
 
   $("#bImport").addEventListener("click", doImport);

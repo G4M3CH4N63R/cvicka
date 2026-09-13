@@ -65,7 +65,18 @@ Hodina má `plan` (co chci dělat), `napln` (co se dělalo) a `zapis` (věta do 
 Stav hodiny: `plan` → `zapsana` → `uzavrena`.
 Záznam docházky: `ok`, `X` (nepřítomen), `N` (necvičí), `U` (bez úboru), plus `vedl` rozcvičku.
 
+## Zásobník činností (v0.2)
+
+53 činností vytěžených z historie: úvodní hry, hlavní část, gymnastika, atletika, průprava a měření.
+Každá má ŠVP okruh a klíčová slova, kterými se hledá ve starých zápisech, takže „dlouho nebylo"
+funguje i pro hodiny zapsané volným textem.
+
+Řazení tipů: nejdřív to, co skupina nejdéle neměla, pak činnosti, které učíš u jiných skupin,
+a nakonec ty, které jsi ještě nepoužil. Karta Dlouho nebylo skrývá všechno z posledních dvou týdnů.
+
+Sliby se zakládají na obrazovce Hodina a visí na Dnes, dokud je neodškrtneš.
+
 ## Co přijde dál
 
-F2 zásobník činností a výpočet „dlouho nebylo", F3 zápis do ŠOL ze šablon a měření výkonů,
-F4 asistent s nástroji, F5 synchronizace mezi iPhonem a Macem.
+F3 zápis do ŠOL ze šablon a měření výkonů, F4 asistent s nástroji,
+F5 synchronizace mezi iPhonem a Macem.
