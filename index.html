@@ -111,7 +111,7 @@ nav button[aria-selected="true"] { color: var(--accent); border-top-color: var(-
 .pill.plan { background: var(--accent-soft); color: var(--accent); }
 
 /* pupils */
-.pupil { display: grid; grid-template-columns: 22px 1fr auto auto; gap: 7px; align-items: center; padding: 6px 13px; border-top: 1px solid var(--line); }
+.pupil { display: grid; grid-template-columns: 22px 1fr auto auto auto; gap: 7px; align-items: center; padding: 6px 13px; border-top: 1px solid var(--line); }
 .pupil:first-child { border-top: 0; }
 .pupil .n { font-family: var(--fm); font-size: 11px; color: var(--ink-3); }
 .pupil .nm { font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -194,6 +194,58 @@ textarea { line-height: 1.45; }
 .err { color: var(--crit); font-size: 13.5px; margin-top: 8px; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* chips */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  appearance: none; cursor: pointer; font-family: var(--fb); font-size: 12.5px; line-height: 1.2;
+  padding: 7px 11px; border-radius: 99px; border: 1px solid var(--line-strong);
+  background: var(--surface-2); color: var(--ink-2);
+}
+.chip[aria-pressed="true"] { background: var(--accent-soft); border-color: transparent; color: var(--accent); font-weight: 600; }
+.chip:active { background: var(--surface-3); }
+
+/* poznamky u zaka */
+.pzn {
+  appearance: none; cursor: pointer; width: 32px; height: 36px; border-radius: 8px;
+  border: 1px dashed var(--line-strong); background: none; color: var(--ink-3);
+  font-family: var(--fm); font-size: 13.5px; line-height: 1;
+}
+.pzn[data-has="1"] { border: 1px solid transparent; background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+
+.sheet { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; }
+body.zamek main { overflow: hidden; }
+.sheet-bg { position: absolute; inset: 0; background: rgba(10,13,20,.45); }
+.sheet-c {
+  position: relative; width: 100%; max-width: 720px; margin: 0 auto; background: var(--surface);
+  border-radius: 14px 14px 0 0; max-height: 88vh; display: flex; flex-direction: column;
+  box-shadow: 0 -8px 30px rgba(0,0,0,.22);
+}
+.sheet-h { display: flex; align-items: center; gap: 10px; padding: 13px 13px 10px; border-bottom: 1px solid var(--line); }
+.sheet-h h3 { font-size: 15px; }
+.sheet-h .sub { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+.sheet-h .iconbtn { margin-left: auto; }
+.sheet-b { overflow-y: auto; padding: 12px 13px calc(16px + var(--safe-b)); }
+.sheet-b .sec { margin-top: 15px; }
+
+select {
+  font-size: 16px; background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 8px; padding: 9px 10px; width: 100%; font-family: inherit; color: inherit;
+}
+.duo { display: grid; grid-template-columns: 1fr 104px; gap: 8px; }
+.chk { display: flex; align-items: center; gap: 9px; margin-top: 11px; font-size: 14px; }
+.chk input { width: 20px; height: 20px; flex: 0 0 auto; }
+
+.zrow { display: grid; grid-template-columns: 54px 1fr auto; gap: 9px; align-items: start; font-size: 13.5px; padding: 9px 0; border-top: 1px solid var(--line); }
+.zrow:first-child { border-top: 0; }
+.zrow > * { min-width: 0; }
+.zrow .d { font-family: var(--fm); font-size: 11px; color: var(--ink-3); padding-top: 3px; }
+.zrow .tp { font-family: var(--fm); font-size: 9.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: 2px 6px; border-radius: 99px; background: var(--surface-3); color: var(--ink-2); margin-right: 6px; white-space: nowrap; }
+.zrow .tp.vykon { background: var(--good-soft); color: var(--good); }
+.zrow .tp.akce { background: var(--accent-soft); color: var(--accent); }
+.zrow .tp.chovani { background: var(--warn-soft); color: var(--warn); }
+.zrow .del { appearance: none; cursor: pointer; border: 1px solid var(--line-strong); background: none; color: var(--ink-3); border-radius: 8px; padding: 4px 8px; font-size: 12px; line-height: 1.4; flex: 0 0 auto; }
+.zrow .del.warn { border-color: var(--crit); color: var(--crit); }
 </style>
 </head>
 <body>
@@ -259,7 +311,7 @@ textarea { line-height: 1.45; }
     <div class="card">
       <div class="card-h"><h3>Docházka</h3><span class="eyebrow" id="attSum"></span></div>
       <div class="legend">
-        <span><b>ok</b> cvičí</span><span><b>X</b> nepřítomen</span><span><b>N</b> necvičí</span><span><b>Ú</b> bez úboru</span><span>☆ vedl rozcvičku</span>
+        <span><b>ok</b> cvičí</span><span><b>X</b> nepřítomen</span><span><b>N</b> necvičí</span><span><b>Ú</b> bez úboru</span><span>☆ vedl rozcvičku</span><span>✎ zápisy u žáka</span>
       </div>
       <div id="pupilList"></div>
     </div>
@@ -347,14 +399,46 @@ textarea { line-height: 1.45; }
   <button type="button" id="updBtn">Načíst</button>
 </div>
 
+<div class="sheet" id="zakSheet" hidden>
+  <div class="sheet-bg" id="zakBg"></div>
+  <div class="sheet-c" role="dialog" aria-modal="true" aria-labelledby="zakJm">
+    <div class="sheet-h">
+      <div style="min-width:0">
+        <h3 id="zakJm">Žák</h3>
+        <div class="sub" id="zakSk"></div>
+      </div>
+      <button class="iconbtn" id="zakX" type="button" aria-label="Zavřít">&#10005;</button>
+    </div>
+    <div class="sheet-b">
+      <div class="chips" id="zakTypy"></div>
+      <div id="zakForm"></div>
+      <div class="sec">
+        <div class="eyebrow" id="zakPocet">Zápisy</div>
+        <div id="zakList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<datalist id="dlDisc"></datalist>
+
 <div class="toast" id="toast"></div>
 
 <script>
 "use strict";
-const APP = { ver: "0.3", db: null };
+const APP = { ver: "0.4", db: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
+const POZN_TYPY = { vykon: "Výkon", akce: "Reprezentace", chovani: "Chování", pozn: "Poznámka" };
+const DISCIPLINY = [
+  ["Skok daleký", "cm"], ["Skok z místa", "cm"], ["Trojskok z místa", "cm"], ["Sprint 60 m", "s"],
+  ["Sprint 50 m", "s"], ["Běh 1000 m", "min"], ["Vytrvalostní běh 12 min", "m"], ["Hod míčkem", "m"],
+  ["Hod medicinbalem", "cm"], ["Člunkový běh 4x10 m", "s"], ["Shyby", "počet"], ["Kliky", "počet"],
+  ["Leh sedy za minutu", "počet"], ["Švihadlo za minutu", "počet"], ["Přeskok přes švihadlo", "počet"],
+  ["Hluboký předklon", "cm"], ["Výskok z místa", "cm"]
+];
+const JEDNOTKY = ["cm", "m", "s", "min", "počet", "body"];
 const POPIS = { ok: "ok", X: "X", N: "N", U: "Ú" };
 const VOLNO_DEFAULT = [
   "2026-09-28", "2026-10-28..2026-10-30", "2026-11-17",
@@ -451,12 +535,13 @@ const STORES = {
   hodiny: { keyPath: "id", idx: [["datum", "datum"], ["skupinaId", "skupinaId"]] },
   zaznamy: { keyPath: "id", idx: [["hodinaId", "hodinaId"], ["zakId", "zakId"]] },
   cinnosti: { keyPath: "id" },
-  sliby: { keyPath: "id", idx: [["skupinaId", "skupinaId"]] }
+  sliby: { keyPath: "id", idx: [["skupinaId", "skupinaId"]] },
+  pozn: { keyPath: "id", idx: [["zakId", "zakId"]] }
 };
 
 function openDB() {
   return new Promise((res, rej) => {
-    const r = indexedDB.open("cvicka", 2);
+    const r = indexedDB.open("cvicka", 3);
     r.onupgradeneeded = () => {
       const db = r.result;
       for (const [name, def] of Object.entries(STORES)) {
@@ -654,7 +739,7 @@ function okruhyZeSeznamu(seznam) {
 }
 
 /* ---------- stav aplikace ---------- */
-const S = { tab: "dnes", den: iso(new Date()), tyden: planWeek(iso(new Date())), hodinaId: null, backTo: null, histSkupina: null, zasTyp: "uvod", cache: {} };
+const S = { tab: "dnes", den: iso(new Date()), tyden: planWeek(iso(new Date())), hodinaId: null, backTo: null, histSkupina: null, zasTyp: "uvod", zakId: null, poznTyp: "vykon", poznDatum: null, cache: {} };
 
 async function refreshCache() {
   const [skupiny, zaci] = await Promise.all([dbAll("skupiny"), dbAll("zaci")]);
@@ -664,6 +749,7 @@ async function refreshCache() {
     if (!S.cache.zaciBySk.has(z.skupinaId)) S.cache.zaciBySk.set(z.skupinaId, []);
     S.cache.zaciBySk.get(z.skupinaId).push(z);
   });
+  S.cache.zakById = new Map(zaci.map((z) => [z.id, z]));
   S.cache.pocty = { skupin: skupiny.length, zaku: zaci.length };
 }
 const skName = (id) => (S.cache.skupiny.get(id) || {}).nazev || "?";
@@ -847,6 +933,11 @@ async function renderHodina() {
   const zaci = (S.cache.zaciBySk.get(h.skupinaId) || []);
   const zazn = await dbBy("zaznamy", "hodinaId", h.id);
   const mapa = new Map(zazn.map((z) => [z.zakId, z]));
+  const poznMapa = new Map();
+  (await dbAll("pozn")).forEach((p) => {
+    if (!poznMapa.has(p.zakId)) poznMapa.set(p.zakId, []);
+    poznMapa.get(p.zakId).push(p);
+  });
   zaci.forEach((z, i) => {
     const rec = mapa.get(z.id) || { id: h.id + "|" + z.id, hodinaId: h.id, zakId: z.id, stav: "ok", vedl: false };
     const row = el("div", "pupil");
@@ -866,7 +957,13 @@ async function renderHodina() {
       ld.setAttribute("aria-pressed", String(rec.vedl));
       await dbPut("zaznamy", rec);
     });
-    row.append(st, ld);
+    const pz = el("button", "pzn"); pz.type = "button"; pz.dataset.zak = z.id;
+    const n = (poznMapa.get(z.id) || []).length;
+    pz.textContent = n ? String(n) : "✎";
+    pz.dataset.has = n ? "1" : "0";
+    pz.setAttribute("aria-label", "zápisy u žáka: " + n);
+    pz.addEventListener("click", () => otevriZaka(z.id, h.datum));
+    row.append(pz, st, ld);
     row.dataset.stav = rec.stav;
     list.appendChild(row);
   });
@@ -1004,6 +1101,165 @@ async function doRestore(file) {
   } catch (e) { toast("Chyba: " + e.message); }
 }
 
+/* ---------- karta žáka ---------- */
+function poznText(p) {
+  if (p.typ === "vykon") return [p.disciplina, p.hodnota, p.jednotka].filter(Boolean).join(" ");
+  if (p.typ === "akce") return [p.nazev, p.text].filter(Boolean).join(" · ");
+  return p.text || "";
+}
+
+async function otevriZaka(zakId, datum) {
+  S.zakId = zakId;
+  S.poznDatum = datum || iso(new Date());
+  if (!S.poznTyp) S.poznTyp = "vykon";
+  $("#zakSheet").hidden = false;
+  document.body.classList.add("zamek");
+  await renderZak();
+}
+
+function zavriZaka() {
+  $("#zakSheet").hidden = true;
+  document.body.classList.remove("zamek");
+  S.zakId = null;
+}
+
+async function renderZak() {
+  const z = S.cache.zakById.get(S.zakId);
+  if (!z) { zavriZaka(); return; }
+  $("#zakJm").textContent = z.prijmeni + " " + z.jmeno;
+  $("#zakSk").textContent = skName(z.skupinaId);
+
+  const typy = $("#zakTypy"); typy.innerHTML = "";
+  Object.entries(POZN_TYPY).forEach(([k, popis]) => {
+    const b = el("button", "chip", popis); b.type = "button"; b.dataset.t = k;
+    b.setAttribute("aria-pressed", String(k === S.poznTyp));
+    b.addEventListener("click", async () => { S.poznTyp = k; await renderZak(); });
+    typy.appendChild(b);
+  });
+
+  renderZakForm();
+
+  const vse = (await dbBy("pozn", "zakId", S.zakId)).slice();
+  vse.sort((a, b) => (b.datum || "").localeCompare(a.datum || "") || (b.vytvoreno || "").localeCompare(a.vytvoreno || ""));
+  $("#zakPocet").textContent = vse.length ? "Zápisy · " + vse.length : "Zápisy";
+  const list = $("#zakList"); list.innerHTML = "";
+  if (!vse.length) { list.appendChild(el("div", "empty", "Zatím tu nic není.")); return; }
+  vse.forEach((z2) => list.appendChild(zakRow(z2)));
+}
+
+function zakRow(p) {
+  const r = el("div", "zrow");
+  r.appendChild(el("span", "d", dm(p.datum)));
+  const mid = el("span", "x");
+  mid.appendChild(el("span", "tp " + p.typ, POZN_TYPY[p.typ] || p.typ));
+  mid.appendChild(document.createTextNode(poznText(p)));
+  if (p.typ === "chovani" && p.rodicum) {
+    const t = el("span", "tp", "rodičům");
+    t.style.margin = "0 0 0 6px";
+    mid.appendChild(t);
+  }
+  r.appendChild(mid);
+  const del = el("button", "del", "✕"); del.type = "button";
+  del.setAttribute("aria-label", "smazat zápis");
+  let potvrd = false;
+  del.addEventListener("click", async () => {
+    if (!potvrd) {
+      potvrd = true; del.textContent = "Smazat?"; del.classList.add("warn");
+      setTimeout(() => { if (potvrd) { potvrd = false; del.textContent = "✕"; del.classList.remove("warn"); } }, 3500);
+      return;
+    }
+    await dbDel("pozn", p.id);
+    await renderZak();
+    await obnovZnacku(p.zakId);
+    toast("Zápis smazán");
+  });
+  r.appendChild(del);
+  return r;
+}
+
+function renderZakForm() {
+  const box = $("#zakForm"); box.innerHTML = "";
+  const t = S.poznTyp;
+  const pole = (popis, node, id) => {
+    const f = el("div", "field");
+    const l = el("label", null, popis); l.setAttribute("for", id);
+    f.append(l, node); return f;
+  };
+  const inp = (id, ph) => { const i = el("input"); i.type = "text"; i.id = id; if (ph) i.placeholder = ph; return i; };
+  const sec = el("div", "sec");
+
+  if (t === "vykon") {
+    const d = inp("pDisc", "Skok daleký"); d.setAttribute("list", "dlDisc");
+    const h = inp("pHod", "145"); h.setAttribute("inputmode", "decimal");
+    const j = el("select"); j.id = "pJed";
+    JEDNOTKY.forEach((u) => { const o = el("option", null, u); o.value = u; j.appendChild(o); });
+    d.addEventListener("change", () => {
+      const nalez = DISCIPLINY.find((x) => x[0].toLowerCase() === d.value.trim().toLowerCase());
+      if (nalez) j.value = nalez[1];
+    });
+    const duo = el("div", "duo"); duo.append(h, j);
+    sec.append(pole("Disciplína", d, "pDisc"), pole("Hodnota a jednotka", duo, "pHod"));
+  } else if (t === "akce") {
+    sec.append(pole("Název akce", inp("pNaz", "Cross cup"), "pNaz"),
+               pole("Umístění nebo poznámka", inp("pText", "3. místo"), "pText"));
+  } else {
+    const ta = el("textarea"); ta.id = "pText"; ta.rows = 2;
+    ta.placeholder = t === "chovani" ? "Co se stalo" : "Cokoli, co si chceš pamatovat";
+    sec.appendChild(pole(t === "chovani" ? "Chování" : "Poznámka", ta, "pText"));
+    if (t === "chovani") {
+      const w = el("label", "chk");
+      const c = el("input"); c.type = "checkbox"; c.id = "pRod";
+      w.append(c, el("span", null, "Už šlo rodičům"));
+      sec.appendChild(w);
+    }
+  }
+
+  const dt = el("input"); dt.type = "date"; dt.id = "pDatum"; dt.value = S.poznDatum;
+  sec.appendChild(pole("Datum", dt, "pDatum"));
+
+  const btns = el("div", "btns");
+  const b = el("button", "btn", "Uložit zápis"); b.type = "button"; b.id = "pSave";
+  b.addEventListener("click", ulozPozn);
+  btns.appendChild(b);
+  sec.appendChild(btns);
+  box.appendChild(sec);
+}
+
+async function ulozPozn() {
+  const t = S.poznTyp;
+  const datum = ($("#pDatum").value || "").trim() || iso(new Date());
+  const r = { id: uid("p"), zakId: S.zakId, typ: t, datum, vytvoreno: new Date().toISOString() };
+  if (S.hodinaId) r.hodinaId = S.hodinaId;
+  if (t === "vykon") {
+    r.disciplina = $("#pDisc").value.trim();
+    r.hodnota = $("#pHod").value.trim().replace(",", ".");
+    r.jednotka = $("#pJed").value;
+    if (!r.disciplina || !r.hodnota) { toast("Vyplň disciplínu a hodnotu"); return; }
+  } else if (t === "akce") {
+    r.nazev = $("#pNaz").value.trim();
+    r.text = $("#pText").value.trim();
+    if (!r.nazev) { toast("Vyplň název akce"); return; }
+  } else {
+    r.text = $("#pText").value.trim();
+    if (t === "chovani") r.rodicum = $("#pRod").checked;
+    if (!r.text) { toast("Napiš text"); return; }
+  }
+  S.poznDatum = datum;
+  await dbPut("pozn", r);
+  await renderZak();
+  await obnovZnacku(S.zakId);
+  toast("Uloženo");
+}
+
+async function obnovZnacku(zakId) {
+  const b = document.querySelector('#pupilList .pzn[data-zak="' + zakId + '"]');
+  if (!b) return;
+  const n = (await dbBy("pozn", "zakId", zakId)).length;
+  b.textContent = n ? String(n) : "✎";
+  b.dataset.has = n ? "1" : "0";
+  b.setAttribute("aria-label", "zápisy u žáka: " + n);
+}
+
 /* ---------- navigace ---------- */
 async function switchTab(name) {
   S.tab = name;
@@ -1027,6 +1283,11 @@ async function boot() {
   if (!(await metaGet("volno"))) await metaSet("volno", VOLNO_DEFAULT.join("\n"));
 
   document.querySelectorAll("nav button").forEach((b) => b.addEventListener("click", () => switchTab(b.dataset.tab)));
+  $("#zakX").addEventListener("click", zavriZaka);
+  $("#zakBg").addEventListener("click", zavriZaka);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#zakSheet").hidden) zavriZaka(); });
+  DISCIPLINY.forEach(([nazev]) => { const o = el("option"); o.value = nazev; $("#dlDisc").appendChild(o); });
+
   $("#navBack").addEventListener("click", async () => { const t = S.backTo; S.backTo = null; await switchTab(t || "dnes"); });
 
   $("#dPrev").addEventListener("click", () => { S.den = addDays(S.den, -1); renderDnes(); });

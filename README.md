@@ -1,7 +1,7 @@
 # Cvička
 
-Třídní kniha na tělesnou výchovu. Fáze F0 a F1: rozvrh, generování hodin na celý školní rok,
-zápis docházky a náplně hodiny, příprava na týden, záloha.
+Třídní kniha na tělesnou výchovu. Rozvrh, generování hodin na celý školní rok, zápis docházky
+a náplně hodiny, příprava na týden, zásobník činností, sliby třídě, karta žáka a záloha.
 
 Data leží v prohlížeči zařízení (IndexedDB) a nikam se neodesílají. Jména žáků neopustí zařízení.
 
@@ -57,22 +57,9 @@ V repozitáři nesmí být CSV se jmény žáků ani záloha. `.gitignore` na to
 - `sw.js` service worker pro offline
 - `manifest.webmanifest` ikona a název na ploše
 
-## Aktualizace (v0.3)
-
-Service worker jede network-first pro HTML: když je signál, dostaneš vždy čerstvou verzi,
-cache slouží jako záloha pro offline. Ostatní soubory jdou z cache a obnovují se na pozadí.
-
-Aplikace kontroluje novou verzi při startu a pokaždé, když ji vrátíš do popředí. Když ji najde,
-ukáže dole lištu s tlačítkem Načíst. Přenačtení spouštíš ty, aby to neskočilo uprostřed zápisu.
-
-Registrace používá `updateViaCache: "none"`, takže se `sw.js` nebere z HTTP cache (GitHub Pages
-na něj posílá `max-age=600`).
-
-Při každém nasazení je nutné zvýšit `CACHE` v `sw.js`, jinak zařízení novou verzi nepozná.
-
 ## Datové úložiště
 
-Object stores: `meta`, `skupiny`, `zaci`, `rozvrh`, `hodiny`, `zaznamy`.
+Object stores: `meta`, `skupiny`, `zaci`, `rozvrh`, `hodiny`, `zaznamy`, `cinnosti`, `sliby`, `pozn`.
 
 Hodina má `plan` (co chci dělat), `napln` (co se dělalo) a `zapis` (věta do ŠOL).
 Stav hodiny: `plan` → `zapsana` → `uzavrena`.
@@ -88,6 +75,25 @@ funguje i pro hodiny zapsané volným textem.
 a nakonec ty, které jsi ještě nepoužil. Karta Dlouho nebylo skrývá všechno z posledních dvou týdnů.
 
 Sliby se zakládají na obrazovce Hodina a visí na Dnes, dokud je neodškrtneš.
+
+## Karta žáka (v0.4)
+
+V docházkovém seznamu je u každého jména malé tlačítko vpravo. Tapnutí otevře kartu žáka,
+tapnutí na stav dál cykluje docházku, takže se to nepoplete. Tlačítko ukazuje počet zápisů,
+dokud žádný není, je v něm tužka.
+
+Čtyři typy zápisů, všechny s datem (předvyplněné podle otevřené hodiny):
+
+- **Výkon**: disciplína, hodnota a jednotka. Seznam disciplín je jen nápověda, dá se napsat vlastní,
+  u známých disciplín se jednotka doplní sama. Desetinná čárka se ukládá jako tečka.
+- **Reprezentace**: název akce a umístění nebo poznámka.
+- **Chování**: text a příznak, jestli už šlo rodičům.
+- **Poznámka**: cokoli dalšího.
+
+Zápisy se řadí odshora od nejnovějšího. Mazání je dvoukrokové, první tapnutí na křížek
+se zeptá, druhé smaže. Všechno leží ve store `pozn` a chodí do zálohy jako zbytek dat.
+
+Porovnání s minulým měřením a osobní rekordy přijdou ve F3.
 
 ## Co přijde dál
 
