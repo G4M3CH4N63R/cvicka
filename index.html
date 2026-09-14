@@ -426,7 +426,7 @@ select {
 
 <script>
 "use strict";
-const APP = { ver: "0.4", db: null };
+const APP = { ver: "0.4.1", db: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -1092,12 +1092,16 @@ async function doRestore(file) {
   try {
     const dump = JSON.parse(await file.text());
     if (dump.app !== "cvicka") throw new Error("tohle není záloha Cvičky");
+    const chybi = [];
     for (const s of Object.keys(STORES)) {
+      // Store, který záloha vůbec nezná (starší verze appky), necháváme být.
+      // Kdybychom ho promazali, přišli bychom o data, která záloha nemůže vrátit.
+      if (!dump.data[s]) { chybi.push(s); continue; }
       await dbClear(s);
-      if (dump.data[s] && dump.data[s].length) await dbPutMany(s, dump.data[s]);
+      if (dump.data[s].length) await dbPutMany(s, dump.data[s]);
     }
     await refreshCache(); await renderNastaveni(); await renderDnes();
-    toast("Obnoveno ze zálohy");
+    toast(chybi.length ? "Obnoveno ze zálohy (beze změny: " + chybi.join(", ") + ")" : "Obnoveno ze zálohy");
   } catch (e) { toast("Chyba: " + e.message); }
 }
 
