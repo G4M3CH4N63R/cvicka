@@ -190,6 +190,8 @@ textarea { line-height: 1.45; }
   max-width: 90vw; text-align: center;
 }
 .toast.on { opacity: 1; }
+.warn-card { border-color: var(--warn); }
+.warn-card .card-h h3 { color: var(--warn); }
 .hint { font-size: 12.5px; color: var(--ink-3); margin-top: 8px; }
 .err { color: var(--crit); font-size: 13.5px; margin-top: 8px; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -259,6 +261,13 @@ select {
 <main>
   <!-- DNES -->
   <section class="screen" id="s-dnes"><div class="wrap">
+    <div class="card warn-card" id="zalohaCard" hidden>
+      <div class="card-h"><h3>Záloha</h3><span class="eyebrow" id="zalohaKdy"></span></div>
+      <div class="card-b">
+        <p class="hint" style="margin-top:0">Data Cvičky leží jen v tomhle zařízení. Dokud nebude synchronizace, je stažená záloha jediná pojistka.</p>
+        <div class="btns"><button class="btn ghost" id="bZalohaTed" type="button">Stáhnout zálohu</button></div>
+      </div>
+    </div>
     <div class="card">
       <div class="card-h">
         <h3 id="dnesDen">Dnes</h3>
@@ -426,7 +435,7 @@ select {
 
 <script>
 "use strict";
-const APP = { ver: "0.4.1", db: null };
+const APP = { ver: "0.5", db: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -520,6 +529,31 @@ const mondayOf = (s) => { const d = parseISO(s); const w = (d.getDay() + 6) % 7;
 const planWeek = (s) => { const dow = parseISO(s).getDay(); return (dow === 0 || dow === 6) ? addDays(mondayOf(s), 7) : mondayOf(s); };
 const dm = (s) => { const d = parseISO(s); return `${d.getDate()}. ${d.getMonth() + 1}.`; };
 const uid = (p) => p + "_" + Math.random().toString(16).slice(2, 10);
+// Stabilni id odvozene z obsahu. Import stejnych CSV na iPhonu i MacBooku musi dat stejna id,
+// jinak by se zaznamy ze serveru nespárovaly s mistnim jmennym seznamem. FNV-1a ve dvou
+// 32bitovych pulkach, tedy 64 bitu, deterministicky v kazdem prohlizeci.
+function hid(text) {
+  let a = 0x811c9dc5, b = 0x01000193;
+  const t = String(text);
+  for (let i = 0; i < t.length; i++) {
+    const c = t.charCodeAt(i);
+    a = Math.imul(a ^ c, 0x01000193) >>> 0;
+    b = Math.imul(b ^ c, 0x85ebca6b) >>> 0;
+  }
+  return (a >>> 0).toString(16).padStart(8, "0") + (b >>> 0).toString(16).padStart(8, "0");
+}
+// Dva zaci se stejnym jmenem ve stejne skupine by dostali stejne id. Poradi je dane
+// abecednim setridenim pred prirazenim, takze pripona vyjde na obou zarizenich stejne.
+function unikat(id, pouzite) {
+  let v = id, n = 2;
+  while (pouzite.has(v)) { v = id + "_" + n; n++; }
+  pouzite.add(v);
+  return v;
+}
+const skId = (key) => "sk_" + hid(key);
+const rzId = (skupinaId, den, poradi) => "rz_" + hid(skupinaId + "|" + den + "|" + poradi);
+const zakId = (skupinaId, prijmeni, jmeno) => "z_" + hid(skupinaId + "|" + prijmeni + "|" + jmeno);
+const cinId = (nazev) => "c_" + hid(nazev);
 
 function toast(msg) {
   const t = $("#toast"); t.textContent = msg; t.classList.add("on");
@@ -541,7 +575,7 @@ const STORES = {
 
 function openDB() {
   return new Promise((res, rej) => {
-    const r = indexedDB.open("cvicka", 3);
+    const r = indexedDB.open("cvicka", 4);
     r.onupgradeneeded = () => {
       const db = r.result;
       for (const [name, def] of Object.entries(STORES)) {
@@ -611,12 +645,14 @@ async function importData(rozvrhText, zaciText) {
     const key = tridy.join(" + ") + "|" + typ;
     if (!skupiny.has(key)) {
       const nazev = tridy.join(" + ") + (typ === "celá třída" ? "" : " " + typ);
-      skupiny.set(key, { id: uid("sk"), nazev, tridy, typ, key });
+      skupiny.set(key, { id: skId(key), nazev, tridy, typ, key });
     }
     const sk = skupiny.get(key);
+    const den = DNY.indexOf((r.den || "").trim());
+    const poradi = Number(r.hodina);
     rozvrh.push({
-      id: uid("rz"), skupinaId: sk.id, den: DNY.indexOf((r.den || "").trim()),
-      poradi: Number(r.hodina), cas: r.cas || HODINY_CAS[Number(r.hodina)] || "", mistnost: r.mistnost || ""
+      id: rzId(sk.id, den, poradi), skupinaId: sk.id, den, poradi,
+      cas: r.cas || HODINY_CAS[poradi] || "", mistnost: r.mistnost || ""
     });
   }
 
@@ -629,15 +665,35 @@ async function importData(rozvrhText, zaciText) {
       if (s.typ === z.typ && s.tridy.includes(z.trida)) { sk = s; break; }
     }
     if (!sk) { nespárováno.push(`${z.trida} ${z.prijmeni}`); continue; }
-    zaci.push({ id: uid("z"), skupinaId: sk.id, trida: z.trida, prijmeni: z.prijmeni, jmeno: z.jmeno });
+    zaci.push({ skupinaId: sk.id, trida: z.trida, prijmeni: z.prijmeni, jmeno: z.jmeno });
   }
+  // Tridit PRED prirazenim id a bez localeCompare, aby poradi (a tim i pripona u shodnych jmen)
+  // vyslo stejne na iPhonu i na Macu. Na obrazovkach se pak tridi znovu podle ceske abecedy.
+  zaci.sort((a, b) => (a.skupinaId + "|" + a.prijmeni + "|" + a.jmeno < b.skupinaId + "|" + b.prijmeni + "|" + b.jmeno ? -1 : 1));
+  const pouziteZ = new Set();
+  zaci.forEach((z) => { z.id = unikat(zakId(z.skupinaId, z.prijmeni, z.jmeno), pouziteZ); });
   zaci.sort((a, b) => a.prijmeni.localeCompare(b.prijmeni, "cs") || a.jmeno.localeCompare(b.jmeno, "cs"));
 
-  await dbClear("skupiny"); await dbClear("zaci"); await dbClear("rozvrh");
-  await dbPutMany("skupiny", [...skupiny.values()]);
-  await dbPutMany("zaci", zaci);
+  // Upsert misto mazani: id jsou odvozena z obsahu, takze stejny soubor da stejna id
+  // a opakovany import nic nerozbije. Zaci, kteri v novem CSV nejsou, se schovaji,
+  // ale karta a historie jim zustanou.
+  const stariZaci = await dbAll("zaci");
+  const noviIds = new Set(zaci.map((z) => z.id));
+  const odesli = stariZaci.filter((z) => !noviIds.has(z.id) && !z.neaktivni);
+  for (const z of odesli) await dbPut("zaci", { ...z, neaktivni: true });
+  const stariById = new Map(stariZaci.map((z) => [z.id, z]));
+  await dbPutMany("zaci", zaci.map((z) => ({ ...stariById.get(z.id), ...z, neaktivni: false })));
+
+  const stareSk = await dbAll("skupiny");
+  const skById = new Map(stareSk.map((x) => [x.id, x]));
+  await dbPutMany("skupiny", [...skupiny.values()].map((x) => ({ ...skById.get(x.id), ...x })));
+
+  const stareRz = await dbAll("rozvrh");
+  const noveRzIds = new Set(rozvrh.map((r) => r.id));
+  for (const r of stareRz) if (!noveRzIds.has(r.id)) await dbDel("rozvrh", r.id);
   await dbPutMany("rozvrh", rozvrh);
-  return { skupin: skupiny.size, zaku: zaci.length, slotu: rozvrh.length, nespárováno };
+
+  return { skupin: skupiny.size, zaku: zaci.length, slotu: rozvrh.length, nespárováno, odesli: odesli.length };
 }
 
 /* ---------- generovani hodin ---------- */
@@ -677,7 +733,10 @@ async function generujHodiny(od, doD, volnoText) {
   }
   // odstranit prazdne hodiny, ktere uz v rozvrhu nejsou
   const smazat = stare.filter((h) => !chtene.has(h.id) && h.stav === "plan" && !h.napln && !h.plan);
-  for (const h of smazat) await dbDel("hodiny", h.id);
+  for (const h of smazat) {
+    await dbDel("hodiny", h.id);
+    for (const z of await dbBy("zaznamy", "hodinaId", h.id)) await dbDel("zaznamy", z.id);
+  }
   if (nove.length) await dbPutMany("hodiny", nove);
   return { pridano: nove.length, smazano: smazat.length, celkem: chtene.size };
 }
@@ -690,7 +749,7 @@ async function seedCinnosti() {
   const maji = new Set(stav.map((c) => c.nazev));
   const nove = CINNOSTI_SEED
     .filter(([nazev]) => !maji.has(nazev))
-    .map(([nazev, typ, okruh, klice]) => ({ id: uid("c"), nazev, typ, okruh: OKRUHY[okruh], klice: klice.split("|"), vlastni: false }));
+    .map(([nazev, typ, okruh, klice]) => ({ id: cinId(nazev), nazev, typ, okruh: OKRUHY[okruh], klice: klice.split("|"), vlastni: false }));
   if (nove.length) await dbPutMany("cinnosti", nove);
   await metaSet("seedVerze", SEED_VERZE);
 }
@@ -746,9 +805,12 @@ async function refreshCache() {
   S.cache.skupiny = new Map(skupiny.map((s) => [s.id, s]));
   S.cache.zaciBySk = new Map();
   zaci.forEach((z) => {
+    if (z.neaktivni) return;
     if (!S.cache.zaciBySk.has(z.skupinaId)) S.cache.zaciBySk.set(z.skupinaId, []);
     S.cache.zaciBySk.get(z.skupinaId).push(z);
   });
+  S.cache.zaciBySk.forEach((pole) => pole.sort((a, b) =>
+    a.prijmeni.localeCompare(b.prijmeni, "cs") || a.jmeno.localeCompare(b.jmeno, "cs")));
   S.cache.zakById = new Map(zaci.map((z) => [z.id, z]));
   S.cache.pocty = { skupin: skupiny.length, zaku: zaci.length };
 }
@@ -764,6 +826,7 @@ async function skocNaNejblizsiDen() {
 
 async function renderDnes() {
   $("#dnesDen").textContent = czFull(S.den);
+  await renderZalohaVyzva();
   const list = $("#dnesList"); list.innerHTML = "";
   const hod = (await dbBy("hodiny", "datum", S.den)).sort((a, b) => a.poradi - b.poradi);
   if (!hod.length) {
@@ -1054,14 +1117,14 @@ async function doImport() {
     const [tR, tZ] = await Promise.all([fR.text(), fZ.text()]);
     const r = await importData(tR, tZ);
     await metaSet("od", $("#fOd").value); await metaSet("do", $("#fDo").value); await metaSet("volno", $("#fVolno").value);
-    await dbClear("hodiny"); await dbClear("zaznamy");
     const g = await generujHodiny($("#fOd").value, $("#fDo").value, $("#fVolno").value);
     await refreshCache();
     await skocNaNejblizsiDen();
     S.tyden = planWeek(iso(new Date()));
     msg.className = "hint";
     msg.textContent = `Načteno: ${r.skupin} skupin, ${r.zaku} žáků, ${r.slotu} hodin v rozvrhu. Vygenerováno ${g.celkem} hodin do konce roku.`
-      + (r.nespárováno.length ? ` Nespárováno: ${r.nespárováno.length} žáků (${r.nespárováno.slice(0, 3).join(", ")}…).` : "");
+      + (r.nespárováno.length ? ` Nespárováno: ${r.nespárováno.length} žáků (${r.nespárováno.slice(0, 3).join(", ")}…).` : "")
+      + (r.odesli ? ` Mimo seznam: ${r.odesli} žáků, schovaní z docházky, karty a historie jim zůstaly.` : "");
     await renderNastaveni(); toast("Hotovo");
   } catch (e) {
     msg.className = "err"; msg.textContent = "Nepovedlo se: " + e.message;
@@ -1085,6 +1148,8 @@ async function doExport() {
   a.download = "cvicka-zaloha-" + iso(new Date()) + ".json";
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  await metaSet("zalohaKdy", Date.now());
+  await renderZalohaVyzva();
   toast("Záloha stažena");
 }
 
@@ -1103,6 +1168,75 @@ async function doRestore(file) {
     await refreshCache(); await renderNastaveni(); await renderDnes();
     toast(chybi.length ? "Obnoveno ze zálohy (beze změny: " + chybi.join(", ") + ")" : "Obnoveno ze zálohy");
   } catch (e) { toast("Chyba: " + e.message); }
+}
+
+/* ---------- připomínka zálohy ---------- */
+const ZALOHA_PO_DNECH = 14;
+
+async function renderZalohaVyzva() {
+  const kdy = await metaGet("zalohaKdy", 0);
+  const dnu = kdy ? Math.floor((Date.now() - kdy) / 86400000) : null;
+  const card = $("#zalohaCard");
+  const prazdno = !(await dbAll("hodiny")).length;
+  card.hidden = prazdno || (dnu !== null && dnu < ZALOHA_PO_DNECH);
+  $("#zalohaKdy").textContent = dnu === null ? "zatím nikdy" : (dnu === 0 ? "dnes" : "před " + dnu + " dny");
+}
+
+/* ---------- migrace na stabilní id (v0.5) ---------- */
+// Do v0.4.1 mela id nahodnou cast, takze stejny CSV dal na kazdem zarizeni jina id
+// a synchronizace by nemela co parovat. Tady se vsechna id prepocitaji z obsahu
+// a prepisou se odkazy ve vsech zaznamech. Bezi jednou, pak se zamkne klicem idV5.
+async function migraceStabilnichId() {
+  if (await metaGet("idV5", false)) return null;
+  const [skupiny, zaci, rozvrh, cinnosti, hodiny, zaznamy, sliby, pozn] = await Promise.all([
+    dbAll("skupiny"), dbAll("zaci"), dbAll("rozvrh"), dbAll("cinnosti"),
+    dbAll("hodiny"), dbAll("zaznamy"), dbAll("sliby"), dbAll("pozn")
+  ]);
+  if (!skupiny.length && !zaci.length && !hodiny.length) { await metaSet("idV5", true); return null; }
+
+  const mSk = new Map(), mZ = new Map(), mRz = new Map(), mC = new Map();
+  skupiny.forEach((x) => mSk.set(x.id, skId(x.key || ((x.tridy || []).join(" + ") + "|" + x.typ))));
+  rozvrh.forEach((r) => mRz.set(r.id, rzId(mSk.get(r.skupinaId) || r.skupinaId, r.den, r.poradi)));
+  const pouziteZ = new Set();
+  [...zaci]
+    .sort((a, b) => ((mSk.get(a.skupinaId) || "") + "|" + a.prijmeni + "|" + a.jmeno < (mSk.get(b.skupinaId) || "") + "|" + b.prijmeni + "|" + b.jmeno ? -1 : 1))
+    .forEach((z) => mZ.set(z.id, unikat(zakId(mSk.get(z.skupinaId) || z.skupinaId, z.prijmeni, z.jmeno), pouziteZ)));
+  cinnosti.forEach((c) => mC.set(c.id, cinId(c.nazev)));
+
+  // hodina.id ma tvar "datum|rozvrhId", takze staci vymenit druhou cast
+  const mH = new Map();
+  hodiny.forEach((h) => {
+    const i = h.id.indexOf("|");
+    const stareRz = i >= 0 ? h.id.slice(i + 1) : "";
+    mH.set(h.id, i >= 0 && mRz.has(stareRz) ? h.id.slice(0, i) + "|" + mRz.get(stareRz) : h.id);
+  });
+
+  const noveSk = skupiny.map((x) => ({ ...x, id: mSk.get(x.id) }));
+  const noveRz = rozvrh.map((r) => ({ ...r, id: mRz.get(r.id), skupinaId: mSk.get(r.skupinaId) || r.skupinaId }));
+  const noveZ = zaci.map((z) => ({ ...z, id: mZ.get(z.id), skupinaId: mSk.get(z.skupinaId) || z.skupinaId }));
+  const noveC = cinnosti.map((c) => ({ ...c, id: mC.get(c.id) }));
+  const noveH = hodiny.map((h) => ({
+    ...h, id: mH.get(h.id), skupinaId: mSk.get(h.skupinaId) || h.skupinaId,
+    cinnosti: (h.cinnosti || []).map((x) => mC.get(x) || x)
+  }));
+  const noveZaz = zaznamy.map((z) => {
+    const hid2 = mH.get(z.hodinaId) || z.hodinaId;
+    const zid2 = mZ.get(z.zakId) || z.zakId;
+    return { ...z, id: hid2 + "|" + zid2, hodinaId: hid2, zakId: zid2 };
+  });
+  const noveSl = sliby.map((x) => ({ ...x, skupinaId: mSk.get(x.skupinaId) || x.skupinaId }));
+  const noveP = pozn.map((x) => ({ ...x, zakId: mZ.get(x.zakId) || x.zakId }));
+
+  const davky = [
+    ["skupiny", noveSk], ["rozvrh", noveRz], ["zaci", noveZ], ["cinnosti", noveC],
+    ["hodiny", noveH], ["zaznamy", noveZaz], ["sliby", noveSl], ["pozn", noveP]
+  ];
+  for (const [store, data] of davky) {
+    await dbClear(store);
+    if (data.length) await dbPutMany(store, data);
+  }
+  await metaSet("idV5", true);
+  return { skupin: noveSk.length, zaku: noveZ.length, hodin: noveH.length, zaznamu: noveZaz.length, poznamek: noveP.length };
 }
 
 /* ---------- karta žáka ---------- */
@@ -1282,8 +1416,10 @@ async function switchTab(name) {
 /* ---------- start ---------- */
 async function boot() {
   APP.db = await openDB();
+  const mig = await migraceStabilnichId();
   await refreshCache();
   await seedCinnosti();
+  if (mig) setTimeout(() => toast("Data převedena na stabilní id (" + mig.zaznamu + " záznamů docházky)"), 900);
   if (!(await metaGet("volno"))) await metaSet("volno", VOLNO_DEFAULT.join("\n"));
 
   document.querySelectorAll("nav button").forEach((b) => b.addEventListener("click", () => switchTab(b.dataset.tab)));
@@ -1332,6 +1468,7 @@ async function boot() {
     toast("Slib uložen");
   });
 
+  $("#bZalohaTed").addEventListener("click", doExport);
   $("#bImport").addEventListener("click", doImport);
   $("#bRegen").addEventListener("click", doRegen);
   $("#bExport").addEventListener("click", doExport);

@@ -115,7 +115,37 @@ která ještě nezná nějaké úložiště (třeba zálohu z v0.1 bez `cinnosti
 zůstane to úložiště beze změny místo toho, aby se promazalo. Hláška po obnově vypíše,
 čeho se to týkalo.
 
+## Stabilní id a příprava na synchronizaci (v0.5)
+
+Do v0.4.1 mělo každé id náhodnou část, takže ten samý CSV soubor dal na iPhonu jiná id než
+na MacBooku a synchronizace by neměla co párovat. Od v0.5 se id odvozují z obsahu:
+
+- skupina z dvojice třídy a typ skupiny
+- rozvrhový slot ze skupiny, dne a pořadí hodiny
+- žák ze skupiny, příjmení a jména
+- činnost z názvu
+- hodina zůstává ve tvaru `datum|rozvrhId`, takže je stabilní také
+
+Díky tomu dá import stejných souborů na obou zařízeních stejná id a stačí, aby si každé
+zařízení natáhlo jmenný seznam z CSV samo. Jméno žáka tak nikdy nemusí opustit zařízení.
+
+Existující data se při prvním startu v0.5 automaticky přepočítají, včetně odkazů v docházce,
+slibech a poznámkách. Migrace běží jednou a zamkne se klíčem `idV5` v `meta`.
+
+Import se tím zároveň změnil ze „smazat a založit znovu" na doplňování. Opakovaný import
+nic nerozbije, hodiny ani docházka se nemažou, a žáci, kteří v novém CSV nejsou, se jen
+schovají z docházky. Karta a historie jim zůstanou.
+
+Docházkový seznam se nově řadí podle české abecedy. Dřív jel v pořadí id, tedy náhodně.
+
+## Připomínka zálohy (v0.5)
+
+Když je poslední stažená záloha starší než čtrnáct dní nebo žádná nebyla, ukáže se nahoře
+na obrazovce Dnes karta s tlačítkem Stáhnout zálohu. Zmizí, jakmile zálohu stáhneš.
+Datum poslední zálohy je v `meta` pod klíčem `zalohaKdy`.
+
 ## Co přijde dál
 
-F3 zápis do ŠOL ze šablon a měření výkonů, F4 asistent s nástroji,
-F5 synchronizace mezi iPhonem a Macem.
+F5 synchronizace mezi iPhonem a MacBookem: Cloudflare Worker a D1, na server jdou jen kódy
+a čísla, poznámky o chování šifrované heslem, jména zůstávají v zařízení.
+Pak F3 zápis do ŠOL ze šablon, porovnání výkonů a pololetní přehledy, a F4 asistent s nástroji.
