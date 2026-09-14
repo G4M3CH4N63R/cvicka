@@ -122,15 +122,29 @@ na MacBooku a synchronizace by neměla co párovat. Od v0.5 se id odvozují z ob
 
 - skupina z dvojice třídy a typ skupiny
 - rozvrhový slot ze skupiny, dne a pořadí hodiny
-- žák ze skupiny, příjmení a jména
+- žák ze skupiny, **třídy**, příjmení a jména
 - činnost z názvu
 - hodina zůstává ve tvaru `datum|rozvrhId`, takže je stabilní také
+
+Třída musí být v klíči žáka: skupina „VI. A + VI. B chlapci" sbírá žáky ze dvou tříd,
+takže dva Jan Novákové z VI. A a VI. B by jinak spadli na stejné id. Skuteční jmenovci
+ve stejné třídě dostanou příponu `_2` podle pořadí v CSV, které je na obou zařízeních stejné.
 
 Díky tomu dá import stejných souborů na obou zařízeních stejná id a stačí, aby si každé
 zařízení natáhlo jmenný seznam z CSV samo. Jméno žáka tak nikdy nemusí opustit zařízení.
 
-Existující data se při prvním startu v0.5 automaticky přepočítají, včetně odkazů v docházce,
-slibech a poznámkách. Migrace běží jednou a zamkne se klíčem `idV5` v `meta`.
+Existující data se při prvním startu automaticky přepočítají, včetně odkazů v docházce,
+slibech a poznámkách. Migrace je řízená konstantou `ID_VERZE` v kódu a klíčem `idVerze`
+v `meta`. Když se schéma id někdy znovu změní, stačí zvednout číslo a přepočet proběhne
+odznova z aktuálních dat.
+
+**Celý přepočet běží v jedné transakci IndexedDB** přes všech osm úložišť plus `meta`.
+Kdyby to šlo úložiště po úložišti a iOS aplikaci mezitím uspal, mohla by docházka zůstat
+ukazovat na žáky, kteří už mají jiné id. Takhle se povede buď všechno, nebo nic.
+Uvnitř té transakce nesmí být žádný `await`, jinak ji prohlížeč uzavře.
+
+Přepočet se spouští i hned po obnově ze zálohy, protože záloha nese i úložiště `meta`
+a může tedy vrátit starší `idVerze` a s ním stará id.
 
 Import se tím zároveň změnil ze „smazat a založit znovu" na doplňování. Opakovaný import
 nic nerozbije, hodiny ani docházka se nemažou, a žáci, kteří v novém CSV nejsou, se jen

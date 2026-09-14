@@ -435,7 +435,7 @@ select {
 
 <script>
 "use strict";
-const APP = { ver: "0.5", db: null };
+const APP = { ver: "0.5.1", db: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -552,7 +552,13 @@ function unikat(id, pouzite) {
 }
 const skId = (key) => "sk_" + hid(key);
 const rzId = (skupinaId, den, poradi) => "rz_" + hid(skupinaId + "|" + den + "|" + poradi);
-const zakId = (skupinaId, prijmeni, jmeno) => "z_" + hid(skupinaId + "|" + prijmeni + "|" + jmeno);
+// Trida musi byt v klici: skupina "VI. A + VI. B chlapci" sbira zaky ze dvou trid,
+// takze dva Jan Novakove z VI. A a VI. B by jinak spadli na stejne id.
+const zakId = (skupinaId, trida, prijmeni, jmeno) => "z_" + hid(skupinaId + "|" + (trida || "") + "|" + prijmeni + "|" + jmeno);
+const zakKlic = (z) => (z.skupinaId || "") + "|" + (z.trida || "") + "|" + z.prijmeni + "|" + z.jmeno;
+// Radne porovnani: pri shode vraci 0, takze stabilni sort zachova poradi z CSV
+// a pripona _2 u opravdovych duplicit vyjde na obou zarizenich stejne.
+const zakPoradi = (a, b) => { const x = zakKlic(a), y = zakKlic(b); return x < y ? -1 : x > y ? 1 : 0; };
 const cinId = (nazev) => "c_" + hid(nazev);
 
 function toast(msg) {
@@ -669,9 +675,9 @@ async function importData(rozvrhText, zaciText) {
   }
   // Tridit PRED prirazenim id a bez localeCompare, aby poradi (a tim i pripona u shodnych jmen)
   // vyslo stejne na iPhonu i na Macu. Na obrazovkach se pak tridi znovu podle ceske abecedy.
-  zaci.sort((a, b) => (a.skupinaId + "|" + a.prijmeni + "|" + a.jmeno < b.skupinaId + "|" + b.prijmeni + "|" + b.jmeno ? -1 : 1));
+  zaci.sort(zakPoradi);
   const pouziteZ = new Set();
-  zaci.forEach((z) => { z.id = unikat(zakId(z.skupinaId, z.prijmeni, z.jmeno), pouziteZ); });
+  zaci.forEach((z) => { z.id = unikat(zakId(z.skupinaId, z.trida, z.prijmeni, z.jmeno), pouziteZ); });
   zaci.sort((a, b) => a.prijmeni.localeCompare(b.prijmeni, "cs") || a.jmeno.localeCompare(b.jmeno, "cs"));
 
   // Upsert misto mazani: id jsou odvozena z obsahu, takze stejny soubor da stejna id
@@ -1165,6 +1171,9 @@ async function doRestore(file) {
       await dbClear(s);
       if (dump.data[s].length) await dbPutMany(s, dump.data[s]);
     }
+    // Zaloha nese i store meta, takze muze vratit stare idVerze a s nim stara id.
+    // Migrace se proto pousti hned po obnove, ne az pri dalsim startu.
+    await migraceStabilnichId();
     await refreshCache(); await renderNastaveni(); await renderDnes();
     toast(chybi.length ? "Obnoveno ze zálohy (beze změny: " + chybi.join(", ") + ")" : "Obnoveno ze zálohy");
   } catch (e) { toast("Chyba: " + e.message); }
@@ -1182,25 +1191,30 @@ async function renderZalohaVyzva() {
   $("#zalohaKdy").textContent = dnu === null ? "zatím nikdy" : (dnu === 0 ? "dnes" : "před " + dnu + " dny");
 }
 
-/* ---------- migrace na stabilní id (v0.5) ---------- */
+/* ---------- migrace na stabilní id ---------- */
 // Do v0.4.1 mela id nahodnou cast, takze stejny CSV dal na kazdem zarizeni jina id
 // a synchronizace by nemela co parovat. Tady se vsechna id prepocitaji z obsahu
-// a prepisou se odkazy ve vsech zaznamech. Bezi jednou, pak se zamkne klicem idV5.
+// a prepisou se odkazy ve vsech zaznamech.
+// ID_VERZE 1 = v0.5, 2 = v0.5.1 (do klice zaka pribyla trida). Kdyz se schema id
+// znovu zmeni, staci zvednout cislo a migrace probehne odznovu z aktualnich dat.
+const ID_VERZE = 2;
+
 async function migraceStabilnichId() {
-  if (await metaGet("idV5", false)) return null;
+  if ((await metaGet("idVerze", 0)) >= ID_VERZE) return null;
   const [skupiny, zaci, rozvrh, cinnosti, hodiny, zaznamy, sliby, pozn] = await Promise.all([
     dbAll("skupiny"), dbAll("zaci"), dbAll("rozvrh"), dbAll("cinnosti"),
     dbAll("hodiny"), dbAll("zaznamy"), dbAll("sliby"), dbAll("pozn")
   ]);
-  if (!skupiny.length && !zaci.length && !hodiny.length) { await metaSet("idV5", true); return null; }
+  if (!skupiny.length && !zaci.length && !hodiny.length) { await metaSet("idVerze", ID_VERZE); return null; }
 
   const mSk = new Map(), mZ = new Map(), mRz = new Map(), mC = new Map();
   skupiny.forEach((x) => mSk.set(x.id, skId(x.key || ((x.tridy || []).join(" + ") + "|" + x.typ))));
   rozvrh.forEach((r) => mRz.set(r.id, rzId(mSk.get(r.skupinaId) || r.skupinaId, r.den, r.poradi)));
   const pouziteZ = new Set();
   [...zaci]
-    .sort((a, b) => ((mSk.get(a.skupinaId) || "") + "|" + a.prijmeni + "|" + a.jmeno < (mSk.get(b.skupinaId) || "") + "|" + b.prijmeni + "|" + b.jmeno ? -1 : 1))
-    .forEach((z) => mZ.set(z.id, unikat(zakId(mSk.get(z.skupinaId) || z.skupinaId, z.prijmeni, z.jmeno), pouziteZ)));
+    .map((z) => ({ ...z, skupinaId: mSk.get(z.skupinaId) || z.skupinaId }))
+    .sort(zakPoradi)
+    .forEach((z) => mZ.set(z.id, unikat(zakId(z.skupinaId, z.trida, z.prijmeni, z.jmeno), pouziteZ)));
   cinnosti.forEach((c) => mC.set(c.id, cinId(c.nazev)));
 
   // hodina.id ma tvar "datum|rozvrhId", takze staci vymenit druhou cast
@@ -1231,11 +1245,25 @@ async function migraceStabilnichId() {
     ["skupiny", noveSk], ["rozvrh", noveRz], ["zaci", noveZ], ["cinnosti", noveC],
     ["hodiny", noveH], ["zaznamy", noveZaz], ["sliby", noveSl], ["pozn", noveP]
   ];
+
+  // Vsechno v JEDNE transakci. Kdyby to slo store po store a iOS appku mezitim uspal,
+  // zustala by docházka ukazovat na zaky, kteri uz maji jine id, nebo by cely store
+  // zmizel mezi vymazanim a zapisem. Takhle se povede bud vsechno, nebo nic.
+  // Uvnitr transakce nesmi byt zadny await, jinak ji prohlizec uzavre.
+  const stores = davky.map(([n]) => n).concat("meta");
+  const t = APP.db.transaction(stores, "readwrite");
   for (const [store, data] of davky) {
-    await dbClear(store);
-    if (data.length) await dbPutMany(store, data);
+    const os = t.objectStore(store);
+    os.clear();
+    data.forEach((x) => os.put(x));
   }
-  await metaSet("idV5", true);
+  t.objectStore("meta").put({ k: "idVerze", v: ID_VERZE });
+  await new Promise((res, rej) => {
+    t.oncomplete = () => res();
+    t.onerror = () => rej(t.error || new Error("migrace selhala"));
+    t.onabort = () => rej(t.error || new Error("migrace přerušena"));
+  });
+
   return { skupin: noveSk.length, zaku: noveZ.length, hodin: noveH.length, zaznamu: noveZaz.length, poznamek: noveP.length };
 }
 
