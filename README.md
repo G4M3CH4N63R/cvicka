@@ -169,15 +169,29 @@ Běží samo: při startu, při návratu do aplikace, po návratu signálu a s o
 po každém zápisu. Ručně jde spustit tlačítkem. Offline se zápisy hromadí ve frontě
 a odejdou, až bude signál.
 
-**Jméno žáka na server nikdy nejde.** Úložiště `zaci` se neodesílá a Worker ho navíc odmítá.
-Druhé zařízení si jmenný seznam natáhne z těch samých CSV ze ŠOL a spáruje ho podle
+**Jmenný seznam na server nikdy nejde.** Úložiště `zaci` se neodesílá a Worker ho navíc
+odmítá. Druhé zařízení si jména natáhne z těch samých CSV ze ŠOL a spáruje je podle
 stabilních id z v0.5. Proto na tom ta verze musela být první.
 
-**Poznámky o chování se šifrují v zařízení** (AES-GCM, klíč z hesla přes PBKDF2, 250 tisíc
-iterací). Server vidí jen bajty. Dokud není zadané heslo, neodesílají se vůbec a čekají
-ve frontě. Na druhém zařízení se po zadání hesla dodatečně rozšifrují i ty, které už dorazily.
+**Volný text u zápisů k žákovi se šifruje v zařízení** (AES-GCM, klíč z hesla přes PBKDF2,
+250 tisíc iterací). Od v0.6.1 to platí pro všechny typy zápisu, tedy i pro volnou poznámku
+a text u reprezentace, ne jenom pro chování: i do volné poznámky se dá napsat jméno.
+Čísla, disciplíny a názvy akcí zůstávají čitelné, aby se z nich daly dělat přehledy.
+Dokud není zadané heslo, zápisy s textem se neodesílají vůbec a čekají ve frontě.
+Na druhém zařízení se po zadání hesla dodatečně rozšifrují i ty, které už dorazily.
 Sůl je náhodná, putuje mezi zařízeními v úložišti `sys` a na serveru platí první zápis,
-aby ji druhé zařízení nepřepsalo svojí a nezneplatnilo tím už zašifrované poznámky.
+aby ji druhé zařízení nepřepsalo svojí a nezneplatnilo tím už zašifrované zápisy.
+
+Zápis, který přišel zašifrovaný a nepodařilo se ho otevřít, se nikdy neposílá zpátky.
+Bez toho by se zašifrovalo prázdno a se stejným `updatedAt` by to na serveru přepsalo
+skutečný obsah.
+
+**Kde ta záruka končí:** náplň hodiny, plán a zápis do ŠOL jdou na server čitelně, protože
+to jsou texty o třídě, ne o konkrétním žákovi. Když do nich napíšeš jméno, na serveru skončí.
+
+**Token a heslo nejsou v záloze.** `syncToken` a `sifraHeslo` se při exportu z úložiště `meta`
+vynechávají. Záloha leží na disku, v iCloudu a v Time Machine, a kdo by ji otevřel, měl by
+jinak klíč k serveru i k zápisům. Po obnově na vyčištěném zařízení se obojí zadá znovu.
 
 **Prázdné hodiny se neodesílají.** Obě zařízení si je vygenerují z rozvrhu sama a díky
 stabilním id vyjdou stejně. Jakmile do hodiny něco přibude, dostane příznak `sync`

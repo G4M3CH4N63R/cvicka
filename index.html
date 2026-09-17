@@ -449,7 +449,7 @@ select {
 
 <script>
 "use strict";
-const APP = { ver: "0.6", db: null, sync: null, klic: null };
+const APP = { ver: "0.6.1", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -1239,10 +1239,15 @@ async function doRegen() {
 }
 
 const ZALOHA_STORES = Object.keys(STORES).filter((s) => s !== "fronta");
+// Token k serveru a heslo na poznámky o chování do zálohy nepatří. Záloha leží na disku,
+// v iCloudu a v Time Machine, a kdo by ji otevřel, měl by klíč k serveru i k poznámkám.
+// Po obnově na vyčištěném zařízení se obojí zadá znovu v Nastavení.
+const TAJNE_META = ["syncToken", "sifraHeslo"];
 
 async function doExport() {
   const dump = { app: "cvicka", ver: APP.ver, kdy: new Date().toISOString(), data: {} };
   for (const s of ZALOHA_STORES) dump.data[s] = await dbAll(s);
+  dump.data.meta = (dump.data.meta || []).filter((r) => !TAJNE_META.includes(r.k));
   const blob = new Blob([JSON.stringify(dump)], { type: "application/json" });
   const a = el("a"); a.href = URL.createObjectURL(blob);
   a.download = "cvicka-zaloha-" + iso(new Date()) + ".json";
@@ -1397,14 +1402,23 @@ async function syncNastaveni() {
   };
 }
 
-// Co se posila na server. Poznamka o chovani jde jen zasifrovana, jinak se preskoci
-// a pocka ve fronte, dokud Karel nezada heslo.
+// Co se posila na server. Volny text u zapisu k zakovi jde jen zasifrovany, jinak se
+// zaznam preskoci a pocka ve fronte, dokud Karel nezada heslo. Tyka se to VSECH typu,
+// ne jen chovani: i do volne poznamky nebo k reprezentaci se da napsat jmeno.
+// Cisla, discipliny a nazvy akci zustavaji citelne, at se z nich daji delat prehledy.
 async function naOdeslani(store, rid, zaznam, kdySmazano) {
   if (!zaznam) return { store, rid, data: null, updatedAt: kdySmazano || Date.now() };
-  if (store === "pozn" && zaznam.typ === "chovani") {
-    if (!APP.klic) return null;
-    const { text, ...zbytek } = zaznam;
-    return { store, rid, data: { ...zbytek, sifra: await zasifrujKlicem(APP.klic, text || "") }, updatedAt: zaznam.updatedAt || Date.now() };
+
+  if (store === "pozn") {
+    // Zaznam, ktery k nam prisel zasifrovany a nepodarilo se ho otevrit, se NIKDY
+    // neposila zpatky. Jinak by se zasifrovalo prazdno a se stejnym updatedAt
+    // by to na serveru prepsalo skutecny obsah.
+    if (zaznam.sifra && !zaznam.text) return null;
+    if (zaznam.text) {
+      if (!APP.klic) return null;
+      const { text, ...zbytek } = zaznam;
+      return { store, rid, data: { ...zbytek, sifra: await zasifrujKlicem(APP.klic, text) }, updatedAt: zaznam.updatedAt || Date.now() };
+    }
   }
   return { store, rid, data: zaznam, updatedAt: zaznam.updatedAt || Date.now() };
 }
@@ -1418,6 +1432,8 @@ async function prijmi(zmeny) {
     let data = z.data;
     if (z.store === "pozn" && data.sifra) {
       const text = APP.klic ? await desifrujKlicem(APP.klic, data.sifra) : null;
+      // Kdyz se otevrit nepodari, sifra v zaznamu zustane a `text` je prazdny.
+      // Podle toho `naOdeslani` pozna, ze tenhle zaznam nesmi poslat zpatky.
       data = text == null ? { ...data, text: "" } : { ...data, text };
     }
     await dbPut(z.store, data, true);

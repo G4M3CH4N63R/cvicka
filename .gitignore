@@ -4,3 +4,6 @@
 Záloha/
 zaloha/
 .DS_Store
+
+# skutecne wrangler.toml nese database_id, v repu je jen vzor
+server/wrangler.toml

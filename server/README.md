@@ -11,8 +11,16 @@ zásobník činností, sliby a zápisy u žáků, tedy výkony, reprezentace a p
 Na server nikdy nejde jmenný seznam. Store `zaci` se neodesílá a Worker ho navíc odmítá.
 Druhé zařízení si jména natáhne z těch samých CSV ze ŠOL a spáruje je podle stabilních id.
 
-Poznámky o chování se šifrují už v zařízení (AES-GCM, klíč z hesla přes PBKDF2).
-Server vidí jen bajty. Dokud v Nastavení nezadáš heslo, aplikace je neodesílá vůbec.
+Volný text u zápisů k žákovi se šifruje už v zařízení (AES-GCM, klíč z hesla přes PBKDF2).
+Týká se to všech typů, tedy i volné poznámky a textu u reprezentace, ne jenom chování:
+i do volné poznámky se dá napsat jméno. Čísla, disciplíny a názvy akcí zůstávají čitelné,
+aby se z nich daly dělat přehledy. Server vidí u textu jen bajty. Dokud v Nastavení
+nezadáš heslo, aplikace zápisy s textem neodesílá vůbec a čekají ve frontě.
+
+**Kde hranice končí:** náplň hodiny, plán a zápis do ŠOL jdou na server v čitelné podobě,
+protože to jsou texty o třídě, ne o konkrétním žákovi. Když do nich napíšeš jméno,
+na serveru skončí. Záruka zní: jmenný seznam se neodesílá nikdy a všechno, co visí
+na konkrétním žákovi, jde jen zašifrované.
 
 ## Nasazení
 
@@ -21,11 +29,15 @@ Potřebuješ přihlášený `wrangler`. Všechno se pouští z téhle složky.
 ```
 cd ~/Desktop/"Claude Cowork"/"Třídní kniha"/cvicka/server
 
+cp wrangler.toml.vzor wrangler.toml         # skutečná konfigurace, do repa nejde
 npx wrangler login                          # jednou, otevře prohlížeč
 npx wrangler d1 create cvicka               # vypíše database_id
 ```
 
 Vypsané `database_id` opiš do `wrangler.toml` místo `SEM_PATRI_ID_Z_WRANGLER_D1_CREATE`.
+V repu je jen `wrangler.toml.vzor`, skutečný soubor je v `.gitignore`. Samotné `database_id`
+sice bez API tokenu nikomu k ničemu není, ale ve veřejném repu nemá co dělat.
+
 Pak založ tabulky a nastav token:
 
 ```
