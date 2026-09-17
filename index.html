@@ -449,7 +449,7 @@ select {
 
 <script>
 "use strict";
-const APP = { ver: "0.6.3", db: null, sync: null, klic: null };
+const APP = { ver: "0.6.4", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -1480,9 +1480,17 @@ async function synchronizuj(rucne) {
   syncBezi = true;
   let odeslano = 0, prijato = 0, ceka = 0;
   try {
-    // Prvni synchronizace na zarizeni, ktere uz ma nasbirana data (typicky po upgradu
-    // appky). Fronta je prazdna, protoze ty zapisy vznikly drive, tak se do ni doplni.
-    if ((await metaGet("syncKurzor", 0)) === 0 && !(await dbAll("fronta")).length) await oznacVseKeSync();
+    // Prvni synchronizace na tomhle zarizeni: do fronty se doplni vsechno, co uz v appce
+    // je, protoze ty zapisy vznikly drive, nez fronta vubec existovala.
+    //
+    // Driv to bylo podmineno prazdnou frontou a byla to chyba. Ulozeni nastaveni totiz
+    // odemkne heslo a odemknuti zapise sul do `sys`, takze fronta prazdna neni a doplneni
+    // se nikdy nespustilo. Na zarizeni s nasbiranymi daty odesly jen ty dva radky se soli.
+    // Ted o tom rozhoduje vlastni priznak, ktery s frontou nema nic spolecneho.
+    if (!(await metaGet("syncNaplneno", false))) {
+      await oznacVseKeSync();
+      await metaSet("syncNaplneno", true);
+    }
 
     const preskocene = new Set();
     for (let kolo = 0; kolo < 60; kolo++) {
