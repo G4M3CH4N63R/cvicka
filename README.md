@@ -184,7 +184,9 @@ aby ji druhé zařízení nepřepsalo svojí a nezneplatnilo tím už zašifrova
 
 Zápis, který přišel zašifrovaný a nepodařilo se ho otevřít, se nikdy neposílá zpátky.
 Bez toho by se zašifrovalo prázdno a se stejným `updatedAt` by to na serveru přepsalo
-skutečný obsah.
+skutečný obsah. Po úspěšném rozšifrování se `sifra` ze záznamu zahodí, místní pravdou
+je `text`. Příznak `sifra` tak znamená jen a pouze „tenhle záznam se nepodařilo otevřít",
+takže od záznamu, u kterého někdo text vymazal schválně, ho jde bezpečně odlišit.
 
 **Kde ta záruka končí:** náplň hodiny, plán a zápis do ŠOL jdou na server čitelně, protože
 to jsou texty o třídě, ne o konkrétním žákovi. Když do nich napíšeš jméno, na serveru skončí.

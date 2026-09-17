@@ -449,7 +449,7 @@ select {
 
 <script>
 "use strict";
-const APP = { ver: "0.6.1", db: null, sync: null, klic: null };
+const APP = { ver: "0.6.2", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -1352,7 +1352,10 @@ async function dorozsifruj() {
   for (const z of await dbAll("pozn")) {
     if (!z.sifra || z.text) continue;
     const text = await desifrujKlicem(APP.klic, z.sifra);
-    if (text != null) { await dbPut("pozn", { ...z, text }, true); n++; }
+    if (text != null) {
+      const { sifra, ...bezSifry } = z;
+      await dbPut("pozn", { ...bezSifry, text }, true); n++;
+    }
   }
   return n;
 }
@@ -1432,9 +1435,17 @@ async function prijmi(zmeny) {
     let data = z.data;
     if (z.store === "pozn" && data.sifra) {
       const text = APP.klic ? await desifrujKlicem(APP.klic, data.sifra) : null;
-      // Kdyz se otevrit nepodari, sifra v zaznamu zustane a `text` je prazdny.
-      // Podle toho `naOdeslani` pozna, ze tenhle zaznam nesmi poslat zpatky.
-      data = text == null ? { ...data, text: "" } : { ...data, text };
+      if (text == null) {
+        // Nepodarilo se otevrit: sifra v zaznamu zustane a `text` je prazdny.
+        // Podle toho `naOdeslani` pozna, ze tenhle zaznam nesmi poslat zpatky.
+        data = { ...data, text: "" };
+      } else {
+        // Otevreno. Sifru zahodit, mistni pravda je `text`. Pri odesilani se
+        // zasifruje znovu. Diky tomu `sifra` znamena jen a pouze "neotevreno",
+        // takze se pozna i zaznam, u ktereho Karel text naschval vymazal.
+        const { sifra, ...bezSifry } = data;
+        data = { ...bezSifry, text };
+      }
     }
     await dbPut(z.store, data, true);
     n++;
