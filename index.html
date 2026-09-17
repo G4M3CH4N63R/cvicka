@@ -449,7 +449,7 @@ select {
 
 <script>
 "use strict";
-const APP = { ver: "0.6.2", db: null, sync: null, klic: null };
+const APP = { ver: "0.6.3", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -1200,8 +1200,12 @@ async function renderNastaveni() {
   const zapsane = hod.filter((h) => h.stav === "uzavrena").length;
   $("#rokLine").textContent = zapsane ? zapsane + " uzavřených" : "";
   $("#fSyncUrl").value = await metaGet("syncUrl", "");
-  $("#fSyncToken").value = await metaGet("syncToken", "");
-  $("#fSifraHeslo").value = await metaGet("sifraHeslo", "");
+  const maToken = !!(await metaGet("syncToken", ""));
+  const maHeslo = !!(await metaGet("sifraHeslo", ""));
+  $("#fSyncToken").value = "";
+  $("#fSifraHeslo").value = "";
+  $("#fSyncToken").placeholder = maToken ? "uložený, vyplň jen při změně" : "z wrangler secret put SYNC_TOKEN";
+  $("#fSifraHeslo").placeholder = maHeslo ? "uložené, vyplň jen při změně" : "na obou zařízeních stejné";
   $("#fSyncZap").checked = await metaGet("syncZap", true);
   await renderSyncStav();
   $("#verLine").textContent = "v" + APP.ver;
@@ -1380,6 +1384,7 @@ async function renderSyncStav() {
 
   const casti = [];
   if (!n.url || !n.token) casti.push("Zadej adresu Workeru a token, pak se bude synchronizovat samo: při startu, při návratu do aplikace a chvíli po každém zápisu.");
+  else casti.push("Token je uložený. Prázdné pole při ukládání nechá to, co je uložené, přepíše se jen když něco vyplníš.");
   if (chyba) casti.push("Poslední pokus selhal: " + chyba);
   if (ceka) casti.push("Ve frontě čeká " + ceka + " záznamů.");
   if (!APP.klic) casti.push("Bez hesla se poznámky o chování neodesílají, zůstanou jen v tomhle zařízení.");
@@ -1851,17 +1856,26 @@ async function boot() {
 
   $("#bSyncUloz").addEventListener("click", async () => {
     await metaSet("syncUrl", $("#fSyncUrl").value.trim());
-    await metaSet("syncToken", $("#fSyncToken").value.trim());
     await metaSet("syncZap", $("#fSyncZap").checked);
-    const heslo = $("#fSifraHeslo").value;
-    const r = await odemkni(heslo);
-    if (heslo && !r.ok) { await metaSet("sifraHeslo", ""); toast("Heslo nepoužito: " + r.duvod); }
-    else {
-      await metaSet("sifraHeslo", heslo);
-      const n = await dorozsifruj();
-      toast(n ? "Uloženo, rozšifrováno " + n + " poznámek" : "Uloženo");
+
+    // Prazdne pole znamena "nech, co je ulozeno". Jinak by stačilo prijit
+    // na Nastaveni a dat Ulozit, a token i heslo by byly pryc.
+    const novyToken = $("#fSyncToken").value.trim();
+    if (novyToken) await metaSet("syncToken", novyToken);
+
+    const noveHeslo = $("#fSifraHeslo").value;
+    let hlaska = "Uloženo";
+    if (noveHeslo) {
+      const r = await odemkni(noveHeslo);
+      if (!r.ok) hlaska = "Heslo nepoužito: " + r.duvod;
+      else {
+        await metaSet("sifraHeslo", noveHeslo);
+        const n = await dorozsifruj();
+        if (n) hlaska = "Uloženo, rozšifrováno " + n + " zápisů";
+      }
     }
-    await renderSyncStav();
+    toast(hlaska);
+    await renderNastaveni();
     synchronizuj().catch(() => {});
   });
   $("#bSyncTed").addEventListener("click", async () => {
