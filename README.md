@@ -53,9 +53,10 @@ V repozitáři nesmí být CSV se jmény žáků ani záloha. `.gitignore` na to
 
 ## Struktura
 
-- `index.html` celá aplikace (UI, datová vrstva nad IndexedDB, import, generátor hodin)
+- `index.html` celá aplikace (UI, datová vrstva nad IndexedDB, import, generátor hodin, synchronizace)
 - `sw.js` service worker pro offline
 - `manifest.webmanifest` ikona a název na ploše
+- `server/` Cloudflare Worker a schéma D1 pro synchronizaci, včetně návodu k nasazení
 
 ## Aktualizace (v0.3)
 
@@ -72,7 +73,7 @@ Při každém nasazení je nutné zvýšit `CACHE` v `sw.js`, jinak zařízení 
 
 ## Datové úložiště
 
-Object stores: `meta`, `skupiny`, `zaci`, `rozvrh`, `hodiny`, `zaznamy`, `cinnosti`, `sliby`, `pozn`.
+Object stores: `meta`, `skupiny`, `zaci`, `rozvrh`, `hodiny`, `zaznamy`, `cinnosti`, `sliby`, `pozn`, `sys`, `fronta`.
 
 Hodina má `plan` (co chci dělat), `napln` (co se dělalo) a `zapis` (věta do ŠOL).
 Stav hodiny: `plan` → `zapsana` → `uzavrena`.
@@ -158,8 +159,36 @@ Když je poslední stažená záloha starší než čtrnáct dní nebo žádná 
 na obrazovce Dnes karta s tlačítkem Stáhnout zálohu. Zmizí, jakmile zálohu stáhneš.
 Datum poslední zálohy je v `meta` pod klíčem `zalohaKdy`.
 
+## Synchronizace (v0.6)
+
+Vlastní Cloudflare Worker a databáze D1. Nasazení a protokol popisuje `server/README.md`.
+V aplikaci se zadává adresa Workeru, token a heslo na poznámky o chování, v Nastavení
+v kartě Synchronizace. Na obou zařízeních stejně.
+
+Běží samo: při startu, při návratu do aplikace, po návratu signálu a s odstupem čtyř sekund
+po každém zápisu. Ručně jde spustit tlačítkem. Offline se zápisy hromadí ve frontě
+a odejdou, až bude signál.
+
+**Jméno žáka na server nikdy nejde.** Úložiště `zaci` se neodesílá a Worker ho navíc odmítá.
+Druhé zařízení si jmenný seznam natáhne z těch samých CSV ze ŠOL a spáruje ho podle
+stabilních id z v0.5. Proto na tom ta verze musela být první.
+
+**Poznámky o chování se šifrují v zařízení** (AES-GCM, klíč z hesla přes PBKDF2, 250 tisíc
+iterací). Server vidí jen bajty. Dokud není zadané heslo, neodesílají se vůbec a čekají
+ve frontě. Na druhém zařízení se po zadání hesla dodatečně rozšifrují i ty, které už dorazily.
+Sůl je náhodná, putuje mezi zařízeními v úložišti `sys` a na serveru platí první zápis,
+aby ji druhé zařízení nepřepsalo svojí a nezneplatnilo tím už zašifrované poznámky.
+
+**Prázdné hodiny se neodesílají.** Obě zařízení si je vygenerují z rozvrhu sama a díky
+stabilním id vyjdou stejně. Jakmile do hodiny něco přibude, dostane příznak `sync`
+a od té chvíle se posílá vždy, i když ji později vymažeš. Bez toho by druhé zařízení
+po importu CSV přepsalo na serveru hodiny, do kterých už bylo zapsáno.
+
+Konflikt řeší poslední zápis podle `updatedAt`. Mazání se přenáší jako náhrobek.
+Fronta odchozích změn je v úložišti `fronta` a do zálohy nepatří, `sys` ano: bez soli
+by se po obnově na vyčištěném zařízení už nedaly otevřít zašifrované poznámky ze serveru.
+
 ## Co přijde dál
 
-F5 synchronizace mezi iPhonem a MacBookem: Cloudflare Worker a D1, na server jdou jen kódy
-a čísla, poznámky o chování šifrované heslem, jména zůstávají v zařízení.
-Pak F3 zápis do ŠOL ze šablon, porovnání výkonů a pololetní přehledy, a F4 asistent s nástroji.
+F3 zápis do ŠOL ze šablon, porovnání výkonů a osobní rekordy, pololetní přehledy.
+Pak F4 asistent s nástroji a F6 uzávěrka školního roku.

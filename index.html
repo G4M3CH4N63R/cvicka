@@ -376,6 +376,20 @@ select {
       </div>
     </div>
     <div class="card">
+      <div class="card-h"><h3>Synchronizace</h3><span class="eyebrow" id="syncStav"></span></div>
+      <div class="card-b">
+        <div class="field"><label for="fSyncUrl">Adresa serveru</label><input type="text" id="fSyncUrl" placeholder="https://cvicka-sync.ucet.workers.dev" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+        <div class="field"><label for="fSyncToken">Token</label><input type="password" id="fSyncToken" placeholder="z wrangler secret put SYNC_TOKEN" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+        <div class="field"><label for="fSifraHeslo">Heslo na poznámky o chování</label><input type="password" id="fSifraHeslo" placeholder="na obou zařízeních stejné" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+        <label class="chk"><input type="checkbox" id="fSyncZap"><span>Synchronizovat automaticky</span></label>
+        <div class="btns two">
+          <button class="btn ghost" id="bSyncUloz" type="button">Uložit nastavení</button>
+          <button class="btn ghost" id="bSyncTed" type="button">Synchronizovat teď</button>
+        </div>
+        <div class="hint" id="syncHint"></div>
+      </div>
+    </div>
+    <div class="card">
       <div class="card-h"><h3>Záloha</h3></div>
       <div class="card-b">
         <div class="btns two">
@@ -389,8 +403,8 @@ select {
     <div class="card">
       <div class="card-h"><h3>O aplikaci</h3><span class="eyebrow" id="verLine">v0.1</span></div>
       <div class="card-b" style="font-size:13.5px;color:var(--ink-2)">
-        Cvička, fáze F0 a F1. Data leží v tomhle prohlížeči (IndexedDB) a nikam se neodesílají.
-        Synchronizace mezi zařízeními přijde ve fázi F5, do té doby přenášej data zálohou.
+        Cvička. Data leží v tomhle prohlížeči (IndexedDB). Na server jdou jen kódy, čísla a texty
+        hodin, nikdy jméno žáka. Poznámky o chování se odesílají jen zašifrované heslem.
       </div>
     </div>
   </div></section>
@@ -435,7 +449,7 @@ select {
 
 <script>
 "use strict";
-const APP = { ver: "0.5.1", db: null };
+const APP = { ver: "0.6", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -576,12 +590,19 @@ const STORES = {
   zaznamy: { keyPath: "id", idx: [["hodinaId", "hodinaId"], ["zakId", "zakId"]] },
   cinnosti: { keyPath: "id" },
   sliby: { keyPath: "id", idx: [["skupinaId", "skupinaId"]] },
-  pozn: { keyPath: "id", idx: [["zakId", "zakId"]] }
+  pozn: { keyPath: "id", idx: [["zakId", "zakId"]] },
+  sys: { keyPath: "id" },
+  fronta: { keyPath: "id" }
 };
+
+// Co se synchronizuje. `zaci` tu schválně NENÍ: jmenný seznam nikdy neopustí zařízení,
+// druhé zařízení si ho natáhne z těch samých CSV ze ŠOL a spáruje podle stabilních id.
+// `meta` taky ne, to jsou nastavení konkrétního zařízení. `fronta` je jen lokální výpravka.
+const SYNC_STORES = ["skupiny", "rozvrh", "hodiny", "zaznamy", "cinnosti", "sliby", "pozn", "sys"];
 
 function openDB() {
   return new Promise((res, rej) => {
-    const r = indexedDB.open("cvicka", 4);
+    const r = indexedDB.open("cvicka", 5);
     r.onupgradeneeded = () => {
       const db = r.result;
       for (const [name, def] of Object.entries(STORES)) {
@@ -598,16 +619,80 @@ function tx(stores, mode) { return APP.db.transaction(stores, mode); }
 function req(r) { return new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
 const dbAll = (store) => req(tx([store], "readonly").objectStore(store).getAll());
 const dbGet = (store, key) => req(tx([store], "readonly").objectStore(store).get(key));
-const dbPut = (store, val) => req(tx([store], "readwrite").objectStore(store).put(val));
-const dbDel = (store, key) => req(tx([store], "readwrite").objectStore(store).delete(key));
-const dbClear = (store) => req(tx([store], "readwrite").objectStore(store).clear());
 const dbBy = (store, index, key) => req(tx([store], "readonly").objectStore(store).index(index).getAll(key));
-function dbPutMany(store, items) {
+const dbClear = (store) => req(tx([store], "readwrite").objectStore(store).clear());
+
+// Kazdy zapis do synchronizovaneho store dostane razitko updatedAt a radek ve fronte,
+// aby se pri dalsi synchronizaci vedelo, co odeslat. `tiche: true` pouziva sama
+// synchronizace, kdyz uklada, co prislo ze serveru, aby se to hned neposilalo zpatky.
+const jeSync = (store) => SYNC_STORES.includes(store);
+const frontaId = (store, rid) => store + "|" + rid;
+
+// Prazdna hodina nenese zadnou informaci: obe zarizeni si ji vygeneruji z rozvrhu sama,
+// a protoze jsou id odvozena z obsahu, vyjde stejne. Kdybychom ji posilali, druhe zarizeni
+// by po importu CSV prepsalo na serveru hodiny, do kterych uz bylo zapsano. Jakmile
+// do hodiny neco pribude, dostane priznak `sync` a od te chvile se posila vzdy,
+// i kdyz ji Karel zase vymaze, aby se prazdno propsalo i na druhou stranu.
+function stojiZaSync(store, z) {
+  if (store !== "hodiny") return true;
+  if (z.sync) return true;
+  return !!(z.plan || z.napln || z.zapis || z.okruh || (z.cinnosti && z.cinnosti.length) || (z.stav && z.stav !== "plan"));
+}
+
+function dbPut(store, val, tiche) {
+  if (jeSync(store) && !tiche && stojiZaSync(store, val)) {
+    val.updatedAt = Date.now();
+    if (store === "hodiny") val.sync = 1;
+    const t = tx([store, "fronta"], "readwrite");
+    t.objectStore(store).put(val);
+    t.objectStore("fronta").put({ id: frontaId(store, val[STORES[store].keyPath]), store, rid: val[STORES[store].keyPath] });
+    return new Promise((res, rej) => { t.oncomplete = () => res(); t.onerror = () => rej(t.error); }).then(naplanujSync);
+  }
+  return req(tx([store], "readwrite").objectStore(store).put(val));
+}
+
+function dbDel(store, key, tiche) {
+  if (jeSync(store) && !tiche) {
+    const t = tx([store, "fronta"], "readwrite");
+    t.objectStore(store).delete(key);
+    t.objectStore("fronta").put({ id: frontaId(store, key), store, rid: key, smazano: true, kdy: Date.now() });
+    return new Promise((res, rej) => { t.oncomplete = () => res(); t.onerror = () => rej(t.error); }).then(naplanujSync);
+  }
+  return req(tx([store], "readwrite").objectStore(store).delete(key));
+}
+
+function dbPutMany(store, items, tiche) {
+  const doFronty = jeSync(store) && !tiche;
+  const kp = STORES[store].keyPath;
+  let poslano = 0;
   return new Promise((res, rej) => {
-    const t = tx([store], "readwrite"); const os = t.objectStore(store);
-    items.forEach((i) => os.put(i));
-    t.oncomplete = res; t.onerror = () => rej(t.error);
-  });
+    const t = tx(doFronty ? [store, "fronta"] : [store], "readwrite");
+    const os = t.objectStore(store);
+    const fr = doFronty ? t.objectStore("fronta") : null;
+    items.forEach((i) => {
+      if (doFronty && stojiZaSync(store, i)) {
+        i.updatedAt = Date.now();
+        if (store === "hodiny") i.sync = 1;
+        fr.put({ id: frontaId(store, i[kp]), store, rid: i[kp] });
+        poslano++;
+      }
+      os.put(i);
+    });
+    t.oncomplete = () => res(); t.onerror = () => rej(t.error);
+  }).then((v) => { if (poslano) naplanujSync(); return v; });
+}
+
+// Po migraci id nebo po obnove ze zalohy uz fronta nesedi, takze se posle vsechno znovu.
+async function oznacVseKeSync() {
+  const radky = [];
+  for (const store of SYNC_STORES) {
+    for (const z of await dbAll(store)) {
+      if (!stojiZaSync(store, z)) continue;
+      radky.push({ id: frontaId(store, z[STORES[store].keyPath]), store, rid: z[STORES[store].keyPath] });
+    }
+  }
+  if (radky.length) await dbPutMany("fronta", radky, true);
+  return radky.length;
 }
 const metaGet = async (k, dflt) => { const r = await dbGet("meta", k); return r === undefined ? dflt : r.v; };
 const metaSet = (k, v) => dbPut("meta", { k, v });
@@ -740,7 +825,9 @@ async function generujHodiny(od, doD, volnoText) {
   // odstranit prazdne hodiny, ktere uz v rozvrhu nejsou
   const smazat = stare.filter((h) => !chtene.has(h.id) && h.stav === "plan" && !h.napln && !h.plan);
   for (const h of smazat) {
-    await dbDel("hodiny", h.id);
+    // Maze jen prazdne hodiny, ktere uz v rozvrhu nejsou. Na server se neposilaly,
+    // tak se za ne neposila ani nahrobek.
+    await dbDel("hodiny", h.id, !h.sync);
     for (const z of await dbBy("zaznamy", "hodinaId", h.id)) await dbDel("zaznamy", z.id);
   }
   if (nove.length) await dbPutMany("hodiny", nove);
@@ -1112,6 +1199,11 @@ async function renderNastaveni() {
   $("#fVolno").value = await metaGet("volno", VOLNO_DEFAULT.join("\n"));
   const zapsane = hod.filter((h) => h.stav === "uzavrena").length;
   $("#rokLine").textContent = zapsane ? zapsane + " uzavřených" : "";
+  $("#fSyncUrl").value = await metaGet("syncUrl", "");
+  $("#fSyncToken").value = await metaGet("syncToken", "");
+  $("#fSifraHeslo").value = await metaGet("sifraHeslo", "");
+  $("#fSyncZap").checked = await metaGet("syncZap", true);
+  await renderSyncStav();
   $("#verLine").textContent = "v" + APP.ver;
 }
 
@@ -1146,9 +1238,11 @@ async function doRegen() {
   } catch (e) { toast("Chyba: " + e.message); }
 }
 
+const ZALOHA_STORES = Object.keys(STORES).filter((s) => s !== "fronta");
+
 async function doExport() {
   const dump = { app: "cvicka", ver: APP.ver, kdy: new Date().toISOString(), data: {} };
-  for (const s of Object.keys(STORES)) dump.data[s] = await dbAll(s);
+  for (const s of ZALOHA_STORES) dump.data[s] = await dbAll(s);
   const blob = new Blob([JSON.stringify(dump)], { type: "application/json" });
   const a = el("a"); a.href = URL.createObjectURL(blob);
   a.download = "cvicka-zaloha-" + iso(new Date()) + ".json";
@@ -1164,16 +1258,20 @@ async function doRestore(file) {
     const dump = JSON.parse(await file.text());
     if (dump.app !== "cvicka") throw new Error("tohle není záloha Cvičky");
     const chybi = [];
-    for (const s of Object.keys(STORES)) {
+    for (const s of ZALOHA_STORES) {
       // Store, který záloha vůbec nezná (starší verze appky), necháváme být.
       // Kdybychom ho promazali, přišli bychom o data, která záloha nemůže vrátit.
       if (!dump.data[s]) { chybi.push(s); continue; }
       await dbClear(s);
-      if (dump.data[s].length) await dbPutMany(s, dump.data[s]);
+      if (dump.data[s].length) await dbPutMany(s, dump.data[s], true);
     }
     // Zaloha nese i store meta, takze muze vratit stare idVerze a s nim stara id.
     // Migrace se proto pousti hned po obnove, ne az pri dalsim startu.
     await migraceStabilnichId();
+    // Po obnove uz fronta nesedi, takze se posle vsechno znovu a kurzor jde od nuly.
+    await metaSet("syncKurzor", 0);
+    await oznacVseKeSync();
+    await odemkni(await metaGet("sifraHeslo", ""));
     await refreshCache(); await renderNastaveni(); await renderDnes();
     toast(chybi.length ? "Obnoveno ze zálohy (beze změny: " + chybi.join(", ") + ")" : "Obnoveno ze zálohy");
   } catch (e) { toast("Chyba: " + e.message); }
@@ -1189,6 +1287,227 @@ async function renderZalohaVyzva() {
   const prazdno = !(await dbAll("hodiny")).length;
   card.hidden = prazdno || (dnu !== null && dnu < ZALOHA_PO_DNECH);
   $("#zalohaKdy").textContent = dnu === null ? "zatím nikdy" : (dnu === 0 ? "dnes" : "před " + dnu + " dny");
+}
+
+/* ---------- šifrování poznámek o chování ---------- */
+// Lokalne lezi poznamky v citelne podobe, sifrovani je kvuli serveru. Klic se odvozuje
+// z hesla pres PBKDF2, sul je nahodna a putuje mezi zarizenimi pres store `sys`.
+// Heslo se uklada do `meta`, protoze data na zarizeni jsou stejne citelna a bez toho
+// by automaticka synchronizace nemohla bezet bez rucniho odemykani po kazdem startu.
+const KONTROLNI_TEXT = "cvicka-kontrola";
+const b64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
+const odB64 = (t) => Uint8Array.from(atob(t), (c) => c.charCodeAt(0));
+
+async function zajistiSul() {
+  const r = await dbGet("sys", "sifraSalt");
+  if (r && r.v) return odB64(r.v);
+  const sul = crypto.getRandomValues(new Uint8Array(16));
+  await dbPut("sys", { id: "sifraSalt", v: b64(sul) });
+  return sul;
+}
+
+async function odemkni(heslo) {
+  APP.klic = null;
+  if (!heslo) return { ok: false, duvod: "bez hesla" };
+  if (!(crypto && crypto.subtle)) return { ok: false, duvod: "prohlížeč neumí šifrovat (chce to https)" };
+  const sul = await zajistiSul();
+  const zaklad = await crypto.subtle.importKey("raw", new TextEncoder().encode(heslo), "PBKDF2", false, ["deriveKey"]);
+  const klic = await crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt: sul, iterations: 250000, hash: "SHA-256" },
+    zaklad, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+
+  const kontrola = await dbGet("sys", "sifraKontrola");
+  if (kontrola && kontrola.v) {
+    const zkouska = await desifrujKlicem(klic, kontrola.v);
+    if (zkouska !== KONTROLNI_TEXT) return { ok: false, duvod: "heslo nesedí s tím, kterým se šifrovalo" };
+  }
+  APP.klic = klic;
+  if (!kontrola) await dbPut("sys", { id: "sifraKontrola", v: await zasifrujKlicem(klic, KONTROLNI_TEXT) });
+  return { ok: true };
+}
+
+async function zasifrujKlicem(klic, text) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, klic, new TextEncoder().encode(text));
+  return b64(iv) + "." + b64(ct);
+}
+
+async function desifrujKlicem(klic, sifra) {
+  try {
+    const [ivB, ctB] = String(sifra).split(".");
+    const otevreno = await crypto.subtle.decrypt({ name: "AES-GCM", iv: odB64(ivB) }, klic, odB64(ctB));
+    return new TextDecoder().decode(otevreno);
+  } catch (e) { return null; }
+}
+
+// Zaznamy, ktere prisly zasifrovane v dobe, kdy jeste nebylo zadane heslo.
+async function dorozsifruj() {
+  if (!APP.klic) return 0;
+  let n = 0;
+  for (const z of await dbAll("pozn")) {
+    if (!z.sifra || z.text) continue;
+    const text = await desifrujKlicem(APP.klic, z.sifra);
+    if (text != null) { await dbPut("pozn", { ...z, text }, true); n++; }
+  }
+  return n;
+}
+
+/* ---------- synchronizace ---------- */
+async function renderSyncStav() {
+  if (!$("#syncStav")) return;
+  const n = await syncNastaveni();
+  const kdy = await metaGet("syncKdy", 0);
+  const chyba = await metaGet("syncChyba", "");
+  const ceka = (await dbAll("fronta")).length;
+
+  let stav;
+  if (!n.url || !n.token) stav = "nenastaveno";
+  else if (chyba) stav = "chyba";
+  else if (!kdy) stav = "zatím nikdy";
+  else {
+    const min = Math.floor((Date.now() - kdy) / 60000);
+    stav = min < 1 ? "právě teď" : min < 60 ? "před " + min + " min" : "před " + Math.floor(min / 60) + " h";
+  }
+  $("#syncStav").textContent = stav;
+
+  const casti = [];
+  if (!n.url || !n.token) casti.push("Zadej adresu Workeru a token, pak se bude synchronizovat samo: při startu, při návratu do aplikace a chvíli po každém zápisu.");
+  if (chyba) casti.push("Poslední pokus selhal: " + chyba);
+  if (ceka) casti.push("Ve frontě čeká " + ceka + " záznamů.");
+  if (!APP.klic) casti.push("Bez hesla se poznámky o chování neodesílají, zůstanou jen v tomhle zařízení.");
+  else casti.push("Poznámky o chování se odesílají zašifrované.");
+  $("#syncHint").textContent = casti.join(" ");
+}
+
+
+const SYNC_DAVKA = 300;
+const SYNC_ODKLAD = 4000;
+let syncBezi = false, syncCasovac = null;
+
+function naplanujSync() {
+  clearTimeout(syncCasovac);
+  syncCasovac = setTimeout(() => { synchronizuj().catch(() => {}); }, SYNC_ODKLAD);
+}
+
+async function syncNastaveni() {
+  return {
+    url: String(await metaGet("syncUrl", "")).trim().replace(/\/+$/, ""),
+    token: String(await metaGet("syncToken", "")).trim(),
+    zap: await metaGet("syncZap", true)
+  };
+}
+
+// Co se posila na server. Poznamka o chovani jde jen zasifrovana, jinak se preskoci
+// a pocka ve fronte, dokud Karel nezada heslo.
+async function naOdeslani(store, rid, zaznam, kdySmazano) {
+  if (!zaznam) return { store, rid, data: null, updatedAt: kdySmazano || Date.now() };
+  if (store === "pozn" && zaznam.typ === "chovani") {
+    if (!APP.klic) return null;
+    const { text, ...zbytek } = zaznam;
+    return { store, rid, data: { ...zbytek, sifra: await zasifrujKlicem(APP.klic, text || "") }, updatedAt: zaznam.updatedAt || Date.now() };
+  }
+  return { store, rid, data: zaznam, updatedAt: zaznam.updatedAt || Date.now() };
+}
+
+async function prijmi(zmeny) {
+  let n = 0;
+  const staraSul = (await dbGet("sys", "sifraSalt") || {}).v || "";
+  for (const z of zmeny) {
+    if (!z || !z.store || !SYNC_STORES.includes(z.store)) continue;
+    if (z.data == null) { await dbDel(z.store, z.rid, true); n++; continue; }
+    let data = z.data;
+    if (z.store === "pozn" && data.sifra) {
+      const text = APP.klic ? await desifrujKlicem(APP.klic, data.sifra) : null;
+      data = text == null ? { ...data, text: "" } : { ...data, text };
+    }
+    await dbPut(z.store, data, true);
+    n++;
+  }
+  // Sul na sifrovani putuje mezi zarizenimi pres store `sys` a na serveru plati prvni
+  // zapis. Kdyz dorazi cizi, klic odvozeny z te nasi uz nesedi: spocita se znovu,
+  // dosifrovane poznamky se otevrou a vlastni se poslou znovu pod spravnym klicem.
+  const novaSul = (await dbGet("sys", "sifraSalt") || {}).v || "";
+  if (novaSul && novaSul !== staraSul) {
+    await odemkni(await metaGet("sifraHeslo", ""));
+    await dorozsifruj();
+    if (APP.klic) {
+      const znovu = (await dbAll("pozn")).filter((z) => z.typ === "chovani" && z.text);
+      if (znovu.length) await dbPutMany("fronta", znovu.map((z) => ({ id: frontaId("pozn", z.id), store: "pozn", rid: z.id })), true);
+    }
+  }
+  return n;
+}
+
+async function synchronizuj(rucne) {
+  const n = await syncNastaveni();
+  if (!n.url || !n.token) return { preskoceno: "není nastavený server" };
+  if (!n.zap && !rucne) return { preskoceno: "vypnuto" };
+  if (syncBezi) return { preskoceno: "už běží" };
+  if (!navigator.onLine && !rucne) return { preskoceno: "offline" };
+
+  syncBezi = true;
+  let odeslano = 0, prijato = 0, ceka = 0;
+  try {
+    // Prvni synchronizace na zarizeni, ktere uz ma nasbirana data (typicky po upgradu
+    // appky). Fronta je prazdna, protoze ty zapisy vznikly drive, tak se do ni doplni.
+    if ((await metaGet("syncKurzor", 0)) === 0 && !(await dbAll("fronta")).length) await oznacVseKeSync();
+
+    const preskocene = new Set();
+    for (let kolo = 0; kolo < 60; kolo++) {
+      const cela = await dbAll("fronta");
+      const davka = cela.filter((f) => !preskocene.has(f.id)).slice(0, SYNC_DAVKA);
+
+      const zmeny = [];
+      const odeslaneRadky = [];
+      for (const f of davka) {
+        const zaznam = f.smazano ? null : await dbGet(f.store, f.rid);
+        const polozka = await naOdeslani(f.store, f.rid, zaznam, f.kdy);
+        if (!polozka) { preskocene.add(f.id); continue; }
+        zmeny.push(polozka);
+        odeslaneRadky.push(f);
+      }
+
+      const od = await metaGet("syncKurzor", 0);
+      const odp = await fetch(n.url + "/sync", {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: "Bearer " + n.token },
+        body: JSON.stringify({ od, zmeny })
+      });
+      if (odp.status === 401) throw new Error("server nepřijal token");
+      if (!odp.ok) throw new Error("server odpověděl " + odp.status);
+      const data = await odp.json();
+      if (data.chyba) throw new Error(data.chyba);
+
+      for (const f of odeslaneRadky) await dbDel("fronta", f.id, true);
+      odeslano += zmeny.length;
+      prijato += await prijmi(data.zmeny || []);
+      await metaSet("syncKurzor", data.verze || od);
+
+      const zbyva = (await dbAll("fronta")).filter((f) => !preskocene.has(f.id)).length;
+      if (!data.vic && !zbyva) break;
+    }
+    ceka = preskocene.size;
+    await metaSet("syncKdy", Date.now());
+    await metaSet("syncChyba", "");
+    if (prijato) { await refreshCache(); await renderAktualni(); }
+    await renderSyncStav();
+    return { odeslano, prijato, ceka };
+  } catch (e) {
+    await metaSet("syncChyba", String(e && e.message || e));
+    await renderSyncStav();
+    return { chyba: String(e && e.message || e) };
+  } finally {
+    syncBezi = false;
+  }
+}
+
+// Po synchronizaci prekreslit to, na co se Karel zrovna diva.
+async function renderAktualni() {
+  if (S.tab === "dnes") await renderDnes();
+  else if (S.tab === "tyden") await renderTyden();
+  else if (S.tab === "hodina") await renderHodina();
+  else if (S.tab === "nastaveni") await renderNastaveni();
+  if (S.zakId && !$("#zakSheet").hidden) await renderZak();
 }
 
 /* ---------- migrace na stabilní id ---------- */
@@ -1445,8 +1764,15 @@ async function switchTab(name) {
 async function boot() {
   APP.db = await openDB();
   const mig = await migraceStabilnichId();
+  if (mig) {
+    // Migrace prepsala id, takze cokoli uz je na serveru je pod starymi klici.
+    // Posle se znovu vsechno a kurzor jde od nuly.
+    await metaSet("syncKurzor", 0);
+    await oznacVseKeSync();
+  }
   await refreshCache();
   await seedCinnosti();
+  await odemkni(await metaGet("sifraHeslo", ""));
   if (mig) setTimeout(() => toast("Data převedena na stabilní id (" + mig.zaznamu + " záznamů docházky)"), 900);
   if (!(await metaGet("volno"))) await metaSet("volno", VOLNO_DEFAULT.join("\n"));
 
@@ -1496,6 +1822,28 @@ async function boot() {
     toast("Slib uložen");
   });
 
+  $("#bSyncUloz").addEventListener("click", async () => {
+    await metaSet("syncUrl", $("#fSyncUrl").value.trim());
+    await metaSet("syncToken", $("#fSyncToken").value.trim());
+    await metaSet("syncZap", $("#fSyncZap").checked);
+    const heslo = $("#fSifraHeslo").value;
+    const r = await odemkni(heslo);
+    if (heslo && !r.ok) { await metaSet("sifraHeslo", ""); toast("Heslo nepoužito: " + r.duvod); }
+    else {
+      await metaSet("sifraHeslo", heslo);
+      const n = await dorozsifruj();
+      toast(n ? "Uloženo, rozšifrováno " + n + " poznámek" : "Uloženo");
+    }
+    await renderSyncStav();
+    synchronizuj().catch(() => {});
+  });
+  $("#bSyncTed").addEventListener("click", async () => {
+    toast("Synchronizuji…");
+    const r = await synchronizuj(true);
+    if (r.chyba) toast("Nepovedlo se: " + r.chyba);
+    else if (r.preskoceno) toast("Přeskočeno: " + r.preskoceno);
+    else toast(`Odesláno ${r.odeslano}, přijato ${r.prijato}` + (r.ceka ? `, čeká ${r.ceka}` : ""));
+  });
   $("#bZalohaTed").addEventListener("click", doExport);
   $("#bImport").addEventListener("click", doImport);
   $("#bRegen").addEventListener("click", doRegen);
@@ -1512,6 +1860,11 @@ async function boot() {
   if (!prazdno) await skocNaNejblizsiDen();
   await switchTab(prazdno ? "nastaveni" : "dnes");
   if (prazdno) toast("Začni načtením rozvrhu a žáků");
+
+  // Automaticka synchronizace: pri startu, pri navratu do popredi a s odstupem po zapisu.
+  synchronizuj().catch(() => {});
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) synchronizuj().catch(() => {}); });
+  window.addEventListener("online", () => { synchronizuj().catch(() => {}); });
 
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
     navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then((reg) => {
