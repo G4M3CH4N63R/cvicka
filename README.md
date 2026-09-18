@@ -222,6 +222,15 @@ Vedlejší oprava: `S.histSkupina` se teď nastavuje při otevření hodiny, ne 
 v Týdnu. Když se hodina otevřela z obrazovky Dnes, karty na Týdnu předtím ukazovaly
 předchozí skupinu, nebo nic.
 
+## Pořadí karet v hodině (v0.6.6)
+
+Obrazovka Hodina je seřazená podle toho, co se dělá kdy: Náplň hodiny, Slib třídě,
+Docházka, Co naposledy měli, Dlouho nebylo, Zásobník. Napřed se hodina vymýšlí,
+teprve pak odškrtává docházka, a materiál k vymýšlení leží pod tím.
+
+Je to čistě přeházení bloků v HTML, žádná logika se nezměnila. Render funkce si berou
+prvky přes id, takže na pořadí nezávisí.
+
 ## Co přijde dál
 
 F3 zápis do ŠOL ze šablon, porovnání výkonů a osobní rekordy, pololetní přehledy.

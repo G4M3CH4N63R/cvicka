@@ -321,13 +321,6 @@ select {
   <!-- HODINA -->
   <section class="screen" id="s-hodina"><div class="wrap">
     <div class="card">
-      <div class="card-h"><h3>Docházka</h3><span class="eyebrow" id="attSum"></span></div>
-      <div class="legend">
-        <span><b>ok</b> cvičí</span><span><b>X</b> nepřítomen</span><span><b>N</b> necvičí</span><span><b>Ú</b> bez úboru</span><span>☆ vedl rozcvičku</span><span>✎ zápisy u žáka</span>
-      </div>
-      <div id="pupilList"></div>
-    </div>
-    <div class="card">
       <div class="card-h"><h3>Náplň hodiny</h3><span class="eyebrow">jen pro tebe</span></div>
       <div class="card-b">
         <div class="field"><label for="fPlan">Plán (co chci dělat)</label><textarea id="fPlan" rows="2" placeholder="Úvod: … Hlavní část: …"></textarea></div>
@@ -338,6 +331,20 @@ select {
           <button class="btn" id="bClose" type="button">Uzavřít hodinu</button>
         </div>
       </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h3>Slib třídě</h3><span class="eyebrow" id="slibCnt"></span></div>
+      <div class="card-b">
+        <div id="slibHodinaList"></div>
+        <div class="field"><label for="fSlib">Co jsi slíbil</label><input type="text" id="fSlib" placeholder="Florbal, až bude volná tělocvična"></div>
+        <div class="btns"><button class="btn ghost" id="bSlib" type="button">Přidat slib</button></div>
+      </div>
+    </div>    <div class="card">
+      <div class="card-h"><h3>Docházka</h3><span class="eyebrow" id="attSum"></span></div>
+      <div class="legend">
+        <span><b>ok</b> cvičí</span><span><b>X</b> nepřítomen</span><span><b>N</b> necvičí</span><span><b>Ú</b> bez úboru</span><span>☆ vedl rozcvičku</span><span>✎ zápisy u žáka</span>
+      </div>
+      <div id="pupilList"></div>
     </div>
     <div class="card" id="hHistCard" hidden>
       <div class="card-h"><h3 id="hHistTtl">Co naposledy měli</h3><span class="eyebrow">poslední hodiny</span><button class="iconbtn sbal" type="button" aria-label="sbalit nebo rozbalit">▾</button></div>
@@ -361,14 +368,7 @@ select {
         <div class="chips" id="zasList" style="margin-top:9px"></div>
       </div>
     </div>
-    <div class="card">
-      <div class="card-h"><h3>Slib třídě</h3><span class="eyebrow" id="slibCnt"></span></div>
-      <div class="card-b">
-        <div id="slibHodinaList"></div>
-        <div class="field"><label for="fSlib">Co jsi slíbil</label><input type="text" id="fSlib" placeholder="Florbal, až bude volná tělocvična"></div>
-        <div class="btns"><button class="btn ghost" id="bSlib" type="button">Přidat slib</button></div>
-      </div>
-    </div>
+
   </div></section>
 
   <!-- NASTAVENI -->
@@ -467,7 +467,7 @@ select {
 
 <script>
 "use strict";
-const APP = { ver: "0.6.5", db: null, sync: null, klic: null };
+const APP = { ver: "0.6.6", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
