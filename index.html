@@ -131,12 +131,26 @@ nav button[aria-selected="true"] { color: var(--accent); border-top-color: var(-
 .legend { display: flex; flex-wrap: wrap; gap: 6px 13px; padding: 8px 13px 2px; font-size: 11.5px; color: var(--ink-3); }
 
 /* tydenni mrizka (rozvrh) */
-.rozvrh { display: grid; gap: 3px; grid-template-columns: 24px repeat(5, minmax(0, 1fr)); }
-.rozvrh .hh { text-align: center; line-height: 1.2; padding-bottom: 3px; }
+.rozvrh-box {
+  overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch;
+  /* aby posun nezastavoval uprostred sloupce; 38px je sirka pripnuteho zahlavi dne */
+  scroll-snap-type: x proximity; scroll-padding-left: 38px;
+}
+.rozvrh .hh, .rozvrh .bu { scroll-snap-align: start; }
+.rozvrh { display: grid; gap: 3px; min-width: min-content; }
+.rozvrh .hh { text-align: center; line-height: 1.15; padding-bottom: 3px; }
 .rozvrh .hh b { display: block; font-family: var(--fd); font-size: 11.5px; color: var(--ink-2); }
-.rozvrh .hh span { font-family: var(--fm); font-size: 10px; color: var(--ink-3); }
-.rozvrh .hh.dnes b, .rozvrh .hh.dnes span { color: var(--accent); }
-.rozvrh .hn { font-family: var(--fm); font-size: 10.5px; color: var(--ink-3); display: grid; place-items: center; }
+.rozvrh .hh span { font-family: var(--fm); font-size: 9.5px; color: var(--ink-3); }
+/* zahlavi dne drzi u leveho okraje, at je pri posunu porad videt, ktery je radek */
+.rozvrh .roh, .rozvrh .dn { position: sticky; left: 0; background: var(--surface); box-shadow: 3px 0 0 0 var(--surface); }
+.rozvrh .roh { z-index: 2; }
+.rozvrh .dn {
+  z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  line-height: 1.15; text-align: center;
+}
+.rozvrh .dn b { font-family: var(--fd); font-size: 11.5px; color: var(--ink-2); }
+.rozvrh .dn span { font-family: var(--fm); font-size: 9.5px; color: var(--ink-3); }
+.rozvrh .dn.dnes b, .rozvrh .dn.dnes span { color: var(--accent); }
 .rozvrh .bu {
   appearance: none; min-height: 38px; border-radius: 8px; border: 1px solid transparent; padding: 3px 2px;
   font-family: var(--fd); font-weight: 600; font-size: 10.5px; line-height: 1.15; color: inherit;
@@ -334,7 +348,7 @@ select {
         <button class="iconbtn" id="tNext" aria-label="Další týden" style="width:30px;height:28px">›</button>
       </div>
       <div class="card-b">
-        <div class="rozvrh" id="tydenMrizka"></div>
+        <div class="rozvrh-box"><div class="rozvrh" id="tydenMrizka"></div></div>
         <div class="mleg">
           <span><i class="bez"></i>bez plánu</span><span><i class="plan"></i>plán</span>
           <span><i class="rozepsano"></i>rozepsané</span><span><i class="zapsano"></i>zapsáno</span>
@@ -511,7 +525,7 @@ select {
 
 <script>
 "use strict";
-const APP = { ver: "0.6.8", db: null, sync: null, klic: null };
+const APP = { ver: "0.6.9", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -1078,12 +1092,14 @@ async function renderMrizka(dny, hodiny) {
   const od = Math.min(...cisla), az = Math.max(...cisla);
   const dnesI = iso(new Date());
 
-  box.appendChild(el("div", "hh"));
-  dny.forEach((d) => {
-    const hl = el("div", "hh" + (d === dnesI ? " dnes" : ""));
-    hl.append(el("b", "", DNY[parseISO(d).getDay()].toLowerCase()), el("span", "", parseISO(d).getDate() + "."));
+  box.style.gridTemplateColumns = "38px repeat(" + (az - od + 1) + ", minmax(72px, 1fr))";
+
+  box.appendChild(el("div", "roh"));
+  for (let p = od; p <= az; p++) {
+    const hl = el("div", "hh");
+    hl.append(el("b", "", String(p)), el("span", "", (HODINY_CAS[p] || "").replace(/^0/, "")));
     box.appendChild(hl);
-  });
+  }
 
   const mapa = new Map();
   hodiny.forEach((h) => {
@@ -1092,11 +1108,13 @@ async function renderMrizka(dny, hodiny) {
     mapa.get(k).push(h);
   });
 
-  for (let p = od; p <= az; p++) {
-    box.appendChild(el("div", "hn", String(p)));
-    dny.forEach((d) => {
+  dny.forEach((d) => {
+    const zah = el("div", "dn" + (d === dnesI ? " dnes" : ""));
+    zah.append(el("b", "", DNY[parseISO(d).getDay()].toLowerCase()), el("span", "", parseISO(d).getDate() + "."));
+    box.appendChild(zah);
+    for (let p = od; p <= az; p++) {
       const v = (mapa.get(d + "|" + p) || []).sort((a, b) => a.id.localeCompare(b.id));
-      if (!v.length) { box.appendChild(el("div", "bu volno")); return; }
+      if (!v.length) { box.appendChild(el("div", "bu volno")); continue; }
       const h = v[0];
       const b = el("button", "bu " + stavTrida(h)); b.type = "button";
       const jmeno = skName(h.skupinaId);
@@ -1108,8 +1126,8 @@ async function renderMrizka(dny, hodiny) {
       b.setAttribute("aria-label", cz(d) + ", " + p + ". hodina, " + jmeno + (co ? ", " + co : ""));
       b.addEventListener("click", () => { S.histSkupina = h.skupinaId; openHodina(h.id, "tyden"); });
       box.appendChild(b);
-    });
-  }
+    }
+  });
 }
 async function renderTyden() {
   const konec = addDays(S.tyden, 4);

@@ -231,33 +231,34 @@ teprve pak odškrtává docházka, a materiál k vymýšlení leží pod tím.
 Je to čistě přeházení bloků v HTML, žádná logika se nezměnila. Render funkce si berou
 prvky přes id, takže na pořadí nezávisí.
 
-## Týden jako rozvrh (v0.6.7)
+## Týden jako rozvrh (v0.6.9)
 
-Obrazovka Týden začíná mřížkou ve tvaru rozvrhu, jak ho znáš ze Školy OnLine:
-sloupce jsou pondělí až pátek, řádky vyučovací hodiny. Pod mřížkou zůstal původní
-seznam s náhledy plánů, takže přehled i detail jsou na jedné obrazovce.
+Obrazovka Týden začíná mřížkou ve tvaru rozvrhu, jak ho znáš ze Školy OnLine: řádky
+jsou pondělí až pátek, sloupce vyučovací hodiny i s časem začátku. Pod mřížkou zůstal
+původní seznam s náhledy plánů, takže přehled i detail jsou na jedné obrazovce.
 
-Buňka nese zkratku skupiny a barvu podle stavu: šedá bez plánu, modrá plán,
-oranžová rozepsané, zelená zapsáno. Ťuknutí otevře hodinu stejně jako řádek v seznamu.
-Volná okna mají jen tečkovaný obrys. Dnešní sloupec má zvýrazněné záhlaví.
+Buňka nese zkratku skupiny a pod ní drobným písmem to, co se dělá: `napln`, a když není,
+tak `plan`, a když není ani ten, tak `zapis`. Text je oříznutý na dva řádky přes
+`-webkit-line-clamp`, takže dlouhý plán buňku neroztrhá; celý je v `title` a `aria-label`.
+Řádek se roztáhne podle nejvyšší buňky, takže dny bez zápisů zůstávají nízké.
+
+Barva říká stav: šedá bez plánu, modrá plán, oranžová rozepsané, zelená zapsáno.
+Ťuknutí otevře hodinu stejně jako řádek v seznamu. Volná okna mají jen tečkovaný obrys,
+dnešní řádek má zvýrazněné záhlaví.
 
 Zkratku dělá `skZkratka()`: z "III. A" udělá "III.A", z "VI. A + VI. B chlapci" udělá
 "VI.A+B ch". Rozlišení chlapci/dívky se nechává, aby dvě skupiny ze stejných tříd
 nevypadaly v mřížce stejně.
 
-Rozsah řádků se bere z rozvrhu, ne z toho, co zrovna v týdnu je. Mřížka tak má pořád
-stejný tvar a v týdnu se svátkem se řádky nepřeskládají. Kdyby v jednom okně byly
+Osm sloupců se na telefon nevejde, takže se mřížka uvnitř karty posouvá do stran
+(`.rozvrh-box`, `overflow-x: auto`). Záhlaví dne je `position: sticky` u levého okraje,
+takže při posunu pořád vidíš, který je řádek, a `scroll-snap-type: x proximity`
+se `scroll-padding-left: 38px` zarovnává posun na hranici sloupce. Na Macu se celý
+týden vejde bez posouvání. Stránka jako celek se vodorovně neposouvá.
+
+Rozsah sloupců se bere z rozvrhu, ne z toho, co zrovna v týdnu je. Mřížka tak má pořád
+stejný tvar a v týdnu se svátkem se sloupce nepřeskládají. Kdyby v jednom okně byly
 dvě hodiny, buňka ukáže první a k ní "+1"; kompletní výpis je vždycky v seznamu pod mřížkou.
-
-## Náplň v buňce rozvrhu (v0.6.8)
-
-Pod zkratkou třídy je v mřížce drobným písmem to, co se v hodině dělá: `napln`,
-a když není, tak `plan`, a když není ani ten, tak `zapis`. Text je oříznutý na dva
-řádky přes `-webkit-line-clamp`, takže dlouhý plán buňku neroztrhá. Celý text je
-v `title` a v `aria-label`, takže na Macu stačí najet myší.
-
-Řádek mřížky se roztáhne podle nejvyšší buňky v něm. Řádky, kde nikdo nic nenapsal,
-proto zůstávají nízké a mřížka nenaroste zbytečně.
 
 ## Co přijde dál
 
