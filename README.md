@@ -231,6 +231,34 @@ teprve pak odškrtává docházka, a materiál k vymýšlení leží pod tím.
 Je to čistě přeházení bloků v HTML, žádná logika se nezměnila. Render funkce si berou
 prvky přes id, takže na pořadí nezávisí.
 
+## Týden jako rozvrh (v0.6.7)
+
+Obrazovka Týden začíná mřížkou ve tvaru rozvrhu, jak ho znáš ze Školy OnLine:
+sloupce jsou pondělí až pátek, řádky vyučovací hodiny. Pod mřížkou zůstal původní
+seznam s náhledy plánů, takže přehled i detail jsou na jedné obrazovce.
+
+Buňka nese zkratku skupiny a barvu podle stavu: šedá bez plánu, modrá plán,
+oranžová rozepsané, zelená zapsáno. Ťuknutí otevře hodinu stejně jako řádek v seznamu.
+Volná okna mají jen tečkovaný obrys. Dnešní sloupec má zvýrazněné záhlaví.
+
+Zkratku dělá `skZkratka()`: z "III. A" udělá "III.A", z "VI. A + VI. B chlapci" udělá
+"VI.A+B ch". Rozlišení chlapci/dívky se nechává, aby dvě skupiny ze stejných tříd
+nevypadaly v mřížce stejně.
+
+Rozsah řádků se bere z rozvrhu, ne z toho, co zrovna v týdnu je. Mřížka tak má pořád
+stejný tvar a v týdnu se svátkem se řádky nepřeskládají. Kdyby v jednom okně byly
+dvě hodiny, buňka ukáže první a k ní "+1"; kompletní výpis je vždycky v seznamu pod mřížkou.
+
+## Náplň v buňce rozvrhu (v0.6.8)
+
+Pod zkratkou třídy je v mřížce drobným písmem to, co se v hodině dělá: `napln`,
+a když není, tak `plan`, a když není ani ten, tak `zapis`. Text je oříznutý na dva
+řádky přes `-webkit-line-clamp`, takže dlouhý plán buňku neroztrhá. Celý text je
+v `title` a v `aria-label`, takže na Macu stačí najet myší.
+
+Řádek mřížky se roztáhne podle nejvyšší buňky v něm. Řádky, kde nikdo nic nenapsal,
+proto zůstávají nízké a mřížka nenaroste zbytečně.
+
 ## Co přijde dál
 
 F3 zápis do ŠOL ze šablon, porovnání výkonů a osobní rekordy, pololetní přehledy.
