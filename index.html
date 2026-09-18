@@ -90,6 +90,8 @@ nav button[aria-selected="true"] { color: var(--accent); border-top-color: var(-
 .card-h h3 { font-size: 13.5px; }
 .card-h .eyebrow { margin-left: auto; }
 .card-b { padding: 0 13px 13px; }
+.card[data-sbaleno="1"] .card-b { display: none; }
+.card-h .sbal { width: 28px; height: 25px; border-radius: 8px; font-size: 12px; }
 .empty { padding: 22px 14px; text-align: center; color: var(--ink-3); font-size: 14px; }
 
 /* lesson rows */
@@ -165,6 +167,7 @@ textarea { line-height: 1.45; }
 .hist { display: grid; }
 .hist div { display: grid; grid-template-columns: 64px 1fr; gap: 9px; font-size: 13.5px; padding: 8px 0; border-top: 1px solid var(--line); }
 .hist div:first-child { border-top: 0; }
+.hist .empty { display: block; padding: 16px 0; border-top: 0; }
 .hist .d { font-family: var(--fm); font-size: 11px; color: var(--ink-3); padding-top: 2px; }
 .hist .x { color: var(--ink-2); }
 
@@ -336,6 +339,21 @@ select {
         </div>
       </div>
     </div>
+    <div class="card" id="hHistCard" hidden>
+      <div class="card-h"><h3 id="hHistTtl">Co naposledy měli</h3><span class="eyebrow">poslední hodiny</span><button class="iconbtn sbal" type="button" aria-label="sbalit nebo rozbalit">▾</button></div>
+      <div class="card-b"><div class="hist" id="hHistList"></div></div>
+    </div>
+    <div class="card" id="hGapsCard" hidden>
+      <div class="card-h"><h3>Dlouho nebylo</h3><span class="eyebrow" id="hGapsCls"></span><button class="iconbtn sbal" type="button" aria-label="sbalit nebo rozbalit">▾</button></div>
+      <div class="card-b">
+        <div class="eyebrow" style="margin-bottom:7px">Okruhy</div>
+        <div class="gaps" id="hGapsOkruhy"></div>
+        <div class="eyebrow" style="margin:13px 0 7px">Úvodní hry</div>
+        <div class="gaps" id="hGapsHry"></div>
+        <div class="eyebrow" style="margin:13px 0 7px">Hlavní část</div>
+        <div class="gaps" id="hGapsHlavni"></div>
+      </div>
+    </div>
     <div class="card">
       <div class="card-h"><h3>Zásobník</h3><span class="eyebrow" id="zasFiltr">tapni a vloží se do plánu</span></div>
       <div class="card-b">
@@ -449,7 +467,7 @@ select {
 
 <script>
 "use strict";
-const APP = { ver: "0.6.4", db: null, sync: null, klic: null };
+const APP = { ver: "0.6.5", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -1009,8 +1027,8 @@ async function renderTyden() {
     });
   }
   if (!n) list.appendChild(el("div", "empty", "V tomhle týdnu nejsou žádné hodiny. Zkontroluj v nastavení rozsah školního roku."));
-  await renderHist();
-  await renderGaps();
+  await renderHist(S.histSkupina);
+  await renderGaps(S.histSkupina);
 }
 
 function gapRow(nazev, posledni, tydnu) {
@@ -1024,42 +1042,66 @@ function gapRow(nazev, posledni, tydnu) {
   return r;
 }
 
-async function renderGaps() {
-  const card = $("#gapsCard");
-  if (!S.histSkupina) { card.hidden = true; return; }
+const GAPS_TYDEN = { card: "#gapsCard", cls: "#gapsCls", okruhy: "#gapsOkruhy", hry: "#gapsHry", hlavni: "#gapsHlavni" };
+const GAPS_HODINA = { card: "#hGapsCard", cls: "#hGapsCls", okruhy: "#hGapsOkruhy", hry: "#hGapsHry", hlavni: "#hGapsHlavni" };
+
+async function renderGaps(skupinaId, kam, opt) {
+  kam = kam || GAPS_TYDEN; opt = opt || {};
+  const card = $(kam.card);
+  if (!skupinaId) { card.hidden = true; return; }
   card.hidden = false;
-  $("#gapsCls").textContent = skName(S.histSkupina);
-  const seznam = await dlouhoNebylo(S.histSkupina);
+  $(kam.cls).textContent = skName(skupinaId);
+  const seznam = opt.seznam || await dlouhoNebylo(skupinaId);
   S.cache.gaps = seznam;
+  const kolik = opt.kolik || 4;
   const chybi = (c) => c.posledni === null || c.tydnu >= 3;
   const fill = (sel, items) => {
     const box = $(sel); box.innerHTML = "";
     if (!items.length) { box.appendChild(el("div", "empty", "všechno měli nedávno")); return; }
     items.forEach((c) => box.appendChild(gapRow(c.nazev, c.posledni, c.tydnu)));
   };
-  fill("#gapsOkruhy", okruhyZeSeznamu(seznam).filter(chybi).slice(0, 4).map((o) => ({ nazev: o.okruh, posledni: o.posledni, tydnu: o.tydnu })));
-  fill("#gapsHry", seznam.filter((c) => c.typ === "uvod" && chybi(c)).slice(0, 4));
-  fill("#gapsHlavni", seznam.filter((c) => (c.typ === "hlavni" || c.typ === "pruprava") && chybi(c)).slice(0, 4));
+  fill(kam.okruhy, okruhyZeSeznamu(seznam).filter(chybi).slice(0, kolik).map((o) => ({ nazev: o.okruh, posledni: o.posledni, tydnu: o.tydnu })));
+  fill(kam.hry, seznam.filter((c) => c.typ === "uvod" && chybi(c)).slice(0, kolik));
+  fill(kam.hlavni, seznam.filter((c) => (c.typ === "hlavni" || c.typ === "pruprava") && chybi(c)).slice(0, kolik));
 }
 
-async function renderHist() {
-  const card = $("#histCard");
-  if (!S.histSkupina) { card.hidden = true; return; }
+const HIST_TYDEN = { card: "#histCard", ttl: "#histTtl", list: "#histList" };
+const HIST_HODINA = { card: "#hHistCard", ttl: "#hHistTtl", list: "#hHistList" };
+
+async function renderHist(skupinaId, kam, opt) {
+  kam = kam || HIST_TYDEN; opt = opt || {};
+  const card = $(kam.card);
+  if (!skupinaId) { card.hidden = true; return; }
   card.hidden = false;
-  $("#histTtl").textContent = "Co " + skName(S.histSkupina) + " naposledy měla";
-  const box = $("#histList"); box.innerHTML = "";
-  const zapsane = (await dbBy("hodiny", "skupinaId", S.histSkupina))
-    .filter((h) => h.napln || h.zapis)
+  $(kam.ttl).textContent = opt.ttl || ("Co " + skName(skupinaId) + " naposledy měla");
+  const box = $(kam.list); box.innerHTML = "";
+  const zapsane = (await dbBy("hodiny", "skupinaId", skupinaId))
+    .filter((h) => (h.napln || h.zapis) && h.id !== opt.krome)
     .sort((a, b) => b.datum.localeCompare(a.datum));
   const dnesI = iso(new Date());
   const minule = zapsane.filter((h) => h.datum <= dnesI);
-  const hod = (minule.length ? minule : zapsane).slice(0, 5);
+  const hod = (minule.length ? minule : zapsane).slice(0, opt.kolik || 5);
   if (!hod.length) { box.appendChild(el("div", "empty", "Zatím žádný zápis.")); return; }
   hod.forEach((h) => {
     const r = el("div");
     r.append(el("span", "d", cz(h.datum)), el("span", "x", h.napln || h.zapis));
     box.appendChild(r);
   });
+}
+
+const SBAL_KLIC = { hHistCard: "sbalHist", hGapsCard: "sbalGaps" };
+
+function kresliSbaleni(card, sbaleno) {
+  card.dataset.sbaleno = sbaleno ? "1" : "0";
+  const b = card.querySelector(".sbal");
+  if (b) { b.textContent = sbaleno ? "▸" : "▾"; b.setAttribute("aria-expanded", String(!sbaleno)); }
+}
+
+async function nastavSbaleni() {
+  for (const id of Object.keys(SBAL_KLIC)) {
+    const card = document.getElementById(id);
+    if (card) kresliSbaleni(card, await metaGet(SBAL_KLIC[id], false));
+  }
 }
 
 /* ---------- render: HODINA ---------- */
@@ -1078,8 +1120,10 @@ async function renderHodina() {
     $("#fPlan").value = ""; $("#fNapln").value = ""; $("#fZapis").value = "";
     $("#hTitle").textContent = "Hodina"; $("#hSub").textContent = "nic nevybráno";
     $("#zasTypy").innerHTML = ""; $("#zasList").innerHTML = ""; $("#slibHodinaList").innerHTML = "";
+    $("#hHistCard").hidden = true; $("#hGapsCard").hidden = true;
     return;
   }
+  S.histSkupina = h.skupinaId;
   $("#hTitle").textContent = skName(h.skupinaId) + " · " + h.poradi + ". hodina";
   $("#hSub").textContent = czFull(h.datum) + (h.mistnost ? " · " + h.mistnost : "");
   $("#fPlan").value = h.plan || "";
@@ -1125,7 +1169,11 @@ async function renderHodina() {
   });
   if (!zaci.length) list.appendChild(el("div", "empty", "Tahle skupina nemá načtené žáky."));
   updateSum();
-  await renderZasobnik(h);
+  const seznamCin = await dlouhoNebylo(h.skupinaId);
+  await renderHist(h.skupinaId, HIST_HODINA, { ttl: "Co naposledy měli", kolik: 3, krome: h.id });
+  await renderGaps(h.skupinaId, GAPS_HODINA, { kolik: 3, seznam: seznamCin });
+  await nastavSbaleni();
+  await renderZasobnik(h, seznamCin);
   await renderSlibyHodina();
 
   function updateSum() {
@@ -1135,16 +1183,16 @@ async function renderHodina() {
   }
 }
 
-async function renderZasobnik(h) {
+async function renderZasobnik(h, hotovy) {
   const typy = $("#zasTypy"); const list = $("#zasList");
   typy.innerHTML = ""; list.innerHTML = "";
   if (!h) return;
-  const seznam = await dlouhoNebylo(h.skupinaId);
+  const seznam = hotovy || await dlouhoNebylo(h.skupinaId);
   const aktivni = S.zasTyp || "uvod";
   Object.entries(TYPY).forEach(([k, popis]) => {
     const b = el("button", "chip", popis); b.type = "button";
     b.setAttribute("aria-pressed", String(k === aktivni));
-    b.addEventListener("click", async () => { S.zasTyp = k; await renderZasobnik(await dbGet("hodiny", S.hodinaId)); });
+    b.addEventListener("click", async () => { S.zasTyp = k; await renderZasobnik(await dbGet("hodiny", S.hodinaId), seznam); });
     typy.appendChild(b);
   });
   const vFiltru = seznam.filter((c) => c.typ === aktivni);
@@ -1830,6 +1878,13 @@ async function boot() {
   $("#tPrev").addEventListener("click", () => { S.tyden = addDays(S.tyden, -7); renderTyden(); });
   $("#tNext").addEventListener("click", () => { S.tyden = addDays(S.tyden, 7); renderTyden(); });
   $("#tThis").addEventListener("click", () => { S.tyden = planWeek(iso(new Date())); renderTyden(); });
+
+  document.querySelectorAll(".sbal").forEach((b) => b.addEventListener("click", async () => {
+    const card = b.closest(".card");
+    const sbaleno = card.dataset.sbaleno !== "1";
+    kresliSbaleni(card, sbaleno);
+    if (SBAL_KLIC[card.id]) await metaSet(SBAL_KLIC[card.id], sbaleno);
+  }));
 
   let saveTimer;
   ["#fPlan", "#fNapln", "#fZapis"].forEach((sel) => $(sel).addEventListener("input", () => {

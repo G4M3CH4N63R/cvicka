@@ -204,6 +204,24 @@ Konflikt řeší poslední zápis podle `updatedAt`. Mazání se přenáší jak
 Fronta odchozích změn je v úložišti `fronta` a do zálohy nepatří, `sys` ano: bez soli
 by se po obnově na vyčištěném zařízení už nedaly otevřít zašifrované poznámky ze serveru.
 
+## Historie a mezery přímo v hodině (v0.6.5)
+
+Karty „Co naposledy měli" a „Dlouho nebylo" jsou nově i na obrazovce Hodina, hned pod
+náplní a nad zásobníkem. Vymýšlení hodiny a psaní plánu se tím vejde na jednu obrazovku
+a nemusí se překlikávat na Týden. Na Týdnu obě karty zůstávají beze změny.
+
+Ve verzi na Hodině se ukazují tři poslední zápisy a tři položky v každé sekci mezer,
+aby zásobník nespadl daleko dolů. Aktuálně otevřená hodina se ve své vlastní historii
+nezobrazuje, jinak by si po napsání náplně četla sama sebe.
+
+Obě karty jde sbalit šipkou v záhlaví. Stav sbalení se pamatuje v úložišti `meta`
+(`sbalHist`, `sbalGaps`), takže přežije restart. `meta` se nesynchronizuje, každé
+zařízení si tedy drží svoje nastavení; v záloze ale je, takže obnovu přežije taky.
+
+Vedlejší oprava: `S.histSkupina` se teď nastavuje při otevření hodiny, ne jen při kliknutí
+v Týdnu. Když se hodina otevřela z obrazovky Dnes, karty na Týdnu předtím ukazovaly
+předchozí skupinu, nebo nic.
+
 ## Co přijde dál
 
 F3 zápis do ŠOL ze šablon, porovnání výkonů a osobní rekordy, pololetní přehledy.
