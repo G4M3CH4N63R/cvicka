@@ -122,10 +122,29 @@ nav button[aria-selected="true"] { color: var(--accent); border-top-color: var(-
   width: 42px; height: 36px; border-radius: 8px; border: 1px solid var(--line-strong);
   background: var(--surface-2); color: var(--ink-3);
 }
-.st[data-s="ok"] { background: var(--good-soft); border-color: transparent; color: var(--good); }
-.st[data-s="X"] { background: var(--crit-soft); border-color: transparent; color: var(--crit); }
-.st[data-s="N"] { background: var(--surface-3); border-color: transparent; color: var(--ink-2); }
-.st[data-s="U"] { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
+.st[data-s="ok"], .sv[data-s="ok"] { background: var(--good-soft); border-color: transparent; color: var(--good); }
+.st[data-s="X"], .sv[data-s="X"] { background: var(--crit-soft); border-color: transparent; color: var(--crit); }
+.st[data-s="N"], .sv[data-s="N"] { background: var(--surface-3); border-color: transparent; color: var(--ink-2); }
+.st[data-s="U"], .sv[data-s="U"] { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
+
+/* nabidka stavu nad tlacitkem docházky */
+.stavpop { position: fixed; inset: 0; z-index: 70; }
+.stavpop-bg { position: absolute; inset: 0; }
+.stavpop-c {
+  position: absolute; width: 300px; max-width: calc(100vw - 16px); padding: 8px;
+  background: var(--surface); border: 1px solid var(--line-strong); border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(10, 13, 20, .22);
+}
+.stavpop-jm { font-size: 11.5px; color: var(--ink-3); padding: 1px 3px 7px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stavpop-v { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.sv {
+  appearance: none; cursor: pointer; border-radius: 9px; border: 1px solid var(--line-strong);
+  background: var(--surface-2); color: var(--ink-3); padding: 8px 3px 7px; min-width: 0;
+  display: grid; gap: 3px; justify-items: center; line-height: 1;
+}
+.sv b { font-family: var(--fd); font-weight: 700; font-size: 14px; }
+.sv span { font-size: 9px; white-space: nowrap; }
+.sv[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 1px; }
 .lead { appearance: none; cursor: pointer; width: 32px; height: 36px; border-radius: 8px; border: 1px dashed var(--line-strong); background: none; color: var(--ink-3); font-size: 15px; line-height: 1; }
 .lead[aria-pressed="true"] { border: 1px solid transparent; background: var(--chalk-soft); color: var(--chalk); }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 13px; padding: 8px 13px 2px; font-size: 11.5px; color: var(--ink-3); }
@@ -498,6 +517,14 @@ select {
   <button type="button" id="updBtn">Načíst</button>
 </div>
 
+<div class="stavpop" id="stavPop" hidden>
+  <div class="stavpop-bg" id="stavBg"></div>
+  <div class="stavpop-c" role="dialog" aria-label="Stav žáka v hodině">
+    <div class="stavpop-jm" id="stavJm"></div>
+    <div class="stavpop-v" id="stavVolby"></div>
+  </div>
+</div>
+
 <div class="sheet" id="zakSheet" hidden>
   <div class="sheet-bg" id="zakBg"></div>
   <div class="sheet-c" role="dialog" aria-modal="true" aria-labelledby="zakJm">
@@ -525,7 +552,7 @@ select {
 
 <script>
 "use strict";
-const APP = { ver: "0.6.9", db: null, sync: null, klic: null };
+const APP = { ver: "0.7.0", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -539,6 +566,7 @@ const DISCIPLINY = [
 ];
 const JEDNOTKY = ["cm", "m", "s", "min", "počet", "body"];
 const POPIS = { ok: "ok", X: "X", N: "N", U: "Ú" };
+const POPIS_STAV = { ok: "cvičí", X: "nepřítomen", N: "necvičí", U: "bez úboru" };
 const VOLNO_DEFAULT = [
   "2026-09-28", "2026-10-28..2026-10-30", "2026-11-17",
   "2026-12-23..2027-01-01", "2027-01-29", "2027-02-22..2027-02-26",
@@ -1232,6 +1260,57 @@ async function nastavSbaleni() {
   }
 }
 
+function prepocitejDochazku() {
+  const btns = $("#pupilList").querySelectorAll(".st");
+  let ok = 0;
+  btns.forEach((b) => { if (b.dataset.s === "ok") ok++; });
+  $("#attSum").textContent = btns.length ? `cvičí ${ok} / ${btns.length}` : "";
+}
+
+function nastavStavTlacitko(btn, radek, stav) {
+  btn.dataset.s = stav;
+  btn.textContent = POPIS[stav];
+  if (radek) radek.dataset.stav = stav;
+  btn.setAttribute("aria-label", (btn.dataset.jm ? btn.dataset.jm + ", " : "") + "stav: " + POPIS_STAV[stav]);
+}
+
+// Nabidka stavu se otevira misto prokliknavani, at se na jeden stav neceka pres tri tapnuti.
+let stavCil = null;
+
+function otevriStav(btn, rec, radek, jmeno) {
+  // scroll si pamatujeme, at nabidku nezavre doznivajici setrvacne rolovani z tapnuti
+  stavCil = { btn, rec, radek, scroll: $("main").scrollTop };
+  const pop = $("#stavPop");
+  pop.hidden = false;
+  $("#stavJm").textContent = jmeno || "";
+  pop.querySelectorAll(".sv").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.s === rec.stav)));
+  btn.setAttribute("aria-expanded", "true");
+
+  const karta = pop.querySelector(".stavpop-c");
+  const r = btn.getBoundingClientRect();
+  const w = karta.offsetWidth, h = karta.offsetHeight;
+  const okraj = 8;
+  let left = Math.min(Math.max(okraj, r.right - w), window.innerWidth - w - okraj);
+  let top = r.bottom + 6;
+  if (top + h > window.innerHeight - okraj) top = r.top - h - 6;
+  if (top < okraj) top = okraj;
+  karta.style.left = Math.round(left) + "px";
+  karta.style.top = Math.round(top) + "px";
+  (pop.querySelector('.sv[aria-pressed="true"]') || pop.querySelector(".sv")).focus({ preventScroll: true });
+}
+
+function zavriStav() {
+  const pop = $("#stavPop");
+  if (pop.hidden) return;
+  pop.hidden = true;
+  const btn = stavCil && stavCil.btn;
+  stavCil = null;
+  if (btn) {
+    btn.setAttribute("aria-expanded", "false");
+    btn.focus({ preventScroll: true });
+  }
+}
+
 /* ---------- render: HODINA ---------- */
 async function openHodina(id, odkud) {
   S.hodinaId = id;
@@ -1270,13 +1349,12 @@ async function renderHodina() {
     const rec = mapa.get(z.id) || { id: h.id + "|" + z.id, hodinaId: h.id, zakId: z.id, stav: "ok", vedl: false };
     const row = el("div", "pupil");
     row.append(el("span", "n mono", String(i + 1)), el("span", "nm", z.prijmeni + " " + z.jmeno));
-    const st = el("button", "st"); st.type = "button"; st.dataset.s = rec.stav; st.textContent = POPIS[rec.stav];
-    st.setAttribute("aria-label", "stav: " + z.prijmeni);
-    st.addEventListener("click", async () => {
-      rec.stav = STAVY[(STAVY.indexOf(rec.stav) + 1) % STAVY.length];
-      st.dataset.s = rec.stav; st.textContent = POPIS[rec.stav];
-      await dbPut("zaznamy", rec); updateSum();
-    });
+    const st = el("button", "st"); st.type = "button";
+    st.dataset.jm = z.prijmeni + " " + z.jmeno;
+    st.setAttribute("aria-haspopup", "true");
+    st.setAttribute("aria-expanded", "false");
+    nastavStavTlacitko(st, row, rec.stav);
+    st.addEventListener("click", () => otevriStav(st, rec, row, z.prijmeni + " " + z.jmeno));
     const ld = el("button", "lead"); ld.type = "button";
     ld.textContent = rec.vedl ? "★" : "☆"; ld.setAttribute("aria-pressed", String(!!rec.vedl));
     ld.setAttribute("aria-label", "vedl rozcvičku: " + z.prijmeni);
@@ -1296,19 +1374,13 @@ async function renderHodina() {
     list.appendChild(row);
   });
   if (!zaci.length) list.appendChild(el("div", "empty", "Tahle skupina nemá načtené žáky."));
-  updateSum();
+  prepocitejDochazku();
   const seznamCin = await dlouhoNebylo(h.skupinaId);
   await renderHist(h.skupinaId, HIST_HODINA, { ttl: "Co naposledy měli", kolik: 3, krome: h.id });
   await renderGaps(h.skupinaId, GAPS_HODINA, { kolik: 3, seznam: seznamCin });
   await nastavSbaleni();
   await renderZasobnik(h, seznamCin);
   await renderSlibyHodina();
-
-  function updateSum() {
-    const btns = list.querySelectorAll(".st");
-    let ok = 0; btns.forEach((b) => { if (b.dataset.s === "ok") ok++; });
-    $("#attSum").textContent = btns.length ? `cvičí ${ok} / ${btns.length}` : "";
-  }
 }
 
 async function renderZasobnik(h, hotovy) {
@@ -1963,6 +2035,7 @@ async function obnovZnacku(zakId) {
 
 /* ---------- navigace ---------- */
 async function switchTab(name) {
+  zavriStav();
   S.tab = name;
   document.querySelectorAll(".screen").forEach((s) => s.classList.toggle("on", s.id === "s-" + name));
   document.querySelectorAll("nav button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
@@ -1996,6 +2069,32 @@ async function boot() {
   $("#zakX").addEventListener("click", zavriZaka);
   $("#zakBg").addEventListener("click", zavriZaka);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#zakSheet").hidden) zavriZaka(); });
+
+  STAVY.forEach((k) => {
+    const b = el("button", "sv"); b.type = "button"; b.dataset.s = k;
+    b.append(el("b", "", POPIS[k]), el("span", "", POPIS_STAV[k]));
+    b.setAttribute("aria-label", POPIS_STAV[k]);
+    $("#stavVolby").appendChild(b);
+  });
+
+  $("#stavBg").addEventListener("click", zavriStav);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#stavPop").hidden) zavriStav(); });
+  // nabidka je ukotvena k tlacitku, pri rolovani by odplula
+  $("main").addEventListener("scroll", () => {
+    if (stavCil && Math.abs($("main").scrollTop - stavCil.scroll) > 4) zavriStav();
+  }, { passive: true });
+  window.addEventListener("resize", () => { if (!$("#stavPop").hidden) zavriStav(); });
+  $("#stavVolby").querySelectorAll(".sv").forEach((b) => b.addEventListener("click", async () => {
+    if (!stavCil) return;
+    const { btn, rec, radek } = stavCil;
+    const novy = b.dataset.s;
+    zavriStav();
+    if (rec.stav === novy) return;
+    rec.stav = novy;
+    nastavStavTlacitko(btn, radek, novy);
+    prepocitejDochazku();
+    await dbPut("zaznamy", rec);
+  }));
   DISCIPLINY.forEach(([nazev]) => { const o = el("option"); o.value = nazev; $("#dlDisc").appendChild(o); });
 
   $("#navBack").addEventListener("click", async () => { const t = S.backTo; S.backTo = null; await switchTab(t || "dnes"); });

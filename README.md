@@ -260,6 +260,27 @@ Rozsah sloupců se bere z rozvrhu, ne z toho, co zrovna v týdnu je. Mřížka t
 stejný tvar a v týdnu se svátkem se sloupce nepřeskládají. Kdyby v jednom okně byly
 dvě hodiny, buňka ukáže první a k ní "+1"; kompletní výpis je vždycky v seznamu pod mřížkou.
 
+## Nabídka stavu místo proklikávání (v0.7.0)
+
+Tlačítko stavu u žáka se už neprokliknává dokola. Ťuknutí otevře nabídku se čtyřmi
+možnostmi (cvičí, nepřítomen, necvičí, bez úboru) a jedno ťuknutí stav nastaví.
+Dřív stálo "bez úboru" tři tapnutí a při přejetí se muselo obíhat dokola.
+
+Nabídka je jednoduchý popover (`#stavPop`): průhledné pozadí přes celou obrazovku,
+kartička ukotvená k tlačítku. Když se pod tlačítko nevejde, překlopí se nad něj, a vždycky
+se drží 8 px od okrajů. Nahoře je jméno žáka, aby bylo jasné, u koho se zapisuje,
+a aktuální stav je zvýrazněný a má fokus.
+
+Zavírá ji ťuknutí mimo, Escape, rolování seznamu a přepnutí obrazovky. Rolování se hlídá
+přes rozdíl `scrollTop` proti hodnotě při otevření, ne přes pouhý výskyt události; bez toho
+ji zavřelo doznívající setrvačné rolování z toho samého tapnutí, kterým se otevřela.
+Focus se vrací na tlačítko s `preventScroll`, aby seznam neposkakoval.
+
+Volby se staví z `STAVY`, `POPIS` a `POPIS_STAV`, takže přidání stavu je jeden řádek.
+Barvy jsou sdílené s tlačítkem v řádku (`.st[data-s=…], .sv[data-s=…]`).
+Přepočet docházky se přesunul z uzávěry uvnitř `renderHodina()` do `prepocitejDochazku()`,
+aby na něj dosáhla i nabídka. Výběr stejného stavu se neukládá.
+
 ## Co přijde dál
 
 F3 zápis do ŠOL ze šablon, porovnání výkonů a osobní rekordy, pololetní přehledy.
