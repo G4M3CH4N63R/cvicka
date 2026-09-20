@@ -318,6 +318,27 @@ select {
 .zrow .tp.chovani { background: var(--warn-soft); color: var(--warn); }
 .zrow .del { appearance: none; cursor: pointer; border: 1px solid var(--line-strong); background: none; color: var(--ink-3); border-radius: 8px; padding: 4px 8px; font-size: 12px; line-height: 1.4; flex: 0 0 auto; }
 .zrow .del.warn { border-color: var(--crit); color: var(--crit); }
+
+/* hromadne mereni */
+.mrow { display: grid; grid-template-columns: 20px 1fr 86px; gap: 8px; align-items: center; padding: 7px 0; border-top: 1px solid var(--line); }
+.mrow:first-child { border-top: 0; }
+.mrow > * { min-width: 0; }
+.mrow .n { font-family: var(--fm); font-size: 11px; color: var(--ink-3); }
+.mrow .nm { font-size: 14px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mrow[data-mimo="1"] .nm { color: var(--ink-3); }
+.mrow .mp { display: flex; flex-wrap: wrap; gap: 3px 7px; align-items: center; font-size: 10.5px; color: var(--ink-3); margin-top: 2px; }
+.mv {
+  appearance: none; width: 100%; text-align: center; font-family: var(--fm); font-size: 15px;
+  padding: 9px 4px; border-radius: 9px; border: 1px solid var(--line-strong);
+  background: var(--surface-2); color: var(--ink);
+}
+.mv:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.mv:disabled { opacity: .45; }
+.mbd { font-family: var(--fm); font-size: 9.5px; font-weight: 600; padding: 2px 6px; border-radius: 99px; white-space: nowrap; }
+.mbd.lepsi { background: var(--good-soft); color: var(--good); }
+.mbd.horsi { background: var(--surface-3); color: var(--ink-2); }
+.mbd.rek { background: var(--chalk-soft); color: var(--chalk); }
+.mbd.mimo { background: var(--crit-soft); color: var(--crit); }
 </style>
 </head>
 <body>
@@ -417,7 +438,7 @@ select {
         <div class="btns"><button class="btn ghost" id="bSlib" type="button">Přidat slib</button></div>
       </div>
     </div>    <div class="card">
-      <div class="card-h"><h3>Docházka</h3><span class="eyebrow" id="attSum"></span></div>
+      <div class="card-h"><h3>Docházka</h3><span class="eyebrow" id="attSum"></span><button class="iconbtn" id="bMereni" type="button" style="width:auto;height:28px;padding:0 10px;font-size:12px">Měřit</button></div>
       <div class="legend">
         <span><b>ok</b> cvičí</span><span><b>X</b> nepřítomen</span><span><b>N</b> necvičí</span><span><b>Ú</b> bez úboru</span><span>☆ vedl rozcvičku</span><span>✎ zápisy u žáka</span>
       </div>
@@ -525,6 +546,33 @@ select {
   </div>
 </div>
 
+<div class="sheet" id="merSheet" hidden>
+  <div class="sheet-bg" id="merBg"></div>
+  <div class="sheet-c" role="dialog" aria-modal="true" aria-labelledby="merTtl">
+    <div class="sheet-h">
+      <div style="min-width:0">
+        <h3 id="merTtl">Měření</h3>
+        <div class="sub" id="merSub"></div>
+      </div>
+      <button class="iconbtn" id="merX" type="button" aria-label="Zavřít">&#10005;</button>
+    </div>
+    <div class="sheet-b">
+      <div class="eyebrow" id="merNedavnoTtl" hidden>Naposledy u téhle skupiny</div>
+      <div class="chips" id="merNedavno" style="margin-top:6px"></div>
+      <div class="duo">
+        <div class="field"><label for="merDisc">Disciplína</label><select id="merDisc"></select></div>
+        <div class="field"><label for="merJed">Jednotka</label><select id="merJed"></select></div>
+      </div>
+      <div class="field" id="merJineF" hidden><label for="merJine">Název disciplíny</label><input type="text" id="merJine" placeholder="Hod obouruč"></div>
+      <div class="sec">
+        <div class="eyebrow" id="merPocet">Žáci</div>
+        <div id="merList"></div>
+      </div>
+      <div class="hint">Zapisuje se rovnou, nic se nepotvrzuje. Prázdné pole zápis smaže.</div>
+    </div>
+  </div>
+</div>
+
 <div class="sheet" id="zakSheet" hidden>
   <div class="sheet-bg" id="zakBg"></div>
   <div class="sheet-c" role="dialog" aria-modal="true" aria-labelledby="zakJm">
@@ -552,7 +600,7 @@ select {
 
 <script>
 "use strict";
-const APP = { ver: "0.7.0", db: null, sync: null, klic: null };
+const APP = { ver: "0.8.0", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -1917,15 +1965,21 @@ async function renderZak() {
   $("#zakPocet").textContent = vse.length ? "Zápisy · " + vse.length : "Zápisy";
   const list = $("#zakList"); list.innerHTML = "";
   if (!vse.length) { list.appendChild(el("div", "empty", "Zatím tu nic není.")); return; }
-  vse.forEach((z2) => list.appendChild(zakRow(z2)));
+  const rek = rekordniIds(vse);
+  vse.forEach((z2) => list.appendChild(zakRow(z2, rek.has(z2.id))));
 }
 
-function zakRow(p) {
+function zakRow(p, jeRekord) {
   const r = el("div", "zrow");
   r.appendChild(el("span", "d", dm(p.datum)));
   const mid = el("span", "x");
   mid.appendChild(el("span", "tp " + p.typ, POZN_TYPY[p.typ] || p.typ));
   mid.appendChild(document.createTextNode(poznText(p)));
+  if (jeRekord) {
+    const t = el("span", "tp", "rekord");
+    t.style.cssText = "margin:0 0 0 6px;background:var(--chalk-soft);color:var(--chalk)";
+    mid.appendChild(t);
+  }
   if (p.typ === "chovani" && p.rodicum) {
     const t = el("span", "tp", "rodičům");
     t.style.margin = "0 0 0 6px";
@@ -2024,6 +2078,253 @@ async function ulozPozn() {
   toast("Uloženo");
 }
 
+/* ---------- hromadne mereni ---------- */
+
+const cisloZ = (x) => { const v = parseFloat(String(x == null ? "" : x).replace(",", ".")); return Number.isFinite(v) ? v : null; };
+const normDisc = (x) => String(x || "").replace(/\s+/g, " ").trim().toLowerCase();
+// u casu je lepsi mensi cislo, u delek a poctu vetsi
+const mensiJeLepsi = (jed) => jed === "s" || jed === "min";
+
+function vykonyZaka(vse, disc) {
+  const d = normDisc(disc);
+  return vse
+    .filter((p) => p.typ === "vykon" && normDisc(p.disciplina) === d && cisloZ(p.hodnota) !== null)
+    .sort((a, b) => String(a.datum || "").localeCompare(String(b.datum || "")));
+}
+
+function rekordZe(zaznamy, jed) {
+  let nej = null;
+  zaznamy.forEach((p) => {
+    const v = cisloZ(p.hodnota);
+    if (v === null) return;
+    if (nej === null || (mensiJeLepsi(jed) ? v < nej : v > nej)) nej = v;
+  });
+  return nej;
+}
+
+// id zaznamu, ktere jsou osobnim rekordem ve sve disciplině
+function rekordniIds(vse) {
+  const podle = new Map();
+  vse.filter((p) => p.typ === "vykon" && cisloZ(p.hodnota) !== null).forEach((p) => {
+    const k = normDisc(p.disciplina);
+    if (!podle.has(k)) podle.set(k, []);
+    podle.get(k).push(p);
+  });
+  const ids = new Set();
+  podle.forEach((skupina) => {
+    const jed = skupina[skupina.length - 1].jednotka;
+    let nej = null;
+    skupina.forEach((p) => {
+      const v = cisloZ(p.hodnota);
+      if (nej === null || (mensiJeLepsi(jed) ? v < cisloZ(nej.hodnota) : v > cisloZ(nej.hodnota))) nej = p;
+    });
+    if (nej) ids.add(nej.id);
+  });
+  return ids;
+}
+
+function merDisciplina() {
+  if (!S.mer) return "";
+  const v = $("#merDisc").value;
+  if (v === "__jina") return $("#merJine").value.trim();
+  return v;
+}
+
+async function otevriMereni() {
+  const h = S.hodinaId ? await dbGet("hodiny", S.hodinaId) : null;
+  if (!h) { toast("Nejdřív otevři hodinu"); return; }
+  S.mer = { datum: h.datum, skupinaId: h.skupinaId, hodinaId: h.id, jed: "cm" };
+  $("#merSub").textContent = skName(h.skupinaId) + " · " + cz(h.datum);
+  $("#merSheet").hidden = false;
+  document.body.classList.add("zamek");
+  await renderMereni();
+}
+
+function zavriMereni() {
+  $("#merSheet").hidden = true;
+  document.body.classList.remove("zamek");
+  S.mer = null;
+}
+
+// Radky se staveji jednou pri otevreni. Zmena discipliny nebo jednotky uz jen
+// prepocita znacky, at se pod rukama nemeni prvky, do kterych se zrovna pise.
+async function renderMereni() {
+  if (!S.mer) return;
+  const zaci = S.cache.zaciBySk.get(S.mer.skupinaId) || [];
+  S.mer.zaci = zaci;
+
+  const d = $("#merDisc"); d.innerHTML = "";
+  const prazdne = el("option", null, "Vyber disciplínu"); prazdne.value = "";
+  d.appendChild(prazdne);
+  DISCIPLINY.forEach(([nazev]) => { const o = el("option", null, nazev); o.value = nazev; d.appendChild(o); });
+  const jina = el("option", null, "Jiná…"); jina.value = "__jina"; d.appendChild(jina);
+  const j = $("#merJed"); j.innerHTML = "";
+  JEDNOTKY.forEach((u) => { const o = el("option", null, u); o.value = u; j.appendChild(o); });
+  $("#merJine").value = "";
+  $("#merJineF").hidden = true;
+
+  const list = $("#merList"); list.innerHTML = "";
+  zaci.forEach((z, i) => {
+    const radek = el("div", "mrow");
+    radek.dataset.zak = z.id;
+    radek.dataset.mimo = chybiVHodine(z.id) ? "1" : "0";
+    radek.append(el("span", "n mono", String(i + 1)));
+    const mid = el("div");
+    mid.append(el("span", "nm", z.prijmeni + " " + z.jmeno), el("div", "mp"));
+    radek.append(mid);
+    const vstup = el("input", "mv");
+    vstup.type = "text";
+    vstup.setAttribute("inputmode", "decimal");
+    vstup.setAttribute("enterkeyhint", "next");
+    vstup.setAttribute("aria-label", z.prijmeni + " " + z.jmeno + ", hodnota");
+    vstup.disabled = true;
+    radek.append(vstup);
+    list.appendChild(radek);
+
+    let cas;
+    vstup.addEventListener("input", () => { clearTimeout(cas); cas = setTimeout(() => ulozMereni(z, vstup, radek), 450); });
+    vstup.addEventListener("blur", () => { clearTimeout(cas); ulozMereni(z, vstup, radek); });
+    vstup.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      const vsechny = [...list.querySelectorAll(".mv:not(:disabled)")];
+      const dalsi = vsechny[vsechny.indexOf(vstup) + 1];
+      if (dalsi) dalsi.focus(); else vstup.blur();
+    });
+  });
+  if (!zaci.length) list.appendChild(el("div", "empty", "Tahle skupina nemá načtené žáky."));
+
+  // co se u tehle skupiny merilo naposledy
+  const vsePozn = await dbAll("pozn");
+  const moje = new Set(zaci.map((z) => z.id));
+  const nedavne = [];
+  vsePozn
+    .filter((x) => moje.has(x.zakId) && x.typ === "vykon" && x.disciplina)
+    .sort((a, b) => String(b.datum || "").localeCompare(String(a.datum || "")))
+    .forEach((x) => { if (!nedavne.some((y) => normDisc(y.disciplina) === normDisc(x.disciplina))) nedavne.push(x); });
+  const chips = $("#merNedavno"); chips.innerHTML = "";
+  $("#merNedavnoTtl").hidden = !nedavne.length;
+  nedavne.slice(0, 4).forEach((x) => {
+    const b = el("button", "chip", x.disciplina); b.type = "button";
+    b.addEventListener("click", async () => {
+      const zname = DISCIPLINY.some((y) => y[0] === x.disciplina);
+      $("#merDisc").value = zname ? x.disciplina : "__jina";
+      $("#merJineF").hidden = zname;
+      if (!zname) $("#merJine").value = x.disciplina;
+      S.mer.jed = x.jednotka || S.mer.jed;
+      $("#merJed").value = S.mer.jed;
+      await osvezMereni();
+    });
+    chips.appendChild(b);
+  });
+
+  await osvezMereni();
+}
+
+let merKresba = 0;
+
+async function osvezMereni() {
+  if (!S.mer) return;
+  const moje = ++merKresba;
+  const disc = merDisciplina();
+  const jed = $("#merJed").value || S.mer.jed;
+  S.mer.jed = jed;
+  const vsePozn = await dbAll("pozn");
+  if (moje !== merKresba || !S.mer) return;
+
+  const podleZaka = new Map();
+  vsePozn.forEach((p) => {
+    if (!podleZaka.has(p.zakId)) podleZaka.set(p.zakId, []);
+    podleZaka.get(p.zakId).push(p);
+  });
+
+  (S.mer.zaci || []).forEach((z) => {
+    const radek = $("#merList").querySelector('.mrow[data-zak="' + z.id + '"]');
+    if (!radek) return;
+    const vstup = radek.querySelector(".mv");
+    const psalSe = document.activeElement === vstup;
+    vstup.disabled = !disc;
+    kresliMerRadek(z, radek, vstup, podleZaka.get(z.id) || [], disc, jed, S.mer.datum, !psalSe);
+  });
+  aktualizujMerPocet();
+}
+
+// prepise hodnotu, znacky a stav radku
+function kresliMerRadek(z, radek, vstup, poznZaka, disc, jed, datum, naplnitHodnotu) {
+  const mp = radek.querySelector(".mp"); mp.innerHTML = "";
+  if (radek.dataset.mimo === "1") mp.appendChild(el("span", "mbd mimo", "nepřítomen"));
+  if (!disc) return;
+  const rada = vykonyZaka(poznZaka, disc);
+  const dnesni = rada.find((p) => p.datum === datum);
+  const drivejsi = rada.filter((p) => p.datum !== datum);
+  if (naplnitHodnotu) vstup.value = dnesni ? String(dnesni.hodnota) : "";
+
+  const posledni = drivejsi.length ? drivejsi[drivejsi.length - 1] : null;
+  const rek = rekordZe(drivejsi, jed);
+  const ted = cisloZ(vstup.value);
+
+  if (ted !== null && rek !== null && (mensiJeLepsi(jed) ? ted < rek : ted > rek)) {
+    mp.appendChild(el("span", "mbd rek", "rekord"));
+  } else if (ted !== null && posledni) {
+    const rozdil = ted - cisloZ(posledni.hodnota);
+    const lepsi = mensiJeLepsi(jed) ? rozdil < 0 : rozdil > 0;
+    const t = (rozdil > 0 ? "+" : "") + Math.round(rozdil * 100) / 100;
+    if (rozdil !== 0) mp.appendChild(el("span", "mbd " + (lepsi ? "lepsi" : "horsi"), t));
+  } else if (ted !== null && !posledni) {
+    mp.appendChild(el("span", "mbd rek", "první"));
+  }
+
+  if (posledni) mp.appendChild(el("span", null, "naposledy " + posledni.hodnota + " " + (posledni.jednotka || "") + " (" + dm(posledni.datum) + ")"));
+  if (rek !== null && (!posledni || cisloZ(posledni.hodnota) !== rek)) mp.appendChild(el("span", null, "rekord " + rek));
+
+}
+
+// kdo v teto hodine chybi, bere se z uz vykreslene dochazky
+function chybiVHodine(zakId) {
+  const znacka = document.querySelector('#pupilList .pzn[data-zak="' + zakId + '"]');
+  const radek = znacka && znacka.closest(".pupil");
+  return !!(radek && radek.dataset.stav === "X");
+}
+
+async function ulozMereni(z, vstup, radek) {
+  if (!S.mer) return;
+  const mer = S.mer;
+  const disc = merDisciplina();
+  if (!disc) return;
+  const jed = mer.jed;
+  const psane = vstup.value.trim().replace(",", ".");
+  const vse = await dbBy("pozn", "zakId", z.id);
+  const dnesni = vse.find((p) => p.typ === "vykon" && normDisc(p.disciplina) === normDisc(disc) && p.datum === mer.datum);
+
+  if (!psane) {
+    if (dnesni) { await dbDel("pozn", dnesni.id); await obnovZnacku(z.id); }
+  } else if (cisloZ(psane) === null) {
+    return;
+  } else if (!dnesni || dnesni.hodnota !== psane || dnesni.jednotka !== jed) {
+    const r = dnesni || { id: uid("p"), zakId: z.id, typ: "vykon", vytvoreno: new Date().toISOString() };
+    r.datum = mer.datum;
+    r.disciplina = disc;
+    r.hodnota = psane;
+    r.jednotka = jed;
+    if (mer.hodinaId) r.hodinaId = mer.hodinaId;
+    await dbPut("pozn", r);
+    await obnovZnacku(z.id);
+  }
+  if (!radek.isConnected || !S.mer) return;
+  kresliMerRadek(z, radek, vstup, await dbBy("pozn", "zakId", z.id), disc, jed, mer.datum, false);
+  aktualizujMerPocet();
+}
+
+function aktualizujMerPocet() {
+  if (!S.mer) return;
+  const vsechny = [...$("#merList").querySelectorAll(".mv")];
+  const vyplnene = vsechny.filter((v) => v.value.trim() !== "").length;
+  const disc = merDisciplina();
+  $("#merPocet").textContent = disc
+    ? "Zapsáno " + vyplnene + " z " + vsechny.length
+    : "Vyber disciplínu, pak se dají psát hodnoty";
+}
+
 async function obnovZnacku(zakId) {
   const b = document.querySelector('#pupilList .pzn[data-zak="' + zakId + '"]');
   if (!b) return;
@@ -2036,6 +2337,7 @@ async function obnovZnacku(zakId) {
 /* ---------- navigace ---------- */
 async function switchTab(name) {
   zavriStav();
+  if (!$("#merSheet").hidden) zavriMereni();
   S.tab = name;
   document.querySelectorAll(".screen").forEach((s) => s.classList.toggle("on", s.id === "s-" + name));
   document.querySelectorAll("nav button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
@@ -2069,6 +2371,7 @@ async function boot() {
   $("#zakX").addEventListener("click", zavriZaka);
   $("#zakBg").addEventListener("click", zavriZaka);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#zakSheet").hidden) zavriZaka(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#merSheet").hidden) zavriMereni(); });
 
   STAVY.forEach((k) => {
     const b = el("button", "sv"); b.type = "button"; b.dataset.s = k;
@@ -2076,6 +2379,25 @@ async function boot() {
     b.setAttribute("aria-label", POPIS_STAV[k]);
     $("#stavVolby").appendChild(b);
   });
+
+  $("#bMereni").addEventListener("click", otevriMereni);
+  $("#merX").addEventListener("click", zavriMereni);
+  $("#merBg").addEventListener("click", zavriMereni);
+  $("#merDisc").addEventListener("change", async () => {
+    if (!S.mer) return;
+    const v = $("#merDisc").value;
+    $("#merJineF").hidden = v !== "__jina";
+    const nalez = DISCIPLINY.find((x) => x[0] === v);
+    if (nalez) { S.mer.jed = nalez[1]; $("#merJed").value = nalez[1]; }
+    await osvezMereni();
+    if (v === "__jina") $("#merJine").focus();
+  });
+  let merJineCas;
+  $("#merJine").addEventListener("input", () => {
+    clearTimeout(merJineCas);
+    merJineCas = setTimeout(() => { if (S.mer) osvezMereni(); }, 300);
+  });
+  $("#merJed").addEventListener("change", async () => { if (!S.mer) return; S.mer.jed = $("#merJed").value; await osvezMereni(); });
 
   $("#stavBg").addEventListener("click", zavriStav);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#stavPop").hidden) zavriStav(); });

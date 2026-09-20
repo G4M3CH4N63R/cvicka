@@ -281,7 +281,36 @@ Barvy jsou sdílené s tlačítkem v řádku (`.st[data-s=…], .sv[data-s=…]`
 Přepočet docházky se přesunul z uzávěry uvnitř `renderHodina()` do `prepocitejDochazku()`,
 aby na něj dosáhla i nabídka. Výběr stejného stavu se neukládá.
 
+## Hromadné měření a osobní rekordy (v0.8.0)
+
+První kus F3. V záhlaví Docházky je tlačítko Měřit, které otevře celou skupinu naráz.
+Dřív se výkon zapisoval jen přes kartu jednoho žáka, což u osmadvaceti dětí znamenalo
+osmadvacetkrát otevřít a zavřít kartu.
+
+Nahoře jsou čipy s tím, co se u téhle skupiny měřilo naposledy, pod nimi výběr disciplíny
+(17 předvolených plus "Jiná…" s vlastním názvem) a jednotka, která se u známé disciplíny
+doplní sama. Dokud není vybraná disciplína, jsou pole zamčená.
+
+U každého žáka je jeho poslední výkon s datem a osobní rekord, pokud se od posledního liší.
+Po zapsání hodnoty přibude značka: `rekord` při překonání osobního maxima, `první` u prvního
+měření, jinak rozdíl proti minule (`+6`, `-3`) barevně podle toho, jestli je to zlepšení.
+Směr se řídí jednotkou: u `s` a `min` je lepší menší číslo, jinak větší. Kdo v hodině chybí,
+má u jména značku `nepřítomen`, ale zapsat se u něj dá taky.
+
+Zapisuje se rovnou, nic se nepotvrzuje: 450 ms po doťukání nebo při opuštění pole.
+Enter skočí na dalšího. Prázdné pole zápis toho dne smaže. Jeden žák má k jedné disciplíně
+a datu jeden záznam, takže opakovaný zápis přepisuje, nezakládá druhý.
+
+Záznam je obyčejný `pozn` typu `vykon`, takže se synchronizuje a je v záloze jako všechno
+ostatní. Navíc nese `hodinaId`.
+
+V kartě žáka má teď nejlepší výsledek v každé disciplíně značku `rekord` (`rekordniIds()`).
+
+Poznámka k implementaci: řádky se staví jednou při otevření, změna disciplíny nebo jednotky
+už jen přepočítá značky (`osvezMereni()`). Dvě překrytá překreslení by si navzájem zahodila
+rozepsaná pole, proto má osvěžení známku a starší doběh se zahodí.
+
 ## Co přijde dál
 
-F3 zápis do ŠOL ze šablon, porovnání výkonů a osobní rekordy, pololetní přehledy.
+Zbytek F3: pololetní přehledy a zápis do ŠOL ze šablon.
 Pak F4 asistent s nástroji a F6 uzávěrka školního roku.
