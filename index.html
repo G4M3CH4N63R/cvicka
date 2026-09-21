@@ -421,7 +421,7 @@ select {
     <div class="card">
       <div class="card-h"><h3>Náplň hodiny</h3><span class="eyebrow">jen pro tebe</span></div>
       <div class="card-b">
-        <div class="field"><label for="fPlan">Plán (co chci dělat)</label><textarea id="fPlan" rows="2" placeholder="Úvod: … Hlavní část: …"></textarea></div>
+        <div class="field"><label for="fPlan">Plán (co chci dělat)</label><textarea id="fPlan" rows="5" placeholder="Úvod: … Hlavní část: …"></textarea></div>
         <div class="field"><label for="fNapln">Co se dělalo</label><textarea id="fNapln" rows="3" placeholder="Prázdné znamená, že proběhlo podle plánu"></textarea></div>
         <div class="field"><label for="fZapis">Zápis do Školy OnLine</label><textarea id="fZapis" rows="3" placeholder="Jedna věta v jednotném čísle"></textarea></div>
         <div class="btns two">
@@ -600,7 +600,7 @@ select {
 
 <script>
 "use strict";
-const APP = { ver: "0.8.0", db: null, sync: null, klic: null };
+const APP = { ver: "0.8.1", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -1373,6 +1373,7 @@ async function renderHodina() {
     $("#attSum").textContent = "";
     list.appendChild(el("div", "empty", "Vyber hodinu na obrazovce Dnes nebo Týden."));
     $("#fPlan").value = ""; $("#fNapln").value = ""; $("#fZapis").value = "";
+    $("#fPlan").style.height = "";
     $("#hTitle").textContent = "Hodina"; $("#hSub").textContent = "nic nevybráno";
     $("#zasTypy").innerHTML = ""; $("#zasList").innerHTML = ""; $("#slibHodinaList").innerHTML = "";
     $("#hHistCard").hidden = true; $("#hGapsCard").hidden = true;
@@ -1384,6 +1385,7 @@ async function renderHodina() {
   $("#fPlan").value = h.plan || "";
   $("#fNapln").value = h.napln || "";
   $("#fZapis").value = h.zapis || "";
+  rostouciPole($("#fPlan"));
 
   const zaci = (S.cache.zaciBySk.get(h.skupinaId) || []);
   const zazn = await dbBy("zaznamy", "hodinaId", h.id);
@@ -1454,6 +1456,7 @@ async function renderZasobnik(h, hotovy) {
       pole.value = pole.value.trim() ? pole.value.trim() + ", " + c.nazev : c.nazev;
       hod.cinnosti = [...new Set([...(hod.cinnosti || []), c.id])];
       hod.plan = pole.value;
+      rostouciPole(pole);
       if (hod.stav === "plan" && !hod.napln) hod.okruh = c.okruh;
       await dbPut("hodiny", hod);
       toast(c.nazev + " přidáno do plánu");
@@ -1470,6 +1473,17 @@ async function renderSlibyHodina() {
   const sliby = (await dbBy("sliby", "skupinaId", h.skupinaId)).filter((s) => !s.splneno).sort((a, b) => a.vytvoreno - b.vytvoreno);
   $("#slibCnt").textContent = sliby.length ? sliby.length + " nesplněno" : "";
   sliby.forEach((sl) => box.appendChild(slibRow(sl, false)));
+}
+
+// Plan byva dlouhy (zasobnik do nej pripisuje cinnosti), tak at neni potreba
+// scrollovat uvnitr policka. Vyska nikdy neklesne pod vychozich pet radku.
+function rostouciPole(ta) {
+  if (!ta || ta.offsetParent === null) return;
+  if (!Number(ta.dataset.min) && !ta.style.height) ta.dataset.min = String(ta.clientHeight || 0);
+  ta.style.height = "auto";
+  // box-sizing je border-box, takze do vysky patri i ramecek, jinak by text o par pixelu preteka
+  const ramecek = ta.offsetHeight - ta.clientHeight;
+  ta.style.height = Math.max(Number(ta.dataset.min) || 0, ta.scrollHeight + ramecek) + "px";
 }
 
 async function saveHodinaPole() {
@@ -2437,6 +2451,7 @@ async function boot() {
 
   let saveTimer;
   ["#fPlan", "#fNapln", "#fZapis"].forEach((sel) => $(sel).addEventListener("input", () => {
+    if (sel === "#fPlan") rostouciPole($("#fPlan"));
     clearTimeout(saveTimer); saveTimer = setTimeout(saveHodinaPole, 600);
   }));
   $("#bCopy").addEventListener("click", async () => {

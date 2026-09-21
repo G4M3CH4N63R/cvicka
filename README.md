@@ -310,6 +310,17 @@ Poznámka k implementaci: řádky se staví jednou při otevření, změna disci
 už jen přepočítá značky (`osvezMereni()`). Dvě překrytá překreslení by si navzájem zahodila
 rozepsaná pole, proto má osvěžení známku a starší doběh se zahodí.
 
+## Větší pole na plán (v0.8.1)
+
+Plán hodiny měl dva řádky, což na vymýšlení nestačilo. Teď má pět a navíc roste s textem
+(`rostouciPole()`), takže se uvnitř políčka nikdy nescrolluje. Pod výchozích pět řádků
+nikdy neklesne, prázdné pole tedy vypadá pořád stejně.
+
+Výšku hlídá `scrollHeight` plus rámeček. Kvůli `box-sizing: border-box` je potřeba k obsahu
+přičíst `offsetHeight - clientHeight`, jinak text přeteče o dva pixely. Přepočet se pouští
+při psaní, při otevření hodiny a po vložení činnosti ze zásobníku. Na skryté obrazovce se
+nepočítá, tam by vyšla nula.
+
 ## Co přijde dál
 
 Zbytek F3: pololetní přehledy a zápis do ŠOL ze šablon.
