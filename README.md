@@ -332,6 +332,14 @@ Rozepsaný text se ukládá s odkladem 600 ms. Před každou změnou hodiny nebo
 teď uloží hned (`ulozRozepsane()`), jinak by se po odkladu zapsal do hodiny, která je
 zrovna otevřená. Časovač proto žije v `S.saveTimer`, ne v lokální proměnné.
 
+## Vrácení uzavřené hodiny do plánu (v0.8.3)
+
+U uzavřené hodiny se tlačítko Uzavřít hodinu mění na Vrátit do plánu a v podtitulku je
+„uzavřená". Klepnutí vrátí `stav` na `plan`, zůstane se na hodině a nic se nemaže, plán,
+náplň i zápis zůstanou. Barva v Týdnu a štítek v Dnes se pak řídí obsahem jako u každé
+neuzavřené hodiny: jen plán dává „plán", s náplní nebo zápisem „rozepsané". Hodina má už
+příznak `sync`, takže se vrácení propíše i na druhé zařízení.
+
 ## Co přijde dál
 
 Zbytek F3: pololetní přehledy a zápis do ŠOL ze šablon.

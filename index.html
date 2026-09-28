@@ -603,7 +603,7 @@ select {
 
 <script>
 "use strict";
-const APP = { ver: "0.8.2", db: null, sync: null, klic: null };
+const APP = { ver: "0.8.3", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -1413,11 +1413,13 @@ async function renderHodina() {
     $("#hTitle").textContent = "Hodina"; $("#hSub").textContent = "nic nevybráno";
     $("#zasTypy").innerHTML = ""; $("#zasList").innerHTML = ""; $("#slibHodinaList").innerHTML = "";
     $("#hHistCard").hidden = true; $("#hGapsCard").hidden = true;
+    kresliUzavreni(null);
     return;
   }
   S.histSkupina = h.skupinaId;
   $("#hTitle").textContent = skName(h.skupinaId) + " · " + h.poradi + ". hodina";
-  $("#hSub").textContent = czFull(h.datum) + (h.mistnost ? " · " + h.mistnost : "");
+  $("#hSub").textContent = czFull(h.datum) + (h.mistnost ? " · " + h.mistnost : "") + (h.stav === "uzavrena" ? " · uzavřená" : "");
+  kresliUzavreni(h);
   $("#fPlan").value = h.plan || "";
   $("#fNapln").value = h.napln || "";
   $("#fZapis").value = h.zapis || "";
@@ -1467,6 +1469,15 @@ async function renderHodina() {
   await nastavSbaleni();
   await renderZasobnik(h, seznamCin);
   await renderSlibyHodina();
+}
+
+// Uzavrenou hodinu jde vratit zpet do planu. Text (plan, napln, zapis) zustava.
+function kresliUzavreni(h) {
+  const b = $("#bClose");
+  const uz = !!(h && h.stav === "uzavrena");
+  b.textContent = uz ? "Vrátit do plánu" : "Uzavřít hodinu";
+  b.classList.toggle("ghost", uz);
+  b.dataset.uz = uz ? "1" : "0";
 }
 
 async function renderZasobnik(h, hotovy) {
@@ -2504,6 +2515,13 @@ async function boot() {
     await saveHodinaPole();
     if (!S.hodinaId) return;
     const h = await dbGet("hodiny", S.hodinaId);
+    if (h.stav === "uzavrena") {
+      h.stav = "plan"; h.updatedAt = Date.now();
+      await dbPut("hodiny", h);
+      toast("Hodina vrácena do plánu");
+      await renderHodina();
+      return;
+    }
     h.stav = "uzavrena"; h.updatedAt = Date.now();
     await dbPut("hodiny", h);
     toast("Hodina uzavřena");
