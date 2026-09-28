@@ -412,9 +412,9 @@ select {
       <div class="card-h"><h3>Hodiny v týdnu</h3><span class="eyebrow" id="tydenCnt"></span></div>
       <div id="tydenList"></div>
     </div>
-    <div class="card" id="histCard" hidden>
-      <div class="card-h"><h3 id="histTtl">Historie</h3><span class="eyebrow">poslední hodiny</span></div>
-      <div class="card-b"><div class="hist" id="histList"></div></div>
+    <div class="card" id="slibyTydenCard">
+      <div class="card-h"><h3>Všechny sliby</h3><span class="eyebrow" id="slibyTydenCnt"></span></div>
+      <div id="slibyTydenList"></div>
     </div>
     <div class="card" id="gapsCard" hidden>
       <div class="card-h"><h3>Dlouho nebylo</h3><span class="eyebrow" id="gapsCls"></span></div>
@@ -613,7 +613,7 @@ select {
 
 <script>
 "use strict";
-const APP = { ver: "0.8.4", db: null, sync: null, klic: null };
+const APP = { ver: "0.8.5", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -1103,11 +1103,23 @@ async function renderDnes() {
   chybi.forEach((h) => todo.appendChild(lessonRow(h, true)));
 }
 
+// Na Dnes jen sliby skupin, ktere maji v zobrazeny den hodinu.
 async function renderSliby() {
-  const sliby = (await dbAll("sliby")).filter((s) => !s.splneno).sort((a, b) => a.vytvoreno - b.vytvoreno);
+  const skDne = new Set((await dbBy("hodiny", "datum", S.den)).map((h) => h.skupinaId));
+  const sliby = (await dbAll("sliby")).filter((s) => !s.splneno && skDne.has(s.skupinaId)).sort((a, b) => a.vytvoreno - b.vytvoreno);
   $("#slibyCard").hidden = sliby.length === 0;
   $("#slibyCnt").textContent = sliby.length ? sliby.length + "×" : "";
   const box = $("#slibyList"); box.innerHTML = "";
+  sliby.forEach((sl) => box.appendChild(slibRow(sl, true)));
+}
+
+// Na Tydnu vsechny nesplnene sliby, serazene podle skupiny a pak podle stari.
+async function renderSlibyTyden() {
+  const sliby = (await dbAll("sliby")).filter((s) => !s.splneno)
+    .sort((a, b) => skName(a.skupinaId).localeCompare(skName(b.skupinaId), "cs") || a.vytvoreno - b.vytvoreno);
+  $("#slibyTydenCnt").textContent = sliby.length ? sliby.length + "×" : "";
+  const box = $("#slibyTydenList"); box.innerHTML = "";
+  if (!sliby.length) { box.appendChild(el("div", "empty", "Žádný nesplněný slib.")); return; }
   sliby.forEach((sl) => box.appendChild(slibRow(sl, true)));
 }
 
@@ -1123,7 +1135,8 @@ function slibRow(sl, sCislem) {
     sl.splneno = Date.now();
     await dbPut("sliby", sl);
     toast("Splněno");
-    await renderSliby();
+    if (S.tab === "dnes") await renderSliby();
+    if (S.tab === "tyden") await renderSlibyTyden();
     if (S.tab === "hodina") await renderSlibyHodina();
   });
   r.append(b);
@@ -1244,7 +1257,7 @@ async function renderTyden() {
   $("#tydenCnt").textContent = n ? n + (n === 1 ? " hodina" : (n < 5 ? " hodiny" : " hodin")) : "";
   if (!n) list.appendChild(el("div", "empty", "V tomhle týdnu nejsou žádné hodiny. Zkontroluj v nastavení rozsah školního roku."));
   await renderMrizka(dny, vsechny);
-  await renderHist(S.histSkupina);
+  await renderSlibyTyden();
   await renderGaps(S.histSkupina);
 }
 
@@ -1282,11 +1295,10 @@ async function renderGaps(skupinaId, kam, opt) {
   fill(kam.hlavni, seznam.filter((c) => (c.typ === "hlavni" || c.typ === "pruprava") && chybi(c)).slice(0, kolik));
 }
 
-const HIST_TYDEN = { card: "#histCard", ttl: "#histTtl", list: "#histList" };
 const HIST_HODINA = { card: "#hHistCard", ttl: "#hHistTtl", list: "#hHistList" };
 
 async function renderHist(skupinaId, kam, opt) {
-  kam = kam || HIST_TYDEN; opt = opt || {};
+  kam = kam || HIST_HODINA; opt = opt || {};
   const card = $(kam.card);
   if (!skupinaId) { card.hidden = true; return; }
   card.hidden = false;
@@ -1303,10 +1315,7 @@ async function renderHist(skupinaId, kam, opt) {
     const r = el("button"); r.type = "button";
     r.append(el("span", "d", cz(h.datum)), el("span", "x", h.napln || h.zapis), el("span", "sip", "›"));
     r.setAttribute("aria-label", "otevřít hodinu " + czFull(h.datum));
-    r.addEventListener("click", () => {
-      if (kam === HIST_HODINA) skocNaHodinu(h.id);
-      else { S.histSkupina = h.skupinaId; openHodina(h.id, S.tab); }
-    });
+    r.addEventListener("click", () => skocNaHodinu(h.id));
     box.appendChild(r);
   });
 }

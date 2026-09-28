@@ -353,6 +353,16 @@ Aby se do hlavičky vešly, titulek hodiny má dvě části: název skupiny se z
 výpustkou a „· 3. hodina“ zůstává vidět vždy (`h1.dve`). Nepoužité tlačítko `#hAction`
 nahradil blok `#hNav`.
 
+## Sliby na Dnes a na Týdnu (v0.8.5)
+
+Týden už nemá kartu s posledními hodinami vybrané skupiny (ta zůstala jen v hodině jako
+Co naposledy měli). Na jejím místě je karta Všechny sliby: všechny nesplněné sliby,
+seřazené podle skupiny a pak podle stáří, se stejným tlačítkem ✓ jako jinde
+(`renderSlibyTyden()`). Karta je vidět vždy, bez slibů ukáže „Žádný nesplněný slib.“
+
+Dnes ukazuje jen sliby skupin, které mají v zobrazený den hodinu. Řídí se dnem, který je
+zrovna nalistovaný šipkami, ne kalendářním dneškem. Den bez hodin kartu slibů skryje.
+
 ## Co přijde dál
 
 Zbytek F3: pololetní přehledy a zápis do ŠOL ze šablon.
