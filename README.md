@@ -321,6 +321,17 @@ přičíst `offsetHeight - clientHeight`, jinak text přeteče o dva pixely. Př
 při psaní, při otevření hodiny a po vložení činnosti ze zásobníku. Na skryté obrazovce se
 nepočítá, tam by vyšla nula.
 
+## Proklik na starší hodinu (v0.8.2)
+
+Řádky v kartě Co naposledy měli jsou tlačítka. Klepnutí otevře tu hodinu celou (plán, náplň,
+zápis, docházku). Šipka zpět vrací na hodinu, ze které se skákalo, a jde to i víc úrovní
+za sebou (`S.zpet` je zásobník). Uzavření hodiny otevřené proklikem vrátí taky na předchozí
+hodinu. Stejně se dá kliknout na historii v Týdnu, tam šipka zpět vede na Týden.
+
+Rozepsaný text se ukládá s odkladem 600 ms. Před každou změnou hodiny nebo obrazovky se
+teď uloží hned (`ulozRozepsane()`), jinak by se po odkladu zapsal do hodiny, která je
+zrovna otevřená. Časovač proto žije v `S.saveTimer`, ne v lokální proměnné.
+
 ## Co přijde dál
 
 Zbytek F3: pololetní přehledy a zápis do ŠOL ze šablon.

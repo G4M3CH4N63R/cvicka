@@ -232,8 +232,11 @@ textarea { line-height: 1.45; }
   width: 32px; height: 30px; border-radius: 8px; color: var(--good); font-size: 14px; line-height: 1;
 }
 .hist { display: grid; }
-.hist div { display: grid; grid-template-columns: 64px 1fr; gap: 9px; font-size: 13.5px; padding: 8px 0; border-top: 1px solid var(--line); }
-.hist div:first-child { border-top: 0; }
+.hist div, .hist button { display: grid; grid-template-columns: 64px 1fr; gap: 9px; font-size: 13.5px; padding: 8px 0; border-top: 1px solid var(--line); }
+.hist div:first-child, .hist button:first-child { border-top: 0; }
+.hist button { grid-template-columns: 64px 1fr 14px; width: 100%; text-align: left; background: none; border-left: 0; border-right: 0; border-bottom: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.hist button:active { background: var(--line); }
+.hist .sip { color: var(--ink-3); font-size: 16px; line-height: 1; padding-top: 1px; }
 .hist .empty { display: block; padding: 16px 0; border-top: 0; }
 .hist .d { font-family: var(--fm); font-size: 11px; color: var(--ink-3); padding-top: 2px; }
 .hist .x { color: var(--ink-2); }
@@ -600,7 +603,7 @@ select {
 
 <script>
 "use strict";
-const APP = { ver: "0.8.1", db: null, sync: null, klic: null };
+const APP = { ver: "0.8.2", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -1043,7 +1046,7 @@ function okruhyZeSeznamu(seznam) {
 }
 
 /* ---------- stav aplikace ---------- */
-const S = { tab: "dnes", den: iso(new Date()), tyden: planWeek(iso(new Date())), hodinaId: null, backTo: null, histSkupina: null, zasTyp: "uvod", zakId: null, poznTyp: "vykon", poznDatum: null, cache: {} };
+const S = { tab: "dnes", den: iso(new Date()), tyden: planWeek(iso(new Date())), hodinaId: null, backTo: null, zpet: [], histSkupina: null, zasTyp: "uvod", zakId: null, poznTyp: "vykon", poznDatum: null, cache: {} };
 
 async function refreshCache() {
   const [skupiny, zaci] = await Promise.all([dbAll("skupiny"), dbAll("zaci")]);
@@ -1287,8 +1290,13 @@ async function renderHist(skupinaId, kam, opt) {
   const hod = (minule.length ? minule : zapsane).slice(0, opt.kolik || 5);
   if (!hod.length) { box.appendChild(el("div", "empty", "Zatím žádný zápis.")); return; }
   hod.forEach((h) => {
-    const r = el("div");
-    r.append(el("span", "d", cz(h.datum)), el("span", "x", h.napln || h.zapis));
+    const r = el("button"); r.type = "button";
+    r.append(el("span", "d", cz(h.datum)), el("span", "x", h.napln || h.zapis), el("span", "sip", "›"));
+    r.setAttribute("aria-label", "otevřít hodinu " + czFull(h.datum));
+    r.addEventListener("click", () => {
+      if (kam === HIST_HODINA) skocNaHodinu(h.id);
+      else { S.histSkupina = h.skupinaId; openHodina(h.id, S.tab); }
+    });
     box.appendChild(r);
   });
 }
@@ -1361,9 +1369,37 @@ function zavriStav() {
 
 /* ---------- render: HODINA ---------- */
 async function openHodina(id, odkud) {
+  await ulozRozepsane();
   S.hodinaId = id;
   S.backTo = odkud || null;
+  S.zpet = [];
   await switchTab("hodina");
+}
+
+// Skok z karty Co naposledy meli na starsi hodinu. Zpet vede na hodinu, ze ktere se skakalo.
+async function skocNaHodinu(id) {
+  if (!id || id === S.hodinaId) return;
+  await ulozRozepsane();
+  S.zpet.push({ hodinaId: S.hodinaId, backTo: S.backTo });
+  S.hodinaId = id;
+  S.backTo = null;
+  await switchTab("hodina");
+}
+
+async function zpetNaHodinu() {
+  await ulozRozepsane();
+  const p = S.zpet.pop();
+  S.hodinaId = p.hodinaId;
+  S.backTo = p.backTo;
+  await switchTab("hodina");
+}
+
+// Rozepsany text se uklada s odkladem. Pred zmenou hodiny se musi ulozit hned,
+// jinak by se po odkladu zapsal do hodiny, ktera je zrovna otevrena.
+async function ulozRozepsane() {
+  if (!S.saveTimer) return;
+  clearTimeout(S.saveTimer); S.saveTimer = null;
+  await saveHodinaPole();
 }
 
 async function renderHodina() {
@@ -2350,12 +2386,13 @@ async function obnovZnacku(zakId) {
 
 /* ---------- navigace ---------- */
 async function switchTab(name) {
+  await ulozRozepsane();
   zavriStav();
   if (!$("#merSheet").hidden) zavriMereni();
   S.tab = name;
   document.querySelectorAll(".screen").forEach((s) => s.classList.toggle("on", s.id === "s-" + name));
   document.querySelectorAll("nav button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
-  $("#navBack").hidden = !(name === "hodina" && S.backTo);
+  $("#navBack").hidden = !(name === "hodina" && (S.backTo || S.zpet.length));
   const titles = { dnes: ["Cvička", "přehled dne"], tyden: ["Příprava na týden", "plán a historie"], nastaveni: ["Nastavení", "data a záloha"] };
   if (titles[name]) { $("#hTitle").textContent = titles[name][0]; $("#hSub").textContent = titles[name][1]; }
   if (name === "dnes") await renderDnes();
@@ -2433,7 +2470,10 @@ async function boot() {
   }));
   DISCIPLINY.forEach(([nazev]) => { const o = el("option"); o.value = nazev; $("#dlDisc").appendChild(o); });
 
-  $("#navBack").addEventListener("click", async () => { const t = S.backTo; S.backTo = null; await switchTab(t || "dnes"); });
+  $("#navBack").addEventListener("click", async () => {
+    if (S.tab === "hodina" && S.zpet.length) { await zpetNaHodinu(); return; }
+    const t = S.backTo; S.backTo = null; await switchTab(t || "dnes");
+  });
 
   $("#dPrev").addEventListener("click", () => { S.den = addDays(S.den, -1); renderDnes(); });
   $("#dNext").addEventListener("click", () => { S.den = addDays(S.den, 1); renderDnes(); });
@@ -2449,10 +2489,10 @@ async function boot() {
     if (SBAL_KLIC[card.id]) await metaSet(SBAL_KLIC[card.id], sbaleno);
   }));
 
-  let saveTimer;
   ["#fPlan", "#fNapln", "#fZapis"].forEach((sel) => $(sel).addEventListener("input", () => {
     if (sel === "#fPlan") rostouciPole($("#fPlan"));
-    clearTimeout(saveTimer); saveTimer = setTimeout(saveHodinaPole, 600);
+    clearTimeout(S.saveTimer);
+    S.saveTimer = setTimeout(() => { S.saveTimer = null; saveHodinaPole(); }, 600);
   }));
   $("#bCopy").addEventListener("click", async () => {
     const t = $("#fZapis").value.trim();
@@ -2467,6 +2507,7 @@ async function boot() {
     h.stav = "uzavrena"; h.updatedAt = Date.now();
     await dbPut("hodiny", h);
     toast("Hodina uzavřena");
+    if (S.zpet.length) { await zpetNaHodinu(); return; }
     await switchTab(S.backTo || "dnes"); S.backTo = null;
   });
 
