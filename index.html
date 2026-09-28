@@ -57,6 +57,9 @@ header {
 }
 header .ttl { flex: 1; min-width: 0; }
 header h1 { font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+header h1.dve { display: flex; min-width: 0; }
+header h1.dve .nm { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+header h1.dve .po { flex: 0 0 auto; }
 header .sub { font-size: 12.5px; color: var(--ink-3); }
 .iconbtn {
   appearance: none; border: 1px solid var(--line); background: var(--surface-2);
@@ -64,6 +67,10 @@ header .sub { font-size: 12.5px; color: var(--ink-3); }
   font-size: 15px; line-height: 1; display: grid; place-items: center; flex: 0 0 auto;
 }
 .iconbtn:active { background: var(--surface-3); }
+.hnav { display: flex; gap: 6px; flex: 0 0 auto; }
+.hnav[hidden] { display: none; }
+.hnav .iconbtn { width: auto; min-width: 44px; padding: 0 9px; font-family: var(--fm); font-size: 12.5px; font-weight: 600; color: var(--accent); }
+.hnav .iconbtn:disabled { opacity: .35; cursor: default; color: var(--ink-3); }
 
 main { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px 12px 18px; }
 .screen { display: none; }
@@ -349,7 +356,10 @@ select {
 <header>
   <button class="iconbtn" id="navBack" hidden aria-label="Zpět">‹</button>
   <div class="ttl"><h1 id="hTitle">Cvička</h1><div class="sub" id="hSub">načítám</div></div>
-  <button class="iconbtn" id="hAction" hidden aria-label="Akce"></button>
+  <div class="hnav" id="hNav" hidden>
+    <button class="iconbtn" id="hPrev" type="button" aria-label="předchozí hodina">‹</button>
+    <button class="iconbtn" id="hNext" type="button" aria-label="další hodina">›</button>
+  </div>
 </header>
 
 <main>
@@ -603,7 +613,7 @@ select {
 
 <script>
 "use strict";
-const APP = { ver: "0.8.3", db: null, sync: null, klic: null };
+const APP = { ver: "0.8.4", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -1410,16 +1420,20 @@ async function renderHodina() {
     list.appendChild(el("div", "empty", "Vyber hodinu na obrazovce Dnes nebo Týden."));
     $("#fPlan").value = ""; $("#fNapln").value = ""; $("#fZapis").value = "";
     $("#fPlan").style.height = "";
-    $("#hTitle").textContent = "Hodina"; $("#hSub").textContent = "nic nevybráno";
+    $("#hTitle").classList.remove("dve"); $("#hTitle").textContent = "Hodina"; $("#hSub").textContent = "nic nevybráno";
     $("#zasTypy").innerHTML = ""; $("#zasList").innerHTML = ""; $("#slibHodinaList").innerHTML = "";
     $("#hHistCard").hidden = true; $("#hGapsCard").hidden = true;
     kresliUzavreni(null);
+    $("#hNav").hidden = true;
     return;
   }
   S.histSkupina = h.skupinaId;
-  $("#hTitle").textContent = skName(h.skupinaId) + " · " + h.poradi + ". hodina";
+  // Dlouhy nazev skupiny se zkracuje sam, cislo hodiny zustava videt vzdy.
+  const ttl = $("#hTitle"); ttl.textContent = ""; ttl.classList.add("dve");
+  ttl.append(el("span", "nm", skName(h.skupinaId)), el("span", "po", "\u00a0· " + h.poradi + ". hodina"));
   $("#hSub").textContent = czFull(h.datum) + (h.mistnost ? " · " + h.mistnost : "") + (h.stav === "uzavrena" ? " · uzavřená" : "");
   kresliUzavreni(h);
+  await kresliSousedy(h);
   $("#fPlan").value = h.plan || "";
   $("#fNapln").value = h.napln || "";
   $("#fZapis").value = h.zapis || "";
@@ -1469,6 +1483,33 @@ async function renderHodina() {
   await nastavSbaleni();
   await renderZasobnik(h, seznamCin);
   await renderSlibyHodina();
+}
+
+// Sipky v hlavicce: predchozi a dalsi hodina tehoz dne podle poradi v rozvrhu.
+async function kresliSousedy(h) {
+  const den = (await dbBy("hodiny", "datum", h.datum)).sort((a, b) => a.poradi - b.poradi || String(a.cas).localeCompare(String(b.cas)));
+  const i = den.findIndex((x) => x.id === h.id);
+  const nav = $("#hNav");
+  if (den.length < 2 || i < 0) { nav.hidden = true; S.sousede = null; return; }
+  const pred = den[i - 1] || null, dal = den[i + 1] || null;
+  S.sousede = { pred: pred && pred.id, dal: dal && dal.id };
+  const nastav = (b, x, sip, kde) => {
+    b.disabled = !x;
+    b.textContent = x ? (kde ? sip + " " + x.poradi + "." : x.poradi + ". " + sip) : sip;
+    b.setAttribute("aria-label", x ? (kde ? "předchozí" : "další") + " hodina: " + skName(x.skupinaId) + ", " + x.poradi + ". hodina" : (kde ? "žádná předchozí hodina" : "žádná další hodina"));
+  };
+  nastav($("#hPrev"), pred, "‹", true);
+  nastav($("#hNext"), dal, "›", false);
+  nav.hidden = false;
+}
+
+// Posun na sousedni hodinu nemeni, kam vede sipka zpet.
+async function sousedniHodina(kam) {
+  const id = S.sousede && S.sousede[kam];
+  if (!id) return;
+  await ulozRozepsane();
+  S.hodinaId = id;
+  await switchTab("hodina");
 }
 
 // Uzavrenou hodinu jde vratit zpet do planu. Text (plan, napln, zapis) zustava.
@@ -2404,8 +2445,9 @@ async function switchTab(name) {
   document.querySelectorAll(".screen").forEach((s) => s.classList.toggle("on", s.id === "s-" + name));
   document.querySelectorAll("nav button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
   $("#navBack").hidden = !(name === "hodina" && (S.backTo || S.zpet.length));
+  if (name !== "hodina") $("#hNav").hidden = true;
   const titles = { dnes: ["Cvička", "přehled dne"], tyden: ["Příprava na týden", "plán a historie"], nastaveni: ["Nastavení", "data a záloha"] };
-  if (titles[name]) { $("#hTitle").textContent = titles[name][0]; $("#hSub").textContent = titles[name][1]; }
+  if (titles[name]) { $("#hTitle").classList.remove("dve"); $("#hTitle").textContent = titles[name][0]; $("#hSub").textContent = titles[name][1]; }
   if (name === "dnes") await renderDnes();
   if (name === "tyden") await renderTyden();
   if (name === "hodina") await renderHodina();
@@ -2481,6 +2523,8 @@ async function boot() {
   }));
   DISCIPLINY.forEach(([nazev]) => { const o = el("option"); o.value = nazev; $("#dlDisc").appendChild(o); });
 
+  $("#hPrev").addEventListener("click", () => sousedniHodina("pred"));
+  $("#hNext").addEventListener("click", () => sousedniHodina("dal"));
   $("#navBack").addEventListener("click", async () => {
     if (S.tab === "hodina" && S.zpet.length) { await zpetNaHodinu(); return; }
     const t = S.backTo; S.backTo = null; await switchTab(t || "dnes");

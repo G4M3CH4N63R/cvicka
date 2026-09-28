@@ -340,6 +340,19 @@ náplň i zápis zůstanou. Barva v Týdnu a štítek v Dnes se pak řídí obsa
 neuzavřené hodiny: jen plán dává „plán", s náplní nebo zápisem „rozepsané". Hodina má už
 příznak `sync`, takže se vrácení propíše i na druhé zařízení.
 
+## Šipky na sousední hodiny téhož dne (v0.8.4)
+
+V hlavičce otevřené hodiny jsou vpravo dvě šipky s číslem sousední hodiny (`‹ 2.` a `4. ›`).
+Posouvají na předchozí a další hodinu stejného dne podle pořadí v rozvrhu, bez ohledu na
+skupinu. Na první a poslední hodině dne je příslušná šipka zašedlá, a když má den jen
+jednu hodinu, šipky se neukážou. Posun nemění, kam vede šipka zpět: z Týdne se pořád vrací
+na Týden a po prokliku z Co naposledy měli na hodinu, ze které se skákalo. Před posunem
+se uloží rozepsaný text (`ulozRozepsane()`), stejně jako u ostatních přechodů.
+
+Aby se do hlavičky vešly, titulek hodiny má dvě části: název skupiny se zkracuje
+výpustkou a „· 3. hodina“ zůstává vidět vždy (`h1.dve`). Nepoužité tlačítko `#hAction`
+nahradil blok `#hNav`.
+
 ## Co přijde dál
 
 Zbytek F3: pololetní přehledy a zápis do ŠOL ze šablon.
