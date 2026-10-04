@@ -396,6 +396,20 @@ dosud (skok na hodinu, šipka zpět vrací). Rozbalení si appka drží v `S.his
 Karel nesbalí, takže zůstane i po prokliku na starší hodinu a zpět. Po sbalení se stránka
 vrátí ke kartě.
 
+## Úprava omluvy a necvičící v měření (v0.9.2)
+
+**Upravit omluvu:** pod každou omluvou v kartě žáka je tlačítko Upravit (a u běžící
+Ukončit nebo Zrušit). Upravit načte od, do a důvod do formuláře, nadpis „Úprava omluvy“,
+tlačítka Uložit změny a Zrušit úpravu, upravovaný řádek je podbarvený. Uložení přepíše
+stávající záznam (stejné `id`, `vytvoreno` zůstává), takže prodloužení nevytváří druhou
+omluvu. Stav úpravy je v `S.poznUprava` a ruší se přepnutím typu, zavřením karty,
+smazáním nebo ukončením té omluvy.
+
+**Hromadné měření:** `chybiVHodine()` nahradila `stavVHodine()`, která vrací stav z
+docházky otevřené hodiny včetně dopočítaného N u omluvených. Nepřítomní (X) i necvičící (N)
+jsou zašedlí se štítkem „nepřítomen“ nebo „necvičí“, Enter je při zapisování přeskočí
+a do počtu „Zapsáno x z y“ se nepočítají, dokud jim hodnotu někdo nezapíše ručně.
+
 ## Co přijde dál
 
 Zbytek F3: pololetní přehledy (včetně počtu necvičení a omluv) a zápis do ŠOL ze šablon.

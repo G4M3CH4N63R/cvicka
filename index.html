@@ -333,6 +333,9 @@ select {
 .zrow .tp.omluva { background: var(--crit-soft); color: var(--crit); }
 .zrow .konec { appearance: none; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2); border-radius: 7px; font-size: 11.5px; padding: 3px 8px; cursor: pointer; white-space: nowrap; }
 .zrow .ak { display: flex; gap: 6px; align-items: flex-start; }
+.zrow .omakce { display: flex; gap: 6px; margin-top: 6px; }
+.zrow.upr { background: var(--accent-soft); border-radius: 8px; padding-inline: 6px; }
+.form-ttl { font-family: var(--fm); font-size: 10.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
 .pupil .nm .om { display: block; font-family: var(--fm); font-size: 10.5px; color: var(--crit); overflow: hidden; text-overflow: ellipsis; }
 .slib.omr { grid-template-columns: 1fr auto; width: 100%; background: none; border-left: 0; border-right: 0; border-bottom: 0; text-align: left; cursor: pointer; font: inherit; color: inherit; }
 .slib.omr:first-child { border-top: 0; }
@@ -636,7 +639,7 @@ select {
 
 <script>
 "use strict";
-const APP = { ver: "0.9.1", db: null, sync: null, klic: null };
+const APP = { ver: "0.9.2", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -1079,7 +1082,7 @@ function okruhyZeSeznamu(seznam) {
 }
 
 /* ---------- stav aplikace ---------- */
-const S = { tab: "dnes", den: iso(new Date()), tyden: planWeek(iso(new Date())), hodinaId: null, backTo: null, zpet: [], histVse: false, histSkupina: null, zasTyp: "uvod", zakId: null, poznTyp: "vykon", poznDatum: null, cache: {} };
+const S = { tab: "dnes", den: iso(new Date()), tyden: planWeek(iso(new Date())), hodinaId: null, backTo: null, zpet: [], histVse: false, poznUprava: null, histSkupina: null, zasTyp: "uvod", zakId: null, poznTyp: "vykon", poznDatum: null, cache: {} };
 
 async function refreshCache() {
   const [skupiny, zaci] = await Promise.all([dbAll("skupiny"), dbAll("zaci")]);
@@ -2162,6 +2165,7 @@ function poznText(p) {
 
 async function otevriZaka(zakId, datum) {
   S.zakId = zakId;
+  S.poznUprava = null;
   S.poznDatum = datum || iso(new Date());
   if (!S.poznTyp) S.poznTyp = "vykon";
   $("#zakSheet").hidden = false;
@@ -2173,6 +2177,7 @@ function zavriZaka() {
   $("#zakSheet").hidden = true;
   document.body.classList.remove("zamek");
   S.zakId = null;
+  S.poznUprava = null;
 }
 
 async function renderZak() {
@@ -2185,10 +2190,12 @@ async function renderZak() {
   Object.entries(POZN_TYPY).forEach(([k, popis]) => {
     const b = el("button", "chip", popis); b.type = "button"; b.dataset.t = k;
     b.setAttribute("aria-pressed", String(k === S.poznTyp));
-    b.addEventListener("click", async () => { S.poznTyp = k; await renderZak(); });
+    b.addEventListener("click", async () => { S.poznTyp = k; S.poznUprava = null; await renderZak(); });
     typy.appendChild(b);
   });
 
+  S.cache.uprava = S.poznUprava ? await dbGet("pozn", S.poznUprava) : null;
+  if (S.poznUprava && !S.cache.uprava) S.poznUprava = null;
   renderZakForm();
 
   const vse = (await dbBy("pozn", "zakId", S.zakId)).slice();
@@ -2218,6 +2225,21 @@ function zakRow(p, jeRekord) {
   }
   r.appendChild(mid);
   const ak = el("span", "ak"); r.appendChild(ak);
+  let omBox = null;
+  if (p.typ === "omluva") {
+    if (S.poznUprava === p.id) r.classList.add("upr");
+    const om = el("div", "omakce"); mid.appendChild(om);
+    const u = el("button", "konec", "Upravit"); u.type = "button";
+    u.setAttribute("aria-label", "upravit omluvu");
+    u.addEventListener("click", async () => {
+      S.poznUprava = p.id; S.poznTyp = "omluva";
+      await renderZak();
+      $("#zakForm").scrollIntoView({ block: "nearest" });
+      $("#pDo").focus({ preventScroll: true });
+    });
+    om.appendChild(u);
+    omBox = om;
+  }
   if (p.typ === "omluva" && konecOmluvy(p) >= iso(new Date())) {
     const budouci = p.datum > iso(new Date());
     const k = el("button", "konec", budouci ? "Zrušit" : "Ukončit"); k.type = "button";
@@ -2225,13 +2247,14 @@ function zakRow(p, jeRekord) {
     k.addEventListener("click", async () => {
       // Konci vcerejskem: dnes uz cvici.
       const vcera = addDays(iso(new Date()), -1);
+      if (S.poznUprava === p.id) S.poznUprava = null;
       if (vcera < p.datum) { await dbDel("pozn", p.id); toast("Omluva zrušena"); }
       else { p.do = vcera; await dbPut("pozn", p); toast("Omluva ukončena, od dneška cvičí"); }
       await renderZak();
       await obnovZnacku(p.zakId);
       await obnovOmluvy();
     });
-    ak.appendChild(k);
+    omBox.appendChild(k);
   }
   const del = el("button", "del", "✕"); del.type = "button";
   del.setAttribute("aria-label", "smazat zápis");
@@ -2242,6 +2265,7 @@ function zakRow(p, jeRekord) {
       setTimeout(() => { if (potvrd) { potvrd = false; del.textContent = "✕"; del.classList.remove("warn"); } }, 3500);
       return;
     }
+    if (S.poznUprava === p.id) S.poznUprava = null;
     await dbDel("pozn", p.id);
     await renderZak();
     await obnovZnacku(p.zakId);
@@ -2278,11 +2302,14 @@ function renderZakForm() {
     sec.append(pole("Název akce", inp("pNaz", "Cross cup"), "pNaz"),
                pole("Umístění nebo poznámka", inp("pText", "3. místo"), "pText"));
   } else if (t === "omluva") {
-    const od = el("input"); od.type = "date"; od.id = "pOd"; od.value = S.poznDatum;
-    const dok = el("input"); dok.type = "date"; dok.id = "pDo";
+    const upr = S.poznUprava ? S.cache.uprava : null;
+    if (upr) sec.appendChild(el("div", "form-ttl", "Úprava omluvy"));
+    const od = el("input"); od.type = "date"; od.id = "pOd"; od.value = upr ? upr.datum : S.poznDatum;
+    const dok = el("input"); dok.type = "date"; dok.id = "pDo"; if (upr) dok.value = upr.do || "";
     const duo = el("div", "duo dva"); duo.append(od, dok);
     sec.append(pole("Od a do", duo, "pOd"), el("p", "form-hint", "Prázdné do znamená do odvolání."),
                pole("Důvod", inp("pText", "Zlomená ruka"), "pText"));
+    if (upr) sec.querySelector("#pText").value = upr.text || "";
   } else {
     const ta = el("textarea"); ta.id = "pText"; ta.rows = 2;
     ta.placeholder = t === "chovani" ? "Co se stalo" : "Cokoli, co si chceš pamatovat";
@@ -2301,9 +2328,16 @@ function renderZakForm() {
   }
 
   const btns = el("div", "btns");
-  const b = el("button", "btn", "Uložit zápis"); b.type = "button"; b.id = "pSave";
+  const upravuji = t === "omluva" && S.poznUprava;
+  const b = el("button", "btn", upravuji ? "Uložit změny" : "Uložit zápis"); b.type = "button"; b.id = "pSave";
   b.addEventListener("click", ulozPozn);
   btns.appendChild(b);
+  if (upravuji) {
+    btns.classList.add("two");
+    const z = el("button", "btn ghost", "Zrušit úpravu"); z.type = "button"; z.id = "pZrus";
+    z.addEventListener("click", async () => { S.poznUprava = null; await renderZak(); });
+    btns.prepend(z);
+  }
   sec.appendChild(btns);
   box.appendChild(sec);
 }
@@ -2326,6 +2360,17 @@ async function ulozPozn() {
     r.do = ($("#pDo").value || "").trim();
     r.text = $("#pText").value.trim();
     if (r.do && r.do < r.datum) { toast("Konec je před začátkem"); return; }
+    if (S.poznUprava) {
+      const puv = await dbGet("pozn", S.poznUprava);
+      S.poznUprava = null;
+      if (puv) {
+        await dbPut("pozn", { ...puv, datum: r.datum, do: r.do, text: r.text });
+        await renderZak();
+        await obnovOmluvy();
+        toast("Omluva upravena");
+        return;
+      }
+    }
   } else {
     r.text = $("#pText").value.trim();
     if (t === "chovani") r.rodicum = $("#pRod").checked;
@@ -2428,7 +2473,9 @@ async function renderMereni() {
   zaci.forEach((z, i) => {
     const radek = el("div", "mrow");
     radek.dataset.zak = z.id;
-    radek.dataset.mimo = chybiVHodine(z.id) ? "1" : "0";
+    const st = stavVHodine(z.id);
+    radek.dataset.mimo = (st === "X" || st === "N") ? "1" : "0";
+    radek.dataset.st = st;
     radek.append(el("span", "n mono", String(i + 1)));
     const mid = el("div");
     mid.append(el("span", "nm", z.prijmeni + " " + z.jmeno), el("div", "mp"));
@@ -2448,8 +2495,9 @@ async function renderMereni() {
     vstup.addEventListener("keydown", (e) => {
       if (e.key !== "Enter") return;
       e.preventDefault();
+      // Enter preskoci nepritomne a necvicici, kliknutim se do nich psat da.
       const vsechny = [...list.querySelectorAll(".mv:not(:disabled)")];
-      const dalsi = vsechny[vsechny.indexOf(vstup) + 1];
+      const dalsi = vsechny.slice(vsechny.indexOf(vstup) + 1).find((v) => v.closest(".mrow").dataset.mimo !== "1");
       if (dalsi) dalsi.focus(); else vstup.blur();
     });
   });
@@ -2513,7 +2561,7 @@ async function osvezMereni() {
 // prepise hodnotu, znacky a stav radku
 function kresliMerRadek(z, radek, vstup, poznZaka, disc, jed, datum, naplnitHodnotu) {
   const mp = radek.querySelector(".mp"); mp.innerHTML = "";
-  if (radek.dataset.mimo === "1") mp.appendChild(el("span", "mbd mimo", "nepřítomen"));
+  if (radek.dataset.mimo === "1") mp.appendChild(el("span", "mbd mimo", radek.dataset.st === "N" ? "necvičí" : "nepřítomen"));
   if (!disc) return;
   const rada = vykonyZaka(poznZaka, disc);
   const dnesni = rada.find((p) => p.datum === datum);
@@ -2541,10 +2589,11 @@ function kresliMerRadek(z, radek, vstup, poznZaka, disc, jed, datum, naplnitHodn
 }
 
 // kdo v teto hodine chybi, bere se z uz vykreslene dochazky
-function chybiVHodine(zakId) {
+// Stav zaka v otevrene hodine (ok, X, N, U). Omluveni maji N, i kdyz nemaji vlastni zaznam.
+function stavVHodine(zakId) {
   const znacka = document.querySelector('#pupilList .pzn[data-zak="' + zakId + '"]');
   const radek = znacka && znacka.closest(".pupil");
-  return !!(radek && radek.dataset.stav === "X");
+  return radek ? radek.dataset.stav : "ok";
 }
 
 async function ulozMereni(z, vstup, radek) {
@@ -2578,7 +2627,9 @@ async function ulozMereni(z, vstup, radek) {
 
 function aktualizujMerPocet() {
   if (!S.mer) return;
-  const vsechny = [...$("#merList").querySelectorAll(".mv")];
+  // Nepritomni a necvicici se do celkoveho poctu nepocitaji, pokud jim hodnota nebyla zapsana.
+  const vsechny = [...$("#merList").querySelectorAll(".mv")]
+    .filter((v) => v.closest(".mrow").dataset.mimo !== "1" || v.value.trim() !== "");
   const vyplnene = vsechny.filter((v) => v.value.trim() !== "").length;
   const disc = merDisciplina();
   $("#merPocet").textContent = disc
