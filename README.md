@@ -433,7 +433,24 @@ hodnota každého žáka a změna, zeleně zlepšení (u `s` a `min` je lepší 
 Počítá se pokaždé znovu z IndexedDB (`spocitejPrehled()`), nic se neukládá, schéma DB
 se neměnilo.
 
+## Návrh zápisu do ŠOL (v0.11.0)
+
+U pole Zápis do Školy OnLine je tlačítko **Navrhnout**. Appka pozná činnosti hodiny
+(`cinnostiVHodine()`: vložené ze zásobníku plus klíčová slova v plánu a náplni, i těch
+právě rozepsaných v polích) a nabídne dvě sady návrhů:
+
+- **Ze šablon:** každá činnost ze zásobníku má v `ZAPIS_CINNOST` krátký úsek se slovesem
+  ve 3. osobě jednotného čísla a bez názvu hry, okruh ŠVP dodá v `ZAPIS_OKRUH` závěr
+  „rozvíjí …“. Vlastní činnosti bez úseku dostanou obecný úsek podle okruhu. Části se
+  oddělují čárkou jako ve vzoru „Zapojí se do …, rozvíjí …“. Návrhy: hlavní činnost se
+  závěrem, hlavní a úvodní hra se závěrem, až tři činnosti bez závěru.
+- **Tvoje dřívější zápisy:** až tři Karlovy vlastní zápisy z dřívějších hodin se stejnou
+  hlavní činností (z kterékoli skupiny), nejnovější napřed, bez duplicit.
+
+Klepnutí návrh vloží do pole (přepíše, co tam bylo), uloží se jako při psaní a dá se
+dál upravit. Nic se neposílá ven, všechno se skládá v zařízení.
+
 ## Co přijde dál
 
-Zbytek F3: zápis do ŠOL ze šablon.
+F3 je hotová.
 Pak F4 asistent s nástroji a F6 uzávěrka školního roku.

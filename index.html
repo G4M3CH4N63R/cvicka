@@ -344,6 +344,13 @@ select {
 .slib .duvod { display: block; font-size: 12px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .slib .kdy { font-family: var(--fm); font-size: 11px; color: var(--crit); white-space: nowrap; }
 .duo > .field { margin-top: 0; }
+.field-h { display: flex; align-items: baseline; gap: 8px; }
+.linkbtn { appearance: none; border: 0; background: none; color: var(--accent); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; margin-left: auto; padding: 2px 0; }
+.navrhy { display: grid; gap: 6px; margin-top: 8px; }
+.navrhy .eyebrow { margin-top: 4px; }
+.navrh { appearance: none; text-align: left; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); border-radius: 9px; padding: 9px 11px; font: inherit; font-size: 13.5px; line-height: 1.4; cursor: pointer; }
+.navrh:active { background: var(--surface-3); }
+.navrh .odkud { display: block; font-family: var(--fm); font-size: 10.5px; color: var(--ink-3); margin-top: 3px; }
 .px-wrap { overflow-x: auto; }
 .px { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
 .px th { font-family: var(--fm); font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); text-align: right; padding: 6px 7px; border-bottom: 1px solid var(--line); white-space: nowrap; }
@@ -482,7 +489,8 @@ select {
       <div class="card-b">
         <div class="field"><label for="fPlan">Plán (co chci dělat)</label><textarea id="fPlan" rows="5" placeholder="Úvod: … Hlavní část: …"></textarea></div>
         <div class="field"><label for="fNapln">Co se dělalo</label><textarea id="fNapln" rows="3" placeholder="Prázdné znamená, že proběhlo podle plánu"></textarea></div>
-        <div class="field"><label for="fZapis">Zápis do Školy OnLine</label><textarea id="fZapis" rows="3" placeholder="Jedna věta v jednotném čísle"></textarea></div>
+        <div class="field"><div class="field-h"><label for="fZapis">Zápis do Školy OnLine</label><button class="linkbtn" id="bNavrh" type="button" aria-expanded="false">Navrhnout</button></div><textarea id="fZapis" rows="3" placeholder="Jedna věta v jednotném čísle"></textarea></div>
+        <div class="navrhy" id="zapNavrhy" hidden></div>
         <div class="btns two">
           <button class="btn ghost" id="bCopy" type="button">Kopírovat zápis</button>
           <button class="btn" id="bClose" type="button">Uzavřít hodinu</button>
@@ -689,7 +697,7 @@ select {
 
 <script>
 "use strict";
-const APP = { ver: "0.10.0", db: null, sync: null, klic: null };
+const APP = { ver: "0.11.0", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -1541,6 +1549,7 @@ async function renderHodina() {
   $("#hSub").textContent = czFull(h.datum) + (h.mistnost ? " · " + h.mistnost : "") + (h.stav === "uzavrena" ? " · uzavřená" : "");
   kresliUzavreni(h);
   await kresliSousedy(h);
+  $("#zapNavrhy").hidden = true; $("#bNavrh").setAttribute("aria-expanded", "false");
   $("#fPlan").value = h.plan || "";
   $("#fNapln").value = h.napln || "";
   $("#fZapis").value = h.zapis || "";
@@ -2204,6 +2213,155 @@ async function obnovOmluvy() {
   if (S.tab === "dnes") await renderOmluvyDnes();
   if (S.tab === "tyden") await renderOmluvyTyden();
   if (S.tab === "hodina") { await ulozRozepsane(); await renderHodina(); }
+}
+
+/* ---------- navrh zapisu do SOL ---------- */
+// Vety se skladaji ze sablon: kazda cinnost ma kratky usek se slovesem ve 3. osobe
+// jednotneho cisla a bez nazvu hry, okruh SVP dodava zaver "rozvíjí …".
+// Cinnost bez vlastniho useku (vlastni cinnosti) dostane obecny usek podle okruhu.
+const ZAPIS_CINNOST = {
+  "Oheň, voda, vítr": "rychle reaguje na povely a mění druh pohybu",
+  "Želvičky": "rychle reaguje a spolupracuje se spoluhráči při honičce",
+  "Tarantule": "obratně uhýbá a rozvíjí rychlost při honičce",
+  "Ocásky": "obratně uhýbá a chrání si šátek za pasem",
+  "Mrazík": "uhýbá chytači a pomáhá vysvobozovat spoluhráče",
+  "Rybičky": "přebíhá prostor, uhýbá chytači a dodržuje pravidla hry",
+  "Zombíci": "uhýbá chytačům a orientuje se v prostoru",
+  "Myslivci": "trefuje se míčem do pohyblivého cíle a uhýbá před zásahem",
+  "Kouzelníci": "uhýbá chytačům a pomáhá vysvobodit spoluhráče",
+  "Dotkni se…": "rychle reaguje na pokyn a orientuje se v prostoru",
+  "Přes barevné moře": "přebíhá prostor a rychle reaguje na zavolanou barvu",
+  "Dostihy": "rychle reaguje na povely a pohybuje se podle příběhu",
+  "Lovci pokladu": "spolupracuje s týmem a volí taktiku při získávání předmětů",
+  "Lovci bez ocásku": "obratně uhýbá a spolupracuje se spoluhráči",
+  "Formule": "běhá v zatáčkách a rychle reaguje na povely",
+  "Jelen": "uhýbá chytači, spolupracuje se spoluhráči a dodržuje pravidla",
+  "Bludišťák": "orientuje se v prostoru a rychle mění směr pohybu",
+  "Laser": "obratně prolézá a podlézá překážky bez dotyku",
+  "Kámen, nůžky, papír": "rychle se rozhoduje a reaguje na výsledek souboje",
+  "Fotbal": "zdokonalí vedení míče nohou, přihrávky a střelbu na branku",
+  "Florbal": "zdokonalí vedení míčku hokejkou, přihrávky a střelbu",
+  "Vybíjená": "zdokonalí přihrávky, házení na cíl a uhýbání míči",
+  "Vybíjená s překážkami": "využívá překážky ke krytí, přesně hází na cíl a uhýbá míči",
+  "Vlajkovaná": "spolupracuje s týmem, volí taktiku a obratně uhýbá soupeři",
+  "Miniházená": "zdokonalí přihrávky, chytání míče a střelbu na branku",
+  "Přehazovaná": "zdokonalí chytání a odhazování míče přes síť",
+  "Basketbal": "zdokonalí driblink, přihrávky a střelbu na koš",
+  "Ultimate": "zdokonalí hod a chytání létajícího talíře",
+  "Branball": "zdokonalí odpal a chytání míče a dodržuje pravidla hry",
+  "Badminton": "zdokonalí odbití košíčku raketou a pohyb po hřišti",
+  "Lakros": "zdokonalí chytání a přihrávky míčku hokejkou se síťkou",
+  "Kapitán": "přesně přihrává spoluhráčům a hlídá si soupeře",
+  "Na počet přihrávek": "přesně přihrává a nabíhá do volného prostoru",
+  "Kotouly": "zdokonalí kotoul vpřed a vzad se správným držením těla",
+  "Stojky": "nacvičí stoj na rukou nebo na lopatkách s dopomocí",
+  "Přemety": "nacvičí přemet stranou se správnou technikou",
+  "Kruhy": "zdokonalí houpání a jednoduché cviky na kruzích",
+  "Hrazda": "zdokonalí vis a jednoduché cviky na hrazdě",
+  "Kladina": "udrží rovnováhu při chůzi a obratech na kladině",
+  "Šplh": "zdokonalí šplh na tyči nebo laně",
+  "Air-track": "nacvičí skoky a odrazy na nafukovací dráze",
+  "Přeskok přes bednu": "zdokonalí rozběh, odraz z můstku a přeskok",
+  "Švihadlo": "zdokonalí skoky přes švihadlo v rytmu",
+  "Překážková dráha": "zdolá překážkovou dráhu a zlepšuje obratnost",
+  "Běh 60 m": "zdokonalí start a rychlý běh na krátkou trať",
+  "Skok daleký": "zdokonalí rozběh a odraz při skoku do dálky",
+  "Vytrvalý běh": "zvládne vytrvalý běh a rozloží si síly",
+  "Hod míčkem": "zdokonalí techniku hodu míčkem z rozběhu",
+  "Štafeta 4×60 m": "zdokonalí předávku štafety a spolupracuje v družstvu",
+  "Běžecká abeceda": "procvičí běžeckou abecedu a správnou techniku běhu",
+  "Rytmická cvičení": "pohybuje se v rytmu hudby a zapamatuje si jednoduchou sestavu",
+  "Kondiční cvičení": "posiluje celé tělo a rozvíjí vytrvalost",
+  "Testování FMS": "vyzkouší si základní pohybové testy a zjistí, co už zvládá"
+};
+const ZAPIS_OKRUH = {
+  "Pohybové hry": ["zapojí se do pohybové hry a dodržuje její pravidla", "rozvíjí rychlost reakce a spolupráci ve skupině"],
+  "Sportovní hry": ["procvičí herní činnosti s míčem", "rozvíjí spolupráci v týmu a hraje fér"],
+  "Gymnastika": ["zdokonalí gymnastické dovednosti a dbá na bezpečné provedení", "rozvíjí obratnost, rovnováhu a odvahu"],
+  "Atletika": ["procvičí atletické dovednosti", "rozvíjí rychlost, vytrvalost a správnou techniku"],
+  "Rytmické a kondiční činnosti": ["procvičí kondiční a rytmická cvičení", "rozvíjí sílu, koordinaci a vytrvalost"],
+  "Pohybové učení": ["vyzkouší si nové pohybové dovednosti", "učí se poznat, co už zvládá a v čem se může zlepšit"]
+};
+const PORADI_TYPU = { hlavni: 0, pruprava: 1, mereni: 2, uvod: 3 };
+
+function cinnostiVHodine(h, cinnosti) {
+  const t = ((h.napln || "") + " " + (h.plan || "")).toLowerCase();
+  return cinnosti
+    .filter((c) => (h.cinnosti || []).includes(c.id) || (c.klice || []).some((k) => k && t.includes(k)))
+    .sort((a, b) => (PORADI_TYPU[a.typ] ?? 9) - (PORADI_TYPU[b.typ] ?? 9));
+}
+
+const usekCinnosti = (c) => ZAPIS_CINNOST[c.nazev] || (ZAPIS_OKRUH[c.okruh] || ZAPIS_OKRUH["Pohybové hry"])[0];
+const velke = (x) => x.charAt(0).toUpperCase() + x.slice(1);
+function spojVetu(useky, zaver) {
+  const casti = useky.slice();
+  if (zaver) casti.push(zaver);
+  // Casti se oddeluji carkou jako ve vzoru „Zapojí se do …, rozvíjí …“, uvnitr casti uz „a“ byva.
+  return velke(casti.join(", ")) + ".";
+}
+
+function navrhyZapisu(cin) {
+  if (!cin.length) return [];
+  const hl = cin.filter((c) => c.typ !== "uvod"), uv = cin.filter((c) => c.typ === "uvod");
+  const hlavni = hl[0] || uv[0];
+  const zaver = (ZAPIS_OKRUH[hlavni.okruh] || ZAPIS_OKRUH["Pohybové hry"])[1];
+  const u = (c) => usekCinnosti(c);
+  const vysl = [];
+  // 1) hlavni cinnost a zaver podle okruhu
+  vysl.push(spojVetu([u(hlavni)], zaver));
+  // 2) hlavni a uvodni hra se zaverem
+  if (hl.length && uv.length) vysl.push(spojVetu([u(hl[0]), u(uv[0])], zaver));
+  // 3) az tri cinnosti bez zaveru
+  if (cin.length > 1) vysl.push(spojVetu([...new Set(cin.slice(0, 3).map(u))], null));
+  return [...new Set(vysl)];
+}
+
+async function ukazNavrhy() {
+  const box = $("#zapNavrhy");
+  if (!box.hidden) { box.hidden = true; $("#bNavrh").setAttribute("aria-expanded", "false"); return; }
+  const h = S.hodinaId ? await dbGet("hodiny", S.hodinaId) : null;
+  if (!h) return;
+  const ted = { ...h, plan: $("#fPlan").value, napln: $("#fNapln").value };
+  const cinnosti = await dbAll("cinnosti");
+  const cin = cinnostiVHodine(ted, cinnosti);
+  box.innerHTML = "";
+  const vloz = (text) => {
+    const pole = $("#fZapis");
+    pole.value = text;
+    pole.dispatchEvent(new Event("input"));
+    box.hidden = true; $("#bNavrh").setAttribute("aria-expanded", "false");
+    pole.focus();
+    toast("Zápis vložen, můžeš ho upravit");
+  };
+  const tl = (text, odkud) => {
+    const b = el("button", "navrh", text); b.type = "button";
+    if (odkud) b.appendChild(el("span", "odkud", odkud));
+    b.addEventListener("click", () => vloz(text));
+    return b;
+  };
+  const navrhy = navrhyZapisu(cin);
+  if (navrhy.length) {
+    box.appendChild(el("div", "eyebrow", "Ze šablon · " + cin.slice(0, 3).map((c) => c.nazev).join(", ")));
+    navrhy.forEach((t) => box.appendChild(tl(t)));
+  } else {
+    box.appendChild(el("p", "hint", "Nepoznal jsem žádnou činnost. Vlož je ze zásobníku nebo je napiš do plánu či náplně."));
+  }
+  // Tvoje drivejsi zapisy u hodin se stejnou hlavni cinnosti, nejnovejsi napred
+  if (cin.length) {
+    const hlavni = cin[0];
+    const vse = (await dbAll("hodiny"))
+      .filter((x) => x.id !== h.id && x.zapis && x.datum <= iso(new Date()))
+      .filter((x) => cinnostiVHodine(x, [hlavni]).length)
+      .sort((a, b) => b.datum.localeCompare(a.datum));
+    const videno = new Set(navrhy);
+    const drive = [];
+    for (const x of vse) { if (!videno.has(x.zapis)) { videno.add(x.zapis); drive.push(x); } if (drive.length >= 3) break; }
+    if (drive.length) {
+      box.appendChild(el("div", "eyebrow", "Tvoje dřívější zápisy · " + hlavni.nazev));
+      drive.forEach((x) => box.appendChild(tl(x.zapis, skName(x.skupinaId) + " · " + dm(x.datum))));
+    }
+  }
+  box.hidden = false; $("#bNavrh").setAttribute("aria-expanded", "true");
 }
 
 /* ---------- render: PREHLED ---------- */
@@ -2964,6 +3122,7 @@ async function boot() {
   }));
   DISCIPLINY.forEach(([nazev]) => { const o = el("option"); o.value = nazev; $("#dlDisc").appendChild(o); });
 
+ $("#bNavrh").addEventListener("click", ukazNavrhy);
   $("#pxSk").addEventListener("change", async (e) => { S.pxSk = e.target.value; await renderPrehled(); });
   $("#pxObd").addEventListener("change", async (e) => { S.pxObd = e.target.value; await renderPrehled(); });
   $("#pxCopy").addEventListener("click", kopirujPrehled);
