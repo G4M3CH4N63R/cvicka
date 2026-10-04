@@ -344,6 +344,22 @@ select {
 .slib .duvod { display: block; font-size: 12px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .slib .kdy { font-family: var(--fm); font-size: 11px; color: var(--crit); white-space: nowrap; }
 .duo > .field { margin-top: 0; }
+.asbtn { width: auto; padding: 0 10px; font-size: 12.5px; font-weight: 600; color: var(--accent); }
+.as-c { height: 88vh; }
+.as-b { flex: 1; display: flex; flex-direction: column; gap: 9px; padding-bottom: 12px; }
+.asmsg { max-width: 88%; padding: 9px 12px; border-radius: 12px; font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
+.asmsg.ja { align-self: flex-end; background: var(--accent-soft); color: var(--ink); border-bottom-right-radius: 4px; }
+.asmsg.on { align-self: flex-start; background: var(--surface-2); color: var(--ink); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+.asmsg.chyba { align-self: stretch; max-width: none; background: var(--crit-soft); color: var(--crit); }
+.asmsg p, .asmsg ul { margin: 0; }
+.asmsg p + p, .asmsg p + ul, .asmsg ul + p { margin-top: 6px; }
+.asmsg ul { padding-left: 18px; }
+.asstav { align-self: flex-start; font-family: var(--fm); font-size: 11px; color: var(--ink-3); }
+.as-uvod { display: grid; gap: 8px; }
+.as-uvod .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.as-form { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 10px 13px calc(10px + var(--safe-b)); border-top: 1px solid var(--line); background: var(--surface); }
+.as-form textarea { resize: none; min-height: 44px; }
+.as-form .btn { width: auto; align-self: end; }
 .field-h { display: flex; align-items: baseline; gap: 8px; }
 .linkbtn { appearance: none; border: 0; background: none; color: var(--accent); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; margin-left: auto; padding: 2px 0; }
 .navrhy { display: grid; gap: 6px; margin-top: 8px; }
@@ -405,6 +421,7 @@ select {
     <button class="iconbtn" id="hPrev" type="button" aria-label="předchozí hodina">‹</button>
     <button class="iconbtn" id="hNext" type="button" aria-label="další hodina">›</button>
   </div>
+  <button class="iconbtn asbtn" id="bAsist" type="button" aria-label="Zeptat se asistenta">Zeptat se</button>
 </header>
 
 <main>
@@ -670,6 +687,25 @@ select {
   </div>
 </div>
 
+<div class="sheet" id="asSheet" hidden>
+  <div class="sheet-bg" id="asBg"></div>
+  <div class="sheet-c as-c" role="dialog" aria-modal="true" aria-labelledby="asTtl">
+    <div class="sheet-h">
+      <div style="min-width:0">
+        <h3 id="asTtl">Asistent</h3>
+        <div class="sub">jména žáků zůstávají v zařízení</div>
+      </div>
+      <button class="iconbtn" id="asNova" type="button" style="width:auto;padding:0 10px;font-size:12.5px">Nová</button>
+      <button class="iconbtn" id="asX" type="button" aria-label="Zavřít" style="margin-left:0">&#10005;</button>
+    </div>
+    <div class="sheet-b as-b" id="asList" aria-live="polite"></div>
+    <form class="as-form" id="asForm">
+      <textarea id="asText" rows="2" placeholder="Zeptej se na docházku, výkony, omluvy nebo plán…" aria-label="Otázka pro asistenta"></textarea>
+      <button class="btn" id="asSend" type="submit">Poslat</button>
+    </form>
+  </div>
+</div>
+
 <div class="sheet" id="zakSheet" hidden>
   <div class="sheet-bg" id="zakBg"></div>
   <div class="sheet-c" role="dialog" aria-modal="true" aria-labelledby="zakJm">
@@ -697,7 +733,7 @@ select {
 
 <script>
 "use strict";
-const APP = { ver: "0.11.0", db: null, sync: null, klic: null };
+const APP = { ver: "0.12.0", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -2364,6 +2400,218 @@ async function ukazNavrhy() {
   box.hidden = false; $("#bNavrh").setAttribute("aria-expanded", "true");
 }
 
+/* ---------- asistent ---------- */
+// Konverzace jde pres Worker (/asistent) do Claude. Nastroje bezi tady v zarizeni.
+// Zaci se ven posilaji jen jako kody Ž1, Ž2…, prirazene pro tuhle konverzaci. Jmena,
+// poznamky o chovani, duvody omluv ani volne poznamky nikdy neodchazeji.
+const AS = { zpravy: [], kody: new Map(), zpet: new Map(), bezi: false };
+
+function kodZaka(zakId) {
+  if (!AS.kody.has(zakId)) { const k = "Ž" + (AS.kody.size + 1); AS.kody.set(zakId, k); AS.zpet.set(k, zakId); }
+  return AS.kody.get(zakId);
+}
+function odkoduj(text) {
+  return String(text || "").replace(/Ž\d+/g, (k) => {
+    const z = S.cache.zakById.get(AS.zpet.get(k));
+    return z ? z.prijmeni + " " + z.jmeno : k;
+  });
+}
+const normNazev = (x) => String(x || "").toLowerCase().replace(/\s+/g, " ").trim();
+function najdiSkupinu(x) {
+  if (!x) return null;
+  if (S.cache.skupiny.has(x)) return S.cache.skupiny.get(x);
+  const n = normNazev(x), bez = n.replace(/\s/g, "");
+  const vse = [...S.cache.skupiny.values()];
+  return vse.find((s) => normNazev(s.nazev) === n) || vse.find((s) => normNazev(s.nazev).replace(/\s/g, "") === bez)
+    || vse.find((s) => normNazev(s.nazev).startsWith(n)) || null;
+}
+function zakZKodu(k) { return k ? AS.zpet.get(String(k).trim()) || null : null; }
+const vRozsahu = (d, od, doD) => (!od || d >= od) && (!doD || d <= doD);
+function skupinaZaka(zakId) { const z = S.cache.zakById.get(zakId); return z ? skName(z.skupinaId) : "?"; }
+
+const AS_NASTROJE = {
+  async skupiny() {
+    const rz = await dbAll("rozvrh");
+    return [...S.cache.skupiny.values()].map((s) => ({
+      id: s.id, nazev: s.nazev, zaku: (S.cache.zaciBySk.get(s.id) || []).length,
+      rozvrh: rz.filter((r) => r.skupinaId === s.id).sort((a, b) => a.den - b.den || a.poradi - b.poradi).map((r) => DNY[r.den] + " " + r.poradi + ".")
+    }));
+  },
+  async zaci({ skupina }) {
+    const sk = najdiSkupinu(skupina);
+    if (!sk) return { chyba: "neznámá skupina" };
+    return { skupina: sk.nazev, zaci: (S.cache.zaciBySk.get(sk.id) || []).map((z) => ({ kod: kodZaka(z.id), trida: z.trida })) };
+  },
+  async dochazka({ skupina, od, do: doD }) {
+    const sk = najdiSkupinu(skupina);
+    if (!sk) return { chyba: "neznámá skupina" };
+    const ob = { od: od || await metaGet("od", "2026-09-01"), do: doD || iso(new Date()) };
+    const d = await spocitejPrehled(sk.id, ob);
+    return { skupina: sk.nazev, od: ob.od, do: d.konec, oduceno: d.hodiny.length,
+      zaci: d.radky.map((r) => ({ kod: kodZaka(r.zak.id), ok: r.ok, X: r.X, N: r.N, U: r.U, vedl: r.vedl })) };
+  },
+  async vykony({ skupina, disciplina, zak, od, do: doD }) {
+    const sk = skupina ? najdiSkupinu(skupina) : null;
+    if (skupina && !sk) return { chyba: "neznámá skupina" };
+    const moje = sk ? new Set((S.cache.zaciBySk.get(sk.id) || []).map((z) => z.id)) : null;
+    const zid = zakZKodu(zak);
+    const d = disciplina ? normDisc(disciplina) : "";
+    const v = (await dbAll("pozn"))
+      .filter((p) => p.typ === "vykon" && S.cache.zakById.has(p.zakId))
+      .filter((p) => (!moje || moje.has(p.zakId)) && (!zid || p.zakId === zid) && (!d || normDisc(p.disciplina).includes(d)) && vRozsahu(p.datum, od, doD))
+      .sort((a, b) => a.datum.localeCompare(b.datum));
+    return { pocet: v.length, vykony: v.slice(-300).map((p) => ({ kod: kodZaka(p.zakId), skupina: skupinaZaka(p.zakId), datum: p.datum, disciplina: p.disciplina, hodnota: cisloZ(p.hodnota), jednotka: p.jednotka || "" })) };
+  },
+  async omluvy({ skupina, platne_k }) {
+    const sk = skupina ? najdiSkupinu(skupina) : null;
+    if (skupina && !sk) return { chyba: "neznámá skupina" };
+    const moje = sk ? new Set((S.cache.zaciBySk.get(sk.id) || []).map((z) => z.id)) : null;
+    return (await dbAll("pozn"))
+      .filter((p) => p.typ === "omluva" && S.cache.zakById.has(p.zakId) && (!moje || moje.has(p.zakId)))
+      .filter((p) => !platne_k || omluvaPlati(p, platne_k))
+      .map((p) => ({ kod: kodZaka(p.zakId), skupina: skupinaZaka(p.zakId), od: p.datum, do: p.do || "do odvolání" }));
+  },
+  async hodiny({ skupina, od, do: doD, hledat }) {
+    const sk = skupina ? najdiSkupinu(skupina) : null;
+    if (skupina && !sk) return { chyba: "neznámá skupina" };
+    const cin = await dbAll("cinnosti");
+    const q = hledat ? String(hledat).toLowerCase() : "";
+    const h = (await dbAll("hodiny"))
+      .filter((x) => (!sk || x.skupinaId === sk.id) && vRozsahu(x.datum, od, doD))
+      .filter((x) => x.plan || x.napln || x.zapis || (x.stav && x.stav !== "plan"))
+      .filter((x) => !q || textHodiny(x).includes(q))
+      .sort((a, b) => b.datum.localeCompare(a.datum));
+    return { pocet: h.length, hodiny: h.slice(0, 60).map((x) => ({ datum: x.datum, skupina: skName(x.skupinaId), poradi: x.poradi, stav: x.stav,
+      plan: x.plan || "", napln: x.napln || "", zapis: x.zapis || "", cinnosti: cinnostiVHodine(x, cin).map((c) => c.nazev) })) };
+  },
+  async dlouho_nebylo({ skupina }) {
+    const sk = najdiSkupinu(skupina);
+    if (!sk) return { chyba: "neznámá skupina" };
+    return { skupina: sk.nazev, cinnosti: (await dlouhoNebylo(sk.id)).slice(0, 40).map((c) => ({ nazev: c.nazev, typ: TYPY[c.typ] || c.typ, okruh: c.okruh, naposledy: c.posledni, tydnu: c.tydnu })) };
+  },
+  async sliby({ skupina }) {
+    const sk = skupina ? najdiSkupinu(skupina) : null;
+    return (await dbAll("sliby")).filter((x) => !x.splneno && (!sk || x.skupinaId === sk.id))
+      .map((x) => ({ skupina: skName(x.skupinaId), text: x.text, od: iso(new Date(x.vytvoreno)) }));
+  }
+};
+const AS_POPIS = { skupiny: "dívám se na skupiny", zaci: "dívám se na žáky", dochazka: "počítám docházku", vykony: "hledám výkony",
+  omluvy: "dívám se na omluvy", hodiny: "procházím hodiny", dlouho_nebylo: "dívám se, co dlouho nebylo", sliby: "dívám se na sliby" };
+
+// Jednoducha sazba odpovedi: odstavce, odrazky a **tucne**, vsechno pres textContent.
+function sazbaOdpovedi(box, text) {
+  const radky = odkoduj(text).split("\n");
+  let ul = null;
+  const sTucnym = (rodic, t) => t.split("**").forEach((cast, i) => {
+    if (!cast) return;
+    if (i % 2) rodic.appendChild(el("b", null, cast)); else rodic.appendChild(document.createTextNode(cast));
+  });
+  radky.forEach((r) => {
+    const m = r.match(/^\s*(?:[-*•]|\d+\.)\s+(.*)$/);
+    if (m) { if (!ul) { ul = el("ul"); box.appendChild(ul); } const li = el("li"); sTucnym(li, m[1]); ul.appendChild(li); return; }
+    ul = null;
+    if (!r.trim()) return;
+    const p = el("p"); sTucnym(p, r.replace(/^#+\s*/, "")); box.appendChild(p);
+  });
+}
+
+function kresliAsistenta(stav) {
+  const box = $("#asList"); box.innerHTML = "";
+  if (!AS.zpravy.length) {
+    const u = el("div", "as-uvod");
+    u.appendChild(el("p", "hint", "Zeptej se na docházku, výkony, omluvy nebo na to, co se v hodinách dělalo. Asistent vidí žáky jen jako kódy, jména doplní až appka."));
+    const skup = [...S.cache.skupiny.values()].sort((a, b) => a.nazev.localeCompare(b.nazev, "cs"));
+    const sk = skup.length ? skName(S.histSkupina && S.cache.skupiny.has(S.histSkupina) ? S.histSkupina : skup[0].id) : "III. A";
+    const ch = el("div", "chips");
+    [`Kdo v ${sk} nejčastěji necvičí?`, `Co ${sk} dlouho neměla?`, "Kdo je teď omluvený?", `Kdo v ${sk} nemá změřený skok z místa?`].forEach((t) => {
+      const b = el("button", "chip", t); b.type = "button";
+      b.addEventListener("click", () => { $("#asText").value = t; asOdeslat(); });
+      ch.appendChild(b);
+    });
+    u.appendChild(ch); box.appendChild(u);
+  }
+  AS.zpravy.forEach((m) => {
+    if (m.role === "user" && typeof m.content === "string") { box.appendChild(el("div", "asmsg ja", m.content)); return; }
+    if (m.role === "assistant") {
+      // Mezikroky typu „Podívám se.“ u volání nástrojů se neukazují, jen konečná odpověď.
+      if ((m.content || []).some((b) => b.type === "tool_use")) return;
+      const t = (m.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n").trim();
+      if (!t) return;
+      const d = el("div", "asmsg on"); sazbaOdpovedi(d, t); box.appendChild(d);
+    }
+  });
+  if (stav && stav.chyba) box.appendChild(el("div", "asmsg chyba", stav.chyba));
+  else if (stav) box.appendChild(el("div", "asstav", stav));
+  box.scrollTop = box.scrollHeight;
+}
+
+async function volejAsistenta() {
+  const nast = await syncNastaveni();
+  if (!nast.url || !nast.token) throw new Error("Asistent potřebuje nastavenou synchronizaci, tedy adresu serveru a token v Nastavení.");
+  const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 60000);
+  try {
+    const r = await fetch(nast.url + "/asistent", {
+      method: "POST", signal: ctrl.signal,
+      headers: { "content-type": "application/json", authorization: "Bearer " + nast.token },
+      body: JSON.stringify({ zpravy: AS.zpravy })
+    });
+    const data = await r.json().catch(() => null);
+    if (!data) throw new Error("Server neodpověděl (HTTP " + r.status + ").");
+    if (data.chyba) throw new Error(r.status === 404 ? "Server ještě asistenta neumí, je potřeba nasadit nový Worker." : data.chyba);
+    return data;
+  } catch (e) {
+    if (e.name === "AbortError") throw new Error("Odpověď trvala moc dlouho, zkus to znovu.");
+    if (e instanceof TypeError) throw new Error("Nepodařilo se spojit se serverem. Jsi online?");
+    throw e;
+  } finally { clearTimeout(t); }
+}
+
+async function asOdeslat() {
+  const text = $("#asText").value.trim();
+  if (!text || AS.bezi) return;
+  AS.bezi = true; $("#asSend").disabled = true; $("#asText").value = "";
+  const zacatek = AS.zpravy.length;
+  AS.zpravy.push({ role: "user", content: text });
+  kresliAsistenta("přemýšlím…");
+  try {
+    for (let kolo = 0; ; kolo++) {
+      if (kolo >= 8) throw new Error("Otázka byla na asistenta moc složitá, zkus ji rozdělit.");
+      const r = await volejAsistenta();
+      AS.zpravy.push({ role: "assistant", content: r.content });
+      const volani = (r.content || []).filter((b) => b.type === "tool_use");
+      if (r.stop_reason !== "tool_use" || !volani.length) break;
+      kresliAsistenta(volani.map((v) => AS_POPIS[v.name] || v.name).join(", ") + "…");
+      const vysledky = [];
+      for (const v of volani) {
+        let out;
+        try { out = AS_NASTROJE[v.name] ? await AS_NASTROJE[v.name](v.input || {}) : { chyba: "neznámý nástroj" }; }
+        catch (e) { out = { chyba: String(e && e.message || e) }; }
+        vysledky.push({ type: "tool_result", tool_use_id: v.id, content: JSON.stringify(out) });
+      }
+      AS.zpravy.push({ role: "user", content: vysledky });
+    }
+    kresliAsistenta();
+  } catch (e) {
+    // Nedokonceny kus konverzace se zahodi, jinak by dalsi otazka poslala neplatnou historii.
+    AS.zpravy.length = zacatek;
+    $("#asText").value = text;
+    kresliAsistenta({ chyba: e.message });
+  } finally {
+    AS.bezi = false; $("#asSend").disabled = false;
+  }
+}
+
+function otevriAsistenta() {
+  $("#asSheet").hidden = false;
+  document.body.classList.add("zamek");
+  kresliAsistenta();
+  setTimeout(() => $("#asText").focus(), 50);
+}
+function zavriAsistenta() {
+  $("#asSheet").hidden = true;
+  document.body.classList.remove("zamek");
+}
+
 /* ---------- render: PREHLED ---------- */
 // Pololetni prehled jedne skupiny. Odučená hodina = do dneška a ma zapis, naplň,
 // neni ve stavu plan, nebo ma aspon jeden zaznam dochazky. Zak bez zaznamu
@@ -3044,6 +3292,7 @@ async function switchTab(name) {
   document.querySelectorAll("nav button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
   $("#navBack").hidden = !(name === "hodina" && (S.backTo || S.zpet.length));
   if (name !== "hodina") $("#hNav").hidden = true;
+  $("#bAsist").hidden = name === "hodina";
   const titles = { dnes: ["Cvička", "přehled dne"], tyden: ["Příprava na týden", "plán a historie"], prehled: ["Přehled", "docházka, omluvy a výkony"], nastaveni: ["Nastavení", "data a záloha"] };
   if (titles[name]) { $("#hTitle").classList.remove("dve"); $("#hTitle").textContent = titles[name][0]; $("#hSub").textContent = titles[name][1]; }
   if (name === "dnes") await renderDnes();
@@ -3074,6 +3323,7 @@ async function boot() {
   $("#zakX").addEventListener("click", zavriZaka);
   $("#zakBg").addEventListener("click", zavriZaka);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#zakSheet").hidden) zavriZaka(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#asSheet").hidden) zavriAsistenta(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#merSheet").hidden) zavriMereni(); });
 
   STAVY.forEach((k) => {
@@ -3123,6 +3373,12 @@ async function boot() {
   DISCIPLINY.forEach(([nazev]) => { const o = el("option"); o.value = nazev; $("#dlDisc").appendChild(o); });
 
  $("#bNavrh").addEventListener("click", ukazNavrhy);
+  $("#bAsist").addEventListener("click", otevriAsistenta);
+  $("#asX").addEventListener("click", zavriAsistenta);
+  $("#asBg").addEventListener("click", zavriAsistenta);
+  $("#asNova").addEventListener("click", () => { if (AS.bezi) return; AS.zpravy = []; AS.kody.clear(); AS.zpet.clear(); kresliAsistenta(); $("#asText").focus(); });
+  $("#asForm").addEventListener("submit", (e) => { e.preventDefault(); asOdeslat(); });
+  $("#asText").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); asOdeslat(); } });
   $("#pxSk").addEventListener("change", async (e) => { S.pxSk = e.target.value; await renderPrehled(); });
   $("#pxObd").addEventListener("change", async (e) => { S.pxObd = e.target.value; await renderPrehled(); });
   $("#pxCopy").addEventListener("click", kopirujPrehled);

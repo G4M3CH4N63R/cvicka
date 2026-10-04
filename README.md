@@ -450,7 +450,26 @@ právě rozepsaných v polích) a nabídne dvě sady návrhů:
 Klepnutí návrh vloží do pole (přepíše, co tam bylo), uloží se jako při psaní a dá se
 dál upravit. Nic se neposílá ven, všechno se skládá v zařízení.
 
+## Asistent (v0.12.0, F4)
+
+Tlačítko **Zeptat se** v hlavičce (mimo obrazovku Hodina) otevře konverzaci. Otázka jde
+přes Worker (`POST /asistent`, klíč ANTHROPIC_API_KEY je jen na serveru) do Claude Haiku 4.5.
+Pokyny a definice nástrojů jsou ve Workeru, aplikace posílá jen zprávy.
+
+**Nástroje běží v zařízení** (`AS_NASTROJE`): skupiny, žáci, docházka (přes
+`spocitejPrehled`), výkony, omluvy, hodiny, dlouho nebylo, sliby. Žáci jsou ve výsledcích
+jen jako kódy Ž1, Ž2… (`kodZaka`), přidělené pro jednu konverzaci, a `odkoduj()` je v odpovědi
+přepíše na jména. Neposílají se jména, poznámky o chování, důvody omluv ani volné poznámky.
+Texty hodin (plán, náplň, zápis) ano, takže do nich nepatří jména žáků.
+
+Smyčka nástrojů má strop osm kol. Při chybě se nedokončený kus konverzace zahodí a otázka
+se vrátí do pole. Mezikroky u volání nástrojů se neukazují. Bez nastavené synchronizace
+(adresa a token) asistent nefunguje a řekne to. Nasazení klíče je v `server/README.md`.
+
+Otestováno proti skutečnému `worker.js` v Node s podvrženým Claude API: 26 požadavků
+na API bez jediného příjmení a bez textu omluvy či poznámky o chování.
+
 ## Co přijde dál
 
 F3 je hotová.
-Pak F4 asistent s nástroji a F6 uzávěrka školního roku.
+Pak F6 uzávěrka školního roku.
