@@ -363,7 +363,31 @@ seřazené podle skupiny a pak podle stáří, se stejným tlačítkem ✓ jako 
 Dnes ukazuje jen sliby skupin, které mají v zobrazený den hodinu. Řídí se dnem, který je
 zrovna nalistovaný šipkami, ne kalendářním dneškem. Den bez hodin kartu slibů skryje.
 
+## Omluvy a zranění (v0.9.0)
+
+Nový typ zápisu v kartě žáka: **Omluva** (`pozn` s `typ: "omluva"`). `datum` je první den,
+`do` poslední den, prázdné `do` znamená do odvolání, důvod je v `text`. Databáze ani Worker
+se neměnily. Důvod je zdravotní údaj, a protože jde o `text` v `pozn`, posílá se na server
+zašifrovaný stejně jako ostatní volný text. Data od a do zůstávají čitelná.
+
+**Docházka:** žák, kterému v den hodiny platí omluva a nemá vlastní záznam, má výchozí stav
+N a pod jménem „omluva do 7. 10. · důvod“ (neutrálně, appka nezná rod žáka). Dopředu se nic nezapisuje, takže zkrácení
+nebo smazání omluvy se v budoucích hodinách projeví hned. Ruční přepnutí stavu platí vždy.
+Při **uzavření hodiny** se dopočítané N uloží jako skutečné záznamy do `zaznamy`, aby
+uzavřená hodina držela, i kdyby se omluva později změnila.
+
+**Ukončit / Zrušit:** u omluvy, která ještě neskončila. Ukončení nastaví `do` na včerejšek
+(od dneška cvičí). Omluva, která ještě nezačala nebo začala dnes, se místo toho smaže.
+
+**Přehledy:** na Týdnu karta Omluvení se všemi omluvami, které ještě neskončily (i budoucími),
+do odvolání nahoře, pak podle konce. Na Dnes jen omluvy platné v nalistovaný den u skupin,
+které ten den mají hodinu. Klepnutí na řádek otevře kartu žáka na typu Omluva. Skončené
+omluvy z přehledů zmizí a zůstanou jen v kartě žáka.
+
+Při té příležitosti opraveno: po změně soli se znovu odesílaly jen poznámky o chování,
+teď všechny zápisy s textem, jak tvrdí komentář u `naOdeslani`.
+
 ## Co přijde dál
 
-Zbytek F3: pololetní přehledy a zápis do ŠOL ze šablon.
+Zbytek F3: pololetní přehledy (včetně počtu necvičení a omluv) a zápis do ŠOL ze šablon.
 Pak F4 asistent s nástroji a F6 uzávěrka školního roku.

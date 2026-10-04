@@ -315,6 +315,7 @@ select {
   border-radius: 8px; padding: 9px 10px; width: 100%; font-family: inherit; color: inherit;
 }
 .duo { display: grid; grid-template-columns: 1fr 104px; gap: 8px; }
+.duo.dva { grid-template-columns: 1fr 1fr; }
 .chk { display: flex; align-items: center; gap: 9px; margin-top: 11px; font-size: 14px; }
 .chk input { width: 20px; height: 20px; flex: 0 0 auto; }
 
@@ -326,6 +327,17 @@ select {
 .zrow .tp.vykon { background: var(--good-soft); color: var(--good); }
 .zrow .tp.akce { background: var(--accent-soft); color: var(--accent); }
 .zrow .tp.chovani { background: var(--warn-soft); color: var(--warn); }
+.zrow .tp.omluva { background: var(--crit-soft); color: var(--crit); }
+.zrow .konec { appearance: none; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2); border-radius: 7px; font-size: 11.5px; padding: 3px 8px; cursor: pointer; white-space: nowrap; }
+.zrow .ak { display: flex; gap: 6px; align-items: flex-start; }
+.pupil .nm .om { display: block; font-family: var(--fm); font-size: 10.5px; color: var(--crit); overflow: hidden; text-overflow: ellipsis; }
+.slib.omr { grid-template-columns: 1fr auto; width: 100%; background: none; border-left: 0; border-right: 0; border-bottom: 0; text-align: left; cursor: pointer; font: inherit; color: inherit; }
+.slib.omr:first-child { border-top: 0; }
+.slib.omr:active { background: var(--surface-3); }
+.slib .kdo { display: block; }
+.slib .duvod { display: block; font-size: 12px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.slib .kdy { font-family: var(--fm); font-size: 11px; color: var(--crit); white-space: nowrap; }
+.form-hint { font-size: 12px; color: var(--ink-3); margin: 6px 0 0; }
 .zrow .del { appearance: none; cursor: pointer; border: 1px solid var(--line-strong); background: none; color: var(--ink-3); border-radius: 8px; padding: 4px 8px; font-size: 12px; line-height: 1.4; flex: 0 0 auto; }
 .zrow .del.warn { border-color: var(--crit); color: var(--crit); }
 
@@ -385,6 +397,10 @@ select {
       <div class="card-h"><h3>Sliby, které máš splnit</h3><span class="eyebrow" id="slibyCnt"></span></div>
       <div id="slibyList"></div>
     </div>
+    <div class="card" id="omluvyCard" hidden>
+      <div class="card-h"><h3>Omluvení</h3><span class="eyebrow" id="omluvyCnt"></span></div>
+      <div id="omluvyList"></div>
+    </div>
     <div class="card" id="dnesTodoCard" hidden>
       <div class="card-h"><h3>Chybí zápis</h3><span class="eyebrow" id="dnesTodoCnt"></span></div>
       <div id="dnesTodo"></div>
@@ -415,6 +431,10 @@ select {
     <div class="card" id="slibyTydenCard">
       <div class="card-h"><h3>Všechny sliby</h3><span class="eyebrow" id="slibyTydenCnt"></span></div>
       <div id="slibyTydenList"></div>
+    </div>
+    <div class="card" id="omluvyTydenCard">
+      <div class="card-h"><h3>Omluvení</h3><span class="eyebrow" id="omluvyTydenCnt"></span></div>
+      <div id="omluvyTydenList"></div>
     </div>
     <div class="card" id="gapsCard" hidden>
       <div class="card-h"><h3>Dlouho nebylo</h3><span class="eyebrow" id="gapsCls"></span></div>
@@ -613,11 +633,11 @@ select {
 
 <script>
 "use strict";
-const APP = { ver: "0.8.5", db: null, sync: null, klic: null };
+const APP = { ver: "0.9.0", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
-const POZN_TYPY = { vykon: "Výkon", akce: "Reprezentace", chovani: "Chování", pozn: "Poznámka" };
+const POZN_TYPY = { vykon: "Výkon", akce: "Reprezentace", chovani: "Chování", omluva: "Omluva", pozn: "Poznámka" };
 const DISCIPLINY = [
   ["Skok daleký", "cm"], ["Skok z místa", "cm"], ["Trojskok z místa", "cm"], ["Sprint 60 m", "s"],
   ["Sprint 50 m", "s"], ["Běh 1000 m", "min"], ["Vytrvalostní běh 12 min", "m"], ["Hod míčkem", "m"],
@@ -1093,6 +1113,7 @@ async function renderDnes() {
     hod.forEach((h) => list.appendChild(lessonRow(h)));
   }
   await renderSliby();
+  await renderOmluvyDnes();
   // nedodelky: zapsane dny v minulosti bez zapisu
   const vse = await dbAll("hodiny");
   const dnes = iso(new Date());
@@ -1258,6 +1279,7 @@ async function renderTyden() {
   if (!n) list.appendChild(el("div", "empty", "V tomhle týdnu nejsou žádné hodiny. Zkontroluj v nastavení rozsah školního roku."));
   await renderMrizka(dny, vsechny);
   await renderSlibyTyden();
+  await renderOmluvyTyden();
   await renderGaps(S.histSkupina);
 }
 
@@ -1456,10 +1478,15 @@ async function renderHodina() {
     if (!poznMapa.has(p.zakId)) poznMapa.set(p.zakId, []);
     poznMapa.get(p.zakId).push(p);
   });
+  const omluveni = omluvyZe([].concat(...poznMapa.values()), h.datum);
   zaci.forEach((z, i) => {
-    const rec = mapa.get(z.id) || { id: h.id + "|" + z.id, hodinaId: h.id, zakId: z.id, stav: "ok", vedl: false };
+    const om = omluveni.get(z.id);
+    // Omluveny zak bez vlastniho zaznamu ma vychozi stav N. Co Karel prepne rucne, plati.
+    const rec = mapa.get(z.id) || { id: h.id + "|" + z.id, hodinaId: h.id, zakId: z.id, stav: om ? "N" : "ok", vedl: false };
     const row = el("div", "pupil");
-    row.append(el("span", "n mono", String(i + 1)), el("span", "nm", z.prijmeni + " " + z.jmeno));
+    const nm = el("span", "nm", z.prijmeni + " " + z.jmeno);
+    if (om) nm.append(el("span", "om", "omluva " + omluvaDo(om) + (om.text ? " · " + om.text : "")));
+    row.append(el("span", "n mono", String(i + 1)), nm);
     const st = el("button", "st"); st.type = "button";
     st.dataset.jm = z.prijmeni + " " + z.jmeno;
     st.setAttribute("aria-haspopup", "true");
@@ -1870,7 +1897,7 @@ async function prijmi(zmeny) {
     await odemkni(await metaGet("sifraHeslo", ""));
     await dorozsifruj();
     if (APP.klic) {
-      const znovu = (await dbAll("pozn")).filter((z) => z.typ === "chovani" && z.text);
+      const znovu = (await dbAll("pozn")).filter((z) => z.text);
       if (znovu.length) await dbPutMany("fronta", znovu.map((z) => ({ id: frontaId("pozn", z.id), store: "pozn", rid: z.id })), true);
     }
   }
@@ -2033,8 +2060,78 @@ async function migraceStabilnichId() {
   return { skupin: noveSk.length, zaku: noveZ.length, hodin: noveH.length, zaznamu: noveZaz.length, poznamek: noveP.length };
 }
 
+/* ---------- omluvy ---------- */
+// Omluva je zapis k zakovi typu "omluva": `datum` je prvni den, `do` posledni den,
+// prazdne `do` znamena do odvolani. Duvod je v `text`, takze do synchronizace jde
+// zasifrovany jako ostatni volny text. Docházka si N dopocita sama pri otevreni hodiny,
+// dopredu se nic nezapisuje, takze zkraceni nebo smazani omluvy se projevi hned.
+const konecOmluvy = (p) => p.do || "9999-12-31";
+const omluvaPlati = (p, d) => p.typ === "omluva" && p.datum <= d && konecOmluvy(p) >= d;
+const omluvaDo = (p) => p.do ? "do " + dm(p.do) : "do odvolání";
+
+// zakId -> omluva platna v den d (pri prekryvu ta, ktera konci nejpozdeji)
+function omluvyZe(vse, d) {
+  const m = new Map();
+  vse.forEach((p) => {
+    if (!omluvaPlati(p, d)) return;
+    const c = m.get(p.zakId);
+    if (!c || konecOmluvy(p) > konecOmluvy(c)) m.set(p.zakId, p);
+  });
+  return m;
+}
+
+// Popisek vuci dni `den`: platna omluva ukaze konec, budouci ukaze rozsah.
+function omluvaKdy(p, den) {
+  if (p.datum <= den) return omluvaDo(p);
+  return p.do ? dm(p.datum) + " až " + dm(p.do) : "od " + dm(p.datum);
+}
+
+function omluvaRadek(p, den) {
+  const z = S.cache.zakById.get(p.zakId);
+  const b = el("button", "slib omr"); b.type = "button";
+  const t = el("span", "txt");
+  t.append(el("span", "kdo", z.prijmeni + " " + z.jmeno), el("span", "duvod", skName(z.skupinaId) + (p.text ? " · " + p.text : "")));
+  b.append(t);
+  b.append(el("span", "kdy", omluvaKdy(p, den)));
+  b.setAttribute("aria-label", z.prijmeni + " " + z.jmeno + ", omluva " + omluvaKdy(p, den));
+  b.addEventListener("click", () => { S.poznTyp = "omluva"; otevriZaka(p.zakId, iso(new Date())); });
+  return b;
+}
+
+// Dnes: jen zaci ze skupin, ktere maji v nalistovany den hodinu, a jen platne v ten den.
+async function renderOmluvyDnes() {
+  const skDne = new Set((await dbBy("hodiny", "datum", S.den)).map((h) => h.skupinaId));
+  const om = [...omluvyZe(await dbAll("pozn"), S.den).values()]
+    .filter((p) => { const z = S.cache.zakById.get(p.zakId); return z && !z.neaktivni && skDne.has(z.skupinaId); })
+    .sort((a, b) => konecOmluvy(a).localeCompare(konecOmluvy(b)));
+  $("#omluvyCard").hidden = om.length === 0;
+  $("#omluvyCnt").textContent = om.length ? om.length + "×" : "";
+  const box = $("#omluvyList"); box.innerHTML = "";
+  om.forEach((p) => box.appendChild(omluvaRadek(p, S.den)));
+}
+
+// Tyden: vsechny omluvy, ktere jeste neskoncily (i ty, co teprve zacnou).
+// Do odvolani nahore, pak podle konce.
+async function renderOmluvyTyden() {
+  const dnes = iso(new Date());
+  const om = (await dbAll("pozn"))
+    .filter((p) => p.typ === "omluva" && konecOmluvy(p) >= dnes && S.cache.zakById.has(p.zakId) && !S.cache.zakById.get(p.zakId).neaktivni)
+    .sort((a, b) => (a.do ? 1 : 0) - (b.do ? 1 : 0) || konecOmluvy(a).localeCompare(konecOmluvy(b)) || a.datum.localeCompare(b.datum));
+  $("#omluvyTydenCnt").textContent = om.length ? om.length + "×" : "";
+  const box = $("#omluvyTydenList"); box.innerHTML = "";
+  if (!om.length) { box.appendChild(el("div", "empty", "Nikdo není omluvený.")); return; }
+  om.forEach((p) => box.appendChild(omluvaRadek(p, dnes)));
+}
+
+async function obnovOmluvy() {
+  if (S.tab === "dnes") await renderOmluvyDnes();
+  if (S.tab === "tyden") await renderOmluvyTyden();
+  if (S.tab === "hodina") { await ulozRozepsane(); await renderHodina(); }
+}
+
 /* ---------- karta žáka ---------- */
 function poznText(p) {
+  if (p.typ === "omluva") return (p.do ? dm(p.datum) + " až " + dm(p.do) : "od " + dm(p.datum) + " do odvolání") + (p.text ? " · " + p.text : "");
   if (p.typ === "vykon") return [p.disciplina, p.hodnota, p.jednotka].filter(Boolean).join(" ");
   if (p.typ === "akce") return [p.nazev, p.text].filter(Boolean).join(" · ");
   return p.text || "";
@@ -2097,6 +2194,22 @@ function zakRow(p, jeRekord) {
     mid.appendChild(t);
   }
   r.appendChild(mid);
+  const ak = el("span", "ak"); r.appendChild(ak);
+  if (p.typ === "omluva" && konecOmluvy(p) >= iso(new Date())) {
+    const budouci = p.datum > iso(new Date());
+    const k = el("button", "konec", budouci ? "Zrušit" : "Ukončit"); k.type = "button";
+    k.setAttribute("aria-label", budouci ? "zrušit omluvu" : "ukončit omluvu, od dneška cvičí");
+    k.addEventListener("click", async () => {
+      // Konci vcerejskem: dnes uz cvici.
+      const vcera = addDays(iso(new Date()), -1);
+      if (vcera < p.datum) { await dbDel("pozn", p.id); toast("Omluva zrušena"); }
+      else { p.do = vcera; await dbPut("pozn", p); toast("Omluva ukončena, od dneška cvičí"); }
+      await renderZak();
+      await obnovZnacku(p.zakId);
+      await obnovOmluvy();
+    });
+    ak.appendChild(k);
+  }
   const del = el("button", "del", "✕"); del.type = "button";
   del.setAttribute("aria-label", "smazat zápis");
   let potvrd = false;
@@ -2109,9 +2222,10 @@ function zakRow(p, jeRekord) {
     await dbDel("pozn", p.id);
     await renderZak();
     await obnovZnacku(p.zakId);
+    if (p.typ === "omluva") await obnovOmluvy();
     toast("Zápis smazán");
   });
-  r.appendChild(del);
+  ak.appendChild(del);
   return r;
 }
 
@@ -2140,6 +2254,12 @@ function renderZakForm() {
   } else if (t === "akce") {
     sec.append(pole("Název akce", inp("pNaz", "Cross cup"), "pNaz"),
                pole("Umístění nebo poznámka", inp("pText", "3. místo"), "pText"));
+  } else if (t === "omluva") {
+    const od = el("input"); od.type = "date"; od.id = "pOd"; od.value = S.poznDatum;
+    const dok = el("input"); dok.type = "date"; dok.id = "pDo";
+    const duo = el("div", "duo dva"); duo.append(od, dok);
+    sec.append(pole("Od a do", duo, "pOd"), el("p", "form-hint", "Prázdné do znamená do odvolání."),
+               pole("Důvod", inp("pText", "Zlomená ruka"), "pText"));
   } else {
     const ta = el("textarea"); ta.id = "pText"; ta.rows = 2;
     ta.placeholder = t === "chovani" ? "Co se stalo" : "Cokoli, co si chceš pamatovat";
@@ -2152,8 +2272,10 @@ function renderZakForm() {
     }
   }
 
-  const dt = el("input"); dt.type = "date"; dt.id = "pDatum"; dt.value = S.poznDatum;
-  sec.appendChild(pole("Datum", dt, "pDatum"));
+  if (t !== "omluva") {
+    const dt = el("input"); dt.type = "date"; dt.id = "pDatum"; dt.value = S.poznDatum;
+    sec.appendChild(pole("Datum", dt, "pDatum"));
+  }
 
   const btns = el("div", "btns");
   const b = el("button", "btn", "Uložit zápis"); b.type = "button"; b.id = "pSave";
@@ -2165,9 +2287,9 @@ function renderZakForm() {
 
 async function ulozPozn() {
   const t = S.poznTyp;
-  const datum = ($("#pDatum").value || "").trim() || iso(new Date());
+  const datum = ($(t === "omluva" ? "#pOd" : "#pDatum").value || "").trim() || iso(new Date());
   const r = { id: uid("p"), zakId: S.zakId, typ: t, datum, vytvoreno: new Date().toISOString() };
-  if (S.hodinaId) r.hodinaId = S.hodinaId;
+  if (S.hodinaId && t !== "omluva") r.hodinaId = S.hodinaId;
   if (t === "vykon") {
     r.disciplina = $("#pDisc").value.trim();
     r.hodnota = $("#pHod").value.trim().replace(",", ".");
@@ -2177,15 +2299,20 @@ async function ulozPozn() {
     r.nazev = $("#pNaz").value.trim();
     r.text = $("#pText").value.trim();
     if (!r.nazev) { toast("Vyplň název akce"); return; }
+  } else if (t === "omluva") {
+    r.do = ($("#pDo").value || "").trim();
+    r.text = $("#pText").value.trim();
+    if (r.do && r.do < r.datum) { toast("Konec je před začátkem"); return; }
   } else {
     r.text = $("#pText").value.trim();
     if (t === "chovani") r.rodicum = $("#pRod").checked;
     if (!r.text) { toast("Napiš text"); return; }
   }
-  S.poznDatum = datum;
+  if (t !== "omluva") S.poznDatum = datum;
   await dbPut("pozn", r);
   await renderZak();
   await obnovZnacku(S.zakId);
+  if (t === "omluva") await obnovOmluvy();
   toast("Uloženo");
 }
 
@@ -2568,6 +2695,15 @@ async function boot() {
     await saveHodinaPole();
     if (!S.hodinaId) return;
     const h = await dbGet("hodiny", S.hodinaId);
+    if (h.stav !== "uzavrena") {
+      // Pri uzavreni se dopocitane N omluvenych ulozi jako skutecny zaznam docházky,
+      // aby v uzavrene hodine zustalo, i kdyby se omluva pozdeji zmenila.
+      const om = omluvyZe(await dbAll("pozn"), h.datum);
+      const maji = new Set((await dbBy("zaznamy", "hodinaId", h.id)).map((x) => x.zakId));
+      for (const z of (S.cache.zaciBySk.get(h.skupinaId) || [])) {
+        if (om.has(z.id) && !maji.has(z.id)) await dbPut("zaznamy", { id: h.id + "|" + z.id, hodinaId: h.id, zakId: z.id, stav: "N", vedl: false });
+      }
+    }
     if (h.stav === "uzavrena") {
       h.stav = "plan"; h.updatedAt = Date.now();
       await dbPut("hodiny", h);
