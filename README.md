@@ -387,6 +387,15 @@ omluvy z přehledů zmizí a zůstanou jen v kartě žáka.
 Při té příležitosti opraveno: po změně soli se znovu odesílaly jen poznámky o chování,
 teď všechny zápisy s textem, jak tvrdí komentář u `naOdeslani`.
 
+## Celá historie hodin v kartě Co naposledy měli (v0.9.1)
+
+Pod třemi posledními hodinami je tlačítko „Celá historie (N)“, když je zapsaných hodin víc.
+Rozbalí kartu na všechny zapsané hodiny skupiny do dneška, rozdělené podle měsíců, nadpis
+se změní na Historie hodin a štítek vpravo ukáže počet. Každý řádek jde rozkliknout jako
+dosud (skok na hodinu, šipka zpět vrací). Rozbalení si appka drží v `S.histVse`, dokud ho
+Karel nesbalí, takže zůstane i po prokliku na starší hodinu a zpět. Po sbalení se stránka
+vrátí ke kartě.
+
 ## Co přijde dál
 
 Zbytek F3: pololetní přehledy (včetně počtu necvičení a omluv) a zápis do ŠOL ze šablon.

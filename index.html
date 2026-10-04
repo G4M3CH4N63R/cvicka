@@ -247,6 +247,9 @@ textarea { line-height: 1.45; }
 .hist .empty { display: block; padding: 16px 0; border-top: 0; }
 .hist .d { font-family: var(--fm); font-size: 11px; color: var(--ink-3); padding-top: 2px; }
 .hist .x { color: var(--ink-2); }
+.hist .mes { margin: 14px 0 2px; font-family: var(--fm); font-size: 10.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+.hist .mes:first-child { margin-top: 0; }
+.hist .mes + button { border-top: 0; }
 
 .kv { display: grid; grid-template-columns: 1fr auto; gap: 8px; font-size: 14px; padding: 7px 0; border-top: 1px solid var(--line); }
 .kv:first-child { border-top: 0; }
@@ -479,7 +482,7 @@ select {
     </div>
     <div class="card" id="hHistCard" hidden>
       <div class="card-h"><h3 id="hHistTtl">Co naposledy měli</h3><span class="eyebrow">poslední hodiny</span><button class="iconbtn sbal" type="button" aria-label="sbalit nebo rozbalit">▾</button></div>
-      <div class="card-b"><div class="hist" id="hHistList"></div></div>
+      <div class="card-b"><div class="hist" id="hHistList"></div><div class="btns" id="hHistVicBox" hidden><button class="btn ghost" id="hHistVic" type="button" aria-expanded="false"></button></div></div>
     </div>
     <div class="card" id="hGapsCard" hidden>
       <div class="card-h"><h3>Dlouho nebylo</h3><span class="eyebrow" id="hGapsCls"></span><button class="iconbtn sbal" type="button" aria-label="sbalit nebo rozbalit">▾</button></div>
@@ -633,7 +636,7 @@ select {
 
 <script>
 "use strict";
-const APP = { ver: "0.9.0", db: null, sync: null, klic: null };
+const APP = { ver: "0.9.1", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -1076,7 +1079,7 @@ function okruhyZeSeznamu(seznam) {
 }
 
 /* ---------- stav aplikace ---------- */
-const S = { tab: "dnes", den: iso(new Date()), tyden: planWeek(iso(new Date())), hodinaId: null, backTo: null, zpet: [], histSkupina: null, zasTyp: "uvod", zakId: null, poznTyp: "vykon", poznDatum: null, cache: {} };
+const S = { tab: "dnes", den: iso(new Date()), tyden: planWeek(iso(new Date())), hodinaId: null, backTo: null, zpet: [], histVse: false, histSkupina: null, zasTyp: "uvod", zakId: null, poznTyp: "vykon", poznDatum: null, cache: {} };
 
 async function refreshCache() {
   const [skupiny, zaci] = await Promise.all([dbAll("skupiny"), dbAll("zaci")]);
@@ -1318,6 +1321,8 @@ async function renderGaps(skupinaId, kam, opt) {
 }
 
 const HIST_HODINA = { card: "#hHistCard", ttl: "#hHistTtl", list: "#hHistList" };
+const HIST_HODINA_OPT = { ttl: "Co naposledy měli", kolik: 3 };
+const MESICE = ["leden", "únor", "březen", "duben", "květen", "červen", "červenec", "srpen", "září", "říjen", "listopad", "prosinec"];
 
 async function renderHist(skupinaId, kam, opt) {
   kam = kam || HIST_HODINA; opt = opt || {};
@@ -1331,9 +1336,27 @@ async function renderHist(skupinaId, kam, opt) {
     .sort((a, b) => b.datum.localeCompare(a.datum));
   const dnesI = iso(new Date());
   const minule = zapsane.filter((h) => h.datum <= dnesI);
-  const hod = (minule.length ? minule : zapsane).slice(0, opt.kolik || 5);
+  const vse = minule.length ? minule : zapsane;
+  // V hodine jde karta rozbalit na celou historii skupiny, pak se radky deli podle mesicu.
+  const rozbal = kam === HIST_HODINA && S.histVse && vse.length > (opt.kolik || 5);
+  const hod = rozbal ? vse : vse.slice(0, opt.kolik || 5);
+  if (kam === HIST_HODINA) {
+    const vic = vse.length > (opt.kolik || 5);
+    $("#hHistVicBox").hidden = !vic;
+    $("#hHistVic").textContent = rozbal ? "Sbalit na poslední " + (opt.kolik || 5) : "Celá historie (" + vse.length + ")";
+    $("#hHistVic").setAttribute("aria-expanded", String(!!rozbal));
+    $(kam.ttl).textContent = rozbal ? "Historie hodin" : (opt.ttl || $(kam.ttl).textContent);
+    const stitek = $(kam.ttl).nextElementSibling;
+    if (stitek) stitek.textContent = rozbal ? vse.length + (vse.length < 5 ? " hodiny" : " hodin") : "poslední hodiny";
+  }
   if (!hod.length) { box.appendChild(el("div", "empty", "Zatím žádný zápis.")); return; }
+  let mesic = "";
   hod.forEach((h) => {
+    if (rozbal) {
+      const d = parseISO(h.datum);
+      const m = MESICE[d.getMonth()] + " " + d.getFullYear();
+      if (m !== mesic) { mesic = m; box.appendChild(el("p", "mes", m)); }
+    }
     const r = el("button"); r.type = "button";
     r.append(el("span", "d", cz(h.datum)), el("span", "x", h.napln || h.zapis), el("span", "sip", "›"));
     r.setAttribute("aria-label", "otevřít hodinu " + czFull(h.datum));
@@ -1514,7 +1537,7 @@ async function renderHodina() {
   if (!zaci.length) list.appendChild(el("div", "empty", "Tahle skupina nemá načtené žáky."));
   prepocitejDochazku();
   const seznamCin = await dlouhoNebylo(h.skupinaId);
-  await renderHist(h.skupinaId, HIST_HODINA, { ttl: "Co naposledy měli", kolik: 3, krome: h.id });
+  await renderHist(h.skupinaId, HIST_HODINA, { ...HIST_HODINA_OPT, krome: h.id });
   await renderGaps(h.skupinaId, GAPS_HODINA, { kolik: 3, seznam: seznamCin });
   await nastavSbaleni();
   await renderZasobnik(h, seznamCin);
@@ -2659,6 +2682,14 @@ async function boot() {
   }));
   DISCIPLINY.forEach(([nazev]) => { const o = el("option"); o.value = nazev; $("#dlDisc").appendChild(o); });
 
+  $("#hHistVic").addEventListener("click", async () => {
+    S.histVse = !S.histVse;
+    const h = S.hodinaId ? await dbGet("hodiny", S.hodinaId) : null;
+    if (!h) return;
+    await renderHist(h.skupinaId, HIST_HODINA, { ...HIST_HODINA_OPT, krome: h.id });
+    // Po sbaleni by stranka zustala daleko pod kartou, tak se k ni vrati.
+    if (!S.histVse) $("#hHistCard").scrollIntoView({ block: "nearest" });
+  });
   $("#hPrev").addEventListener("click", () => sousedniHodina("pred"));
   $("#hNext").addEventListener("click", () => sousedniHodina("dal"));
   $("#navBack").addEventListener("click", async () => {
