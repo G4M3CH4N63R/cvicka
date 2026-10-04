@@ -80,7 +80,7 @@ main { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; padd
 /* tabbar */
 nav {
   flex: 0 0 auto; background: var(--surface); border-top: 1px solid var(--line);
-  display: grid; grid-template-columns: repeat(4, 1fr); padding-bottom: var(--safe-b);
+  display: grid; grid-template-columns: repeat(5, 1fr); padding-bottom: var(--safe-b);
 }
 nav button {
   appearance: none; border: 0; background: none; cursor: pointer; color: var(--ink-3);
@@ -343,6 +343,26 @@ select {
 .slib .kdo { display: block; }
 .slib .duvod { display: block; font-size: 12px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .slib .kdy { font-family: var(--fm); font-size: 11px; color: var(--crit); white-space: nowrap; }
+.duo > .field { margin-top: 0; }
+.px-wrap { overflow-x: auto; }
+.px { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.px th { font-family: var(--fm); font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); text-align: right; padding: 6px 7px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.px td { padding: 8px 7px; text-align: right; border-top: 1px solid var(--line); white-space: nowrap; }
+.px tr:first-child td { border-top: 0; }
+.px th:first-child, .px td:first-child { text-align: left; padding-left: 13px; white-space: normal; }
+.px th:last-child, .px td:last-child { padding-right: 13px; }
+.px tbody tr { cursor: pointer; }
+.px tbody tr:active { background: var(--surface-3); }
+.px .nula { color: var(--ink-3); }
+.px .warn { color: var(--warn); font-weight: 700; }
+.px .crit { color: var(--crit); font-weight: 700; }
+.px tr.vyst td:first-child::after { content: " ●"; color: var(--crit); font-size: 10px; }
+.px .lepsi { color: var(--good); font-weight: 600; }
+.px .horsi { color: var(--ink-3); }
+.px .sub { display: block; font-size: 11.5px; color: var(--ink-3); }
+.px-disc { padding: 12px 13px 4px; display: flex; gap: 8px; align-items: baseline; }
+.px-disc h4 { font-size: 13.5px; }
+.px-disc .eyebrow { margin-left: auto; }
 .form-hint { font-size: 12px; color: var(--ink-3); margin: 6px 0 0; }
 .zrow .del { appearance: none; cursor: pointer; border: 1px solid var(--line-strong); background: none; color: var(--ink-3); border-radius: 8px; padding: 4px 8px; font-size: 12px; line-height: 1.4; flex: 0 0 auto; }
 .zrow .del.warn { border-color: var(--crit); color: var(--crit); }
@@ -509,6 +529,35 @@ select {
   </div></section>
 
   <!-- NASTAVENI -->
+  <!-- PREHLED -->
+  <section class="screen" id="s-prehled"><div class="wrap">
+    <div class="card">
+      <div class="card-b" style="padding-top:13px">
+        <div class="duo dva">
+          <div class="field"><label for="pxSk">Skupina</label><select id="pxSk"></select></div>
+          <div class="field"><label for="pxObd">Období</label><select id="pxObd"><option value="1">1. pololetí</option><option value="2">2. pololetí</option><option value="r">Celý rok</option></select></div>
+        </div>
+        <p class="hint" id="pxInfo"></p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h3>Docházka</h3><span class="eyebrow" id="pxDochCnt"></span></div>
+      <div class="px-wrap"><table class="px" id="pxDoch"></table></div>
+      <div class="card-b">
+        <p class="hint" id="pxPozn"></p>
+        <div class="btns"><button class="btn ghost" id="pxCopy" type="button">Kopírovat tabulku</button></div>
+      </div>
+    </div>
+    <div class="card" id="pxOmCard" hidden>
+      <div class="card-h"><h3>Omluvy v období</h3><span class="eyebrow" id="pxOmCnt"></span></div>
+      <div class="px-wrap"><table class="px" id="pxOm"></table></div>
+    </div>
+    <div class="card" id="pxVyCard">
+      <div class="card-h"><h3>Výkony</h3><span class="eyebrow" id="pxVyCnt"></span></div>
+      <div id="pxVy"></div>
+    </div>
+  </div></section>
+
   <section class="screen" id="s-nastaveni"><div class="wrap">
     <div class="card">
       <div class="card-h"><h3>Data</h3><span class="eyebrow" id="statLine"></span></div>
@@ -569,6 +618,7 @@ select {
   <button role="tab" data-tab="dnes" aria-selected="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>Dnes</button>
   <button role="tab" data-tab="tyden" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M9 4v17M15 4v17"/></svg>Týden</button>
   <button role="tab" data-tab="hodina" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>Hodina</button>
+  <button role="tab" data-tab="prehled" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Přehled</button>
   <button role="tab" data-tab="nastaveni" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>Nastavení</button>
 </nav>
 
@@ -639,7 +689,7 @@ select {
 
 <script>
 "use strict";
-const APP = { ver: "0.9.2", db: null, sync: null, klic: null };
+const APP = { ver: "0.10.0", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -2150,9 +2200,188 @@ async function renderOmluvyTyden() {
 }
 
 async function obnovOmluvy() {
+  if (S.tab === "prehled") await renderPrehled();
   if (S.tab === "dnes") await renderOmluvyDnes();
   if (S.tab === "tyden") await renderOmluvyTyden();
   if (S.tab === "hodina") { await ulozRozepsane(); await renderHodina(); }
+}
+
+/* ---------- render: PREHLED ---------- */
+// Pololetni prehled jedne skupiny. Odučená hodina = do dneška a ma zapis, naplň,
+// neni ve stavu plan, nebo ma aspon jeden zaznam dochazky. Zak bez zaznamu
+// v takove hodine cvicil, pokud zrovna nemel omluvu (pak N), stejne jako v dochazce.
+async function obdobiPrehledu(kod) {
+  const od = await metaGet("od", "2026-09-01");
+  const doR = await metaGet("do", "2027-06-30");
+  const hranice = (Number(od.slice(0, 4)) + 1) + "-02-01";
+  if (kod === "1") return { od, do: addDays(hranice, -1), nazev: "1. pololetí", hranice };
+  if (kod === "2") return { od: hranice, do: doR, nazev: "2. pololetí", hranice };
+  return { od, do: doR, nazev: "celý rok", hranice };
+}
+
+const dmr = (x) => dm(x) + " " + x.slice(0, 4);
+const sklon = (n, jedna, dve, pet) => n + " " + (n === 1 ? jedna : (n >= 2 && n <= 4 ? dve : pet));
+
+async function spocitejPrehled(skupinaId, ob) {
+  const dnes = iso(new Date());
+  const konec = ob.do < dnes ? ob.do : dnes;
+  const zazn = await dbAll("zaznamy");
+  const zazMap = new Map();
+  zazn.forEach((z) => { if (!zazMap.has(z.hodinaId)) zazMap.set(z.hodinaId, new Map()); zazMap.get(z.hodinaId).set(z.zakId, z); });
+  const hodiny = (await dbBy("hodiny", "skupinaId", skupinaId))
+    .filter((h) => h.datum >= ob.od && h.datum <= konec)
+    .filter((h) => h.napln || h.zapis || (h.stav && h.stav !== "plan") || zazMap.has(h.id))
+    .sort((a, b) => a.datum.localeCompare(b.datum));
+  const pozn = await dbAll("pozn");
+  const zaci = S.cache.zaciBySk.get(skupinaId) || [];
+  const mojeIds = new Set(zaci.map((z) => z.id));
+  const omluvy = pozn.filter((p) => p.typ === "omluva" && mojeIds.has(p.zakId));
+  const radky = zaci.map((z) => {
+    const r = { zak: z, hodin: hodiny.length, ok: 0, X: 0, N: 0, U: 0, vedl: 0 };
+    hodiny.forEach((h) => {
+      const rec = (zazMap.get(h.id) || new Map()).get(z.id);
+      const om = !rec && omluvy.some((p) => p.zakId === z.id && omluvaPlati(p, h.datum));
+      const st = rec ? rec.stav : (om ? "N" : "ok");
+      r[st] = (r[st] || 0) + 1;
+      if (rec && rec.vedl) r.vedl++;
+    });
+    r.mimo = r.X + r.N + r.U;
+    // Malo podkladu ke znamce: necvicil tretinu a vic hodin (az od sesti odučených).
+    r.vyst = r.hodin >= 6 && r.mimo * 3 >= r.hodin;
+    return r;
+  });
+  const omVObdobi = omluvy
+    .filter((p) => p.datum <= ob.do && konecOmluvy(p) >= ob.od)
+    .map((p) => ({ p, hodin: hodiny.filter((h) => omluvaPlati(p, h.datum)).length }))
+    .sort((a, b) => a.p.datum.localeCompare(b.p.datum));
+  const vykony = pozn.filter((p) => p.typ === "vykon" && mojeIds.has(p.zakId) && p.datum >= ob.od && p.datum <= ob.do && cisloZ(p.hodnota) !== null);
+  return { hodiny, radky, omVObdobi, vykony, konec };
+}
+
+async function renderPrehled() {
+  const skupiny = [...S.cache.skupiny.values()].sort((a, b) => a.nazev.localeCompare(b.nazev, "cs"));
+  const selSk = $("#pxSk");
+  selSk.innerHTML = "";
+  skupiny.forEach((x) => { const o = el("option", null, x.nazev); o.value = x.id; selSk.appendChild(o); });
+  if (!skupiny.length) {
+    $("#pxInfo").textContent = "Nejdřív načti rozvrh a žáky v Nastavení.";
+    $("#pxDoch").innerHTML = ""; $("#pxVy").innerHTML = ""; $("#pxOmCard").hidden = true;
+    return;
+  }
+  if (!S.pxSk || !S.cache.skupiny.has(S.pxSk)) S.pxSk = (S.histSkupina && S.cache.skupiny.has(S.histSkupina)) ? S.histSkupina : skupiny[0].id;
+  if (!S.pxObd) S.pxObd = iso(new Date()) >= (await obdobiPrehledu("1")).hranice ? "2" : "1";
+  selSk.value = S.pxSk;
+  $("#pxObd").value = S.pxObd;
+
+  const ob = await obdobiPrehledu(S.pxObd);
+  const d = await spocitejPrehled(S.pxSk, ob);
+  S.cache.prehled = { ob, d };
+  const dnesP = iso(new Date());
+  $("#pxInfo").textContent = dmr(ob.od) + " až " + dmr(ob.do)
+    + (ob.od > dnesP ? " · období ještě nezačalo" : (d.konec < ob.do ? " · započítáno do dneška" : ""));
+  $("#pxDochCnt").textContent = sklon(d.hodiny.length, "odučená hodina", "odučené hodiny", "odučených hodin");
+
+  // dochazka
+  const t = $("#pxDoch"); t.innerHTML = "";
+  if (!d.hodiny.length) {
+    t.innerHTML = "";
+    const tr = el("tr"); const td = el("td", "empty", "V tomhle období zatím nejsou zapsané hodiny."); td.colSpan = 6; tr.appendChild(td);
+    t.appendChild(tr);
+    $("#pxPozn").textContent = ""; $("#pxCopy").hidden = true;
+  } else {
+    $("#pxCopy").hidden = false;
+    const th = el("thead"); const hr = el("tr");
+    [["Žák", ""], ["Cvičil", "cvičil z odučených"], ["X", "nepřítomen"], ["N", "necvičil"], ["Ú", "bez úboru"], ["☆", "vedl rozcvičku"]]
+      .forEach(([k, popis]) => { const c = el("th", null, k); if (popis) c.title = popis; hr.appendChild(c); });
+    th.appendChild(hr); t.appendChild(th);
+    const tb = el("tbody");
+    d.radky.forEach((r) => {
+      const tr = el("tr");
+      if (r.vyst) tr.classList.add("vyst");
+      tr.appendChild(el("td", null, r.zak.prijmeni + " " + r.zak.jmeno));
+      tr.appendChild(el("td", r.vyst ? "crit" : "", r.ok + "/" + r.hodin));
+      const bunka = (n, cls) => el("td", n ? (cls || "") : "nula", String(n));
+      tr.appendChild(bunka(r.X));
+      tr.appendChild(bunka(r.N));
+      tr.appendChild(bunka(r.U, r.U >= 3 ? "warn" : ""));
+      tr.appendChild(bunka(r.vedl));
+      tr.setAttribute("aria-label", r.zak.prijmeni + " " + r.zak.jmeno + ", cvičil " + r.ok + " z " + r.hodin);
+      tr.addEventListener("click", () => otevriZaka(r.zak.id, iso(new Date())));
+      tb.appendChild(tr);
+    });
+    t.appendChild(tb);
+    const vyst = d.radky.filter((r) => r.vyst).length, uboru = d.radky.filter((r) => r.U >= 3).length;
+    $("#pxPozn").textContent = "● necvičil třetinu a víc odučených hodin, málo podkladů ke známce"
+      + (vyst ? " (" + vyst + ")" : "") + ". Oranžově 3× a víc bez úboru" + (uboru ? " (" + uboru + ")" : "") + ".";
+  }
+
+  // omluvy
+  const ot = $("#pxOm"); ot.innerHTML = "";
+  $("#pxOmCard").hidden = d.omVObdobi.length === 0;
+  $("#pxOmCnt").textContent = d.omVObdobi.length ? d.omVObdobi.length + "×" : "";
+  const otb = el("tbody");
+  d.omVObdobi.forEach(({ p, hodin }) => {
+    const z = S.cache.zakById.get(p.zakId);
+    if (!z) return;
+    const tr = el("tr");
+    const c = el("td", null, z.prijmeni + " " + z.jmeno);
+    c.appendChild(el("span", "sub", (p.do ? dm(p.datum) + " až " + dm(p.do) : "od " + dm(p.datum) + " do odvolání") + (p.text ? " · " + p.text : "")));
+    tr.appendChild(c);
+    tr.appendChild(el("td", hodin ? "" : "nula", sklon(hodin, "hodina", "hodiny", "hodin")));
+    tr.addEventListener("click", () => { S.poznTyp = "omluva"; otevriZaka(p.zakId, iso(new Date())); });
+    otb.appendChild(tr);
+  });
+  ot.appendChild(otb);
+
+  // vykony: prvni a posledni mereni v obdobi, zmena podle toho, jestli je lepsi vic nebo min
+  const box = $("#pxVy"); box.innerHTML = "";
+  const disc = new Map();
+  d.vykony.forEach((p) => { const k = normDisc(p.disciplina); if (!disc.has(k)) disc.set(k, []); disc.get(k).push(p); });
+  $("#pxVyCnt").textContent = disc.size ? sklon(disc.size, "disciplína", "disciplíny", "disciplín") : "";
+  if (!disc.size) { box.appendChild(el("div", "empty", "V tomhle období se nic neměřilo.")); return; }
+  [...disc.values()].sort((a, b) => a[0].disciplina.localeCompare(b[0].disciplina, "cs")).forEach((vse) => {
+    const jed = vse[0].jednotka || "";
+    const hl = el("div", "px-disc");
+    hl.append(el("h4", null, vse[0].disciplina + (jed ? " (" + jed + ")" : "")), el("span", "eyebrow", sklon(new Set(vse.map((p) => p.datum)).size, "měření", "měření", "měření")));
+    box.appendChild(hl);
+    const wrap = el("div", "px-wrap"); const tt = el("table", "px");
+    const hr = el("tr"); ["Žák", "První", "Poslední", "Změna"].forEach((k) => hr.appendChild(el("th", null, k)));
+    const th = el("thead"); th.appendChild(hr); tt.appendChild(th);
+    const tb = el("tbody");
+    const poZacich = new Map();
+    vse.forEach((p) => { if (!poZacich.has(p.zakId)) poZacich.set(p.zakId, []); poZacich.get(p.zakId).push(p); });
+    [...poZacich.entries()]
+      .map(([zakId, rada]) => ({ z: S.cache.zakById.get(zakId), rada: rada.sort((a, b) => a.datum.localeCompare(b.datum)) }))
+      .filter((x) => x.z)
+      .sort((a, b) => a.z.prijmeni.localeCompare(b.z.prijmeni, "cs") || a.z.jmeno.localeCompare(b.z.jmeno, "cs"))
+      .forEach(({ z, rada }) => {
+        const prvni = rada[0], posl = rada[rada.length - 1];
+        const tr = el("tr");
+        tr.appendChild(el("td", null, z.prijmeni + " " + z.jmeno));
+        const cislo = (x) => String(x).replace(".", ",");
+        tr.appendChild(el("td", null, cislo(prvni.hodnota)));
+        tr.appendChild(el("td", null, rada.length > 1 ? cislo(posl.hodnota) : "·"));
+        if (rada.length > 1) {
+          const rozdil = Math.round((cisloZ(posl.hodnota) - cisloZ(prvni.hodnota)) * 100) / 100;
+          const lepsi = mensiJeLepsi(jed) ? rozdil < 0 : rozdil > 0;
+          tr.appendChild(el("td", rozdil === 0 ? "nula" : (lepsi ? "lepsi" : "horsi"), (rozdil > 0 ? "+" : "") + String(rozdil).replace(".", ",")));
+        } else tr.appendChild(el("td", "nula", "·"));
+        tr.addEventListener("click", () => { S.poznTyp = "vykon"; otevriZaka(z.id, iso(new Date())); });
+        tb.appendChild(tr);
+      });
+    tt.appendChild(tb); wrap.appendChild(tt); box.appendChild(wrap);
+  });
+}
+
+async function kopirujPrehled() {
+  const pr = S.cache.prehled;
+  if (!pr || !pr.d.hodiny.length) return;
+  const radky = [[skName(S.pxSk) + " · " + pr.ob.nazev + " (" + dmr(pr.ob.od) + " až " + dmr(pr.d.konec) + ")"],
+    ["Žák", "Cvičil", "Odučeno", "Nepřítomen", "Necvičil", "Bez úboru", "Vedl rozcvičku"]];
+  pr.d.radky.forEach((r) => radky.push([r.zak.prijmeni + " " + r.zak.jmeno, r.ok, r.hodin, r.X, r.N, r.U, r.vedl]));
+  const text = radky.map((r) => r.join("\t")).join("\n");
+  try { await navigator.clipboard.writeText(text); toast("Tabulka zkopírována, vlož ji do Numbers nebo Excelu"); }
+  catch { toast("Kopírování se nepovedlo"); }
 }
 
 /* ---------- karta žáka ---------- */
@@ -2178,6 +2407,7 @@ function zavriZaka() {
   document.body.classList.remove("zamek");
   S.zakId = null;
   S.poznUprava = null;
+  if (S.tab === "prehled") renderPrehled();
 }
 
 async function renderZak() {
@@ -2656,11 +2886,12 @@ async function switchTab(name) {
   document.querySelectorAll("nav button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
   $("#navBack").hidden = !(name === "hodina" && (S.backTo || S.zpet.length));
   if (name !== "hodina") $("#hNav").hidden = true;
-  const titles = { dnes: ["Cvička", "přehled dne"], tyden: ["Příprava na týden", "plán a historie"], nastaveni: ["Nastavení", "data a záloha"] };
+  const titles = { dnes: ["Cvička", "přehled dne"], tyden: ["Příprava na týden", "plán a historie"], prehled: ["Přehled", "docházka, omluvy a výkony"], nastaveni: ["Nastavení", "data a záloha"] };
   if (titles[name]) { $("#hTitle").classList.remove("dve"); $("#hTitle").textContent = titles[name][0]; $("#hSub").textContent = titles[name][1]; }
   if (name === "dnes") await renderDnes();
   if (name === "tyden") await renderTyden();
   if (name === "hodina") await renderHodina();
+  if (name === "prehled") await renderPrehled();
   if (name === "nastaveni") await renderNastaveni();
   document.querySelector("main").scrollTop = 0;
 }
@@ -2733,6 +2964,9 @@ async function boot() {
   }));
   DISCIPLINY.forEach(([nazev]) => { const o = el("option"); o.value = nazev; $("#dlDisc").appendChild(o); });
 
+  $("#pxSk").addEventListener("change", async (e) => { S.pxSk = e.target.value; await renderPrehled(); });
+  $("#pxObd").addEventListener("change", async (e) => { S.pxObd = e.target.value; await renderPrehled(); });
+  $("#pxCopy").addEventListener("click", kopirujPrehled);
   $("#hHistVic").addEventListener("click", async () => {
     S.histVse = !S.histVse;
     const h = S.hodinaId ? await dbGet("hodiny", S.hodinaId) : null;

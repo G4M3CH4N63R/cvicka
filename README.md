@@ -410,7 +410,30 @@ docházky otevřené hodiny včetně dopočítaného N u omluvených. Nepřítom
 jsou zašedlí se štítkem „nepřítomen“ nebo „necvičí“, Enter je při zapisování přeskočí
 a do počtu „Zapsáno x z y“ se nepočítají, dokud jim hodnotu někdo nezapíše ručně.
 
+## Pololetní přehled (v0.10.0)
+
+Nová záložka **Přehled** v dolní liště (lišta má teď pět sloupců). Nahoře výběr skupiny
+a období: 1. pololetí (od `meta.od` do 31. 1.), 2. pololetí (od 1. 2. do `meta.do`)
+a celý rok. Výchozí je pololetí podle dneška a skupina naposledy otevřené hodiny.
+
+**Odučená hodina** je hodina do dneška, která má zápis nebo náplň, není ve stavu `plan`,
+nebo má aspoň jeden záznam docházky. Hodina bez čehokoli se nepočítá (mohla odpadnout).
+Žák bez záznamu v odučené hodině cvičil, pokud mu ten den neplatila omluva, pak má N,
+stejně jako v docházce.
+
+**Docházka:** tabulka Žák, Cvičil (x z odučených), X, N, Ú, ☆ vedl rozcvičku. Červená tečka
+u žáka, který necvičil třetinu a víc hodin (až od šesti odučených), oranžově 3× a víc bez
+úboru. Klepnutí na řádek otevře kartu žáka. **Kopírovat tabulku** dá do schránky TSV
+s hlavičkou, vloží se rovnou do Numbers nebo Excelu.
+
+**Omluvy v období:** omluvy, které se s obdobím překrývají, s počtem odučených hodin,
+kterých se týkaly. **Výkony:** pro každou disciplínu změřenou v období první a poslední
+hodnota každého žáka a změna, zeleně zlepšení (u `s` a `min` je lepší menší číslo).
+
+Počítá se pokaždé znovu z IndexedDB (`spocitejPrehled()`), nic se neukládá, schéma DB
+se neměnilo.
+
 ## Co přijde dál
 
-Zbytek F3: pololetní přehledy (včetně počtu necvičení a omluv) a zápis do ŠOL ze šablon.
+Zbytek F3: zápis do ŠOL ze šablon.
 Pak F4 asistent s nástroji a F6 uzávěrka školního roku.
