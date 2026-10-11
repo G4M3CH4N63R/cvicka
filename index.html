@@ -375,6 +375,8 @@ select {
 .px th:first-child, .px td:first-child { text-align: left; padding-left: 13px; white-space: normal; }
 .px th:last-child, .px td:last-child { padding-right: 13px; }
 .px tbody tr { cursor: pointer; }
+.px th.razitko { cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+.px th.vybrano { color: var(--accent); }
 .px tbody tr:active { background: var(--surface-3); }
 .px .nula { color: var(--ink-3); }
 .px .warn { color: var(--warn); font-weight: 700; }
@@ -430,7 +432,7 @@ select {
     <div class="card warn-card" id="zalohaCard" hidden>
       <div class="card-h"><h3>Záloha</h3><span class="eyebrow" id="zalohaKdy"></span></div>
       <div class="card-b">
-        <p class="hint" style="margin-top:0">Data Cvičky leží jen v tomhle zařízení. Dokud nebude synchronizace, je stažená záloha jediná pojistka.</p>
+        <p class="hint" style="margin-top:0" id="zalohaText">Data Cvičky leží jen v tomhle zařízení. Stažená záloha je jediná pojistka.</p>
         <div class="btns"><button class="btn ghost" id="bZalohaTed" type="button">Stáhnout zálohu</button></div>
       </div>
     </div>
@@ -733,7 +735,7 @@ select {
 
 <script>
 "use strict";
-const APP = { ver: "0.12.0", db: null, sync: null, klic: null };
+const APP = { ver: "0.13.0", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -1418,7 +1420,7 @@ async function renderGaps(skupinaId, kam, opt) {
 }
 
 const HIST_HODINA = { card: "#hHistCard", ttl: "#hHistTtl", list: "#hHistList" };
-const HIST_HODINA_OPT = { ttl: "Co naposledy měli", kolik: 3 };
+const HIST_HODINA_OPT = { ttl: "Co naposledy měli", kolik: 5 };
 const MESICE = ["leden", "únor", "březen", "duben", "květen", "červen", "červenec", "srpen", "září", "říjen", "listopad", "prosinec"];
 
 async function renderHist(skupinaId, kam, opt) {
@@ -1447,6 +1449,7 @@ async function renderHist(skupinaId, kam, opt) {
     if (stitek) stitek.textContent = rozbal ? vse.length + (vse.length < 5 ? " hodiny" : " hodin") : "poslední hodiny";
   }
   if (!hod.length) { box.appendChild(el("div", "empty", "Zatím žádný zápis.")); return; }
+  const cin = await dbAll("cinnosti");
   let mesic = "";
   hod.forEach((h) => {
     if (rozbal) {
@@ -1455,11 +1458,24 @@ async function renderHist(skupinaId, kam, opt) {
       if (m !== mesic) { mesic = m; box.appendChild(el("p", "mes", m)); }
     }
     const r = el("button"); r.type = "button";
-    r.append(el("span", "d", cz(h.datum)), el("span", "x", h.napln || h.zapis), el("span", "sip", "›"));
+    r.append(el("span", "d", cz(h.datum)), el("span", "x", hlavniAktivita(h, cin)), el("span", "sip", "›"));
+    r.title = h.napln || h.zapis || "";
     r.setAttribute("aria-label", "otevřít hodinu " + czFull(h.datum));
     r.addEventListener("click", () => skocNaHodinu(h.id));
     box.appendChild(r);
   });
+}
+
+// Kratky popis hodiny do historie: poznane cinnosti (hlavni napred), jinak hlavni cast
+// z textu naplne nebo planu, jinak prvni veta. Cela hodina je o klepnuti dal.
+function hlavniAktivita(h, cin) {
+  const c = cinnostiVHodine(h, cin || []);
+  if (c.length) return c.slice(0, 3).map((x) => x.nazev).join(", ");
+  const t = String(h.napln || h.plan || h.zapis || "").replace(/\s+/g, " ").trim();
+  const m = t.match(/hlavní část\s*[:–-]?\s*([^.;]+)/i);
+  let k = (m ? m[1] : t.split(/[.;]/)[0]).trim();
+  if (k.length > 70) k = k.slice(0, 68).replace(/\s+\S*$/, "") + "…";
+  return k || t.slice(0, 70);
 }
 
 const SBAL_KLIC = { hHistCard: "sbalHist", hGapsCard: "sbalGaps" };
@@ -1586,9 +1602,11 @@ async function renderHodina() {
   kresliUzavreni(h);
   await kresliSousedy(h);
   $("#zapNavrhy").hidden = true; $("#bNavrh").setAttribute("aria-expanded", "false");
-  $("#fPlan").value = h.plan || "";
-  $("#fNapln").value = h.napln || "";
-  $("#fZapis").value = h.zapis || "";
+  // Synchronizace po ulozeni hodinu prekresluje. Pole, do ktereho se prave pise, se nesmi
+  // prepsat, jinak kurzor skoci na konec textu (a rozepsany text by mohl zmizet).
+  nastavPole($("#fPlan"), h.plan || "");
+  nastavPole($("#fNapln"), h.napln || "");
+  nastavPole($("#fZapis"), h.zapis || "");
   rostouciPole($("#fPlan"));
 
   const zaci = (S.cache.zaciBySk.get(h.skupinaId) || []);
@@ -1722,6 +1740,12 @@ async function renderSlibyHodina() {
 
 // Plan byva dlouhy (zasobnik do nej pripisuje cinnosti), tak at neni potreba
 // scrollovat uvnitr policka. Vyska nikdy neklesne pod vychozich pet radku.
+function nastavPole(pole, hodnota) {
+  if (document.activeElement === pole && pole.dataset.hodina === S.hodinaId) return;
+  pole.dataset.hodina = S.hodinaId || "";
+  if (pole.value !== hodnota) pole.value = hodnota;
+}
+
 function rostouciPole(ta) {
   if (!ta || ta.offsetParent === null) return;
   if (!Number(ta.dataset.min) && !ta.style.height) ta.dataset.min = String(ta.clientHeight || 0);
@@ -1843,13 +1867,21 @@ async function doRestore(file) {
 
 /* ---------- připomínka zálohy ---------- */
 const ZALOHA_PO_DNECH = 14;
+const ZALOHA_PO_DNECH_SYNC = 30;
 
 async function renderZalohaVyzva() {
   const kdy = await metaGet("zalohaKdy", 0);
   const dnu = kdy ? Math.floor((Date.now() - kdy) / 86400000) : null;
   const card = $("#zalohaCard");
   const prazdno = !(await dbAll("hodiny")).length;
-  card.hidden = prazdno || (dnu !== null && dnu < ZALOHA_PO_DNECH);
+  // Se synchronizaci jsou data i na serveru, jen jmenny seznam zaku zustava v zarizenich.
+  // Rucni zaloha je pak pojistka navic, staci jednou za mesic.
+  const nast = await syncNastaveni();
+  const synchro = !!(nast.url && nast.token && nast.zap);
+  $("#zalohaText").textContent = synchro
+    ? "Data se synchronizují přes tvůj server, jmenný seznam žáků ale zůstává jen v zařízeních. Stažená záloha je pojistka navíc."
+    : "Data Cvičky leží jen v tomhle zařízení. Stažená záloha je jediná pojistka.";
+  card.hidden = prazdno || (dnu !== null && dnu < (synchro ? ZALOHA_PO_DNECH_SYNC : ZALOHA_PO_DNECH));
   $("#zalohaKdy").textContent = dnu === null ? "zatím nikdy" : (dnu === 0 ? "dnes" : "před " + dnu + " dny");
 }
 
@@ -2531,7 +2563,7 @@ function kresliAsistenta(stav) {
     u.appendChild(ch); box.appendChild(u);
   }
   AS.zpravy.forEach((m) => {
-    if (m.role === "user" && typeof m.content === "string") { box.appendChild(el("div", "asmsg ja", m.content)); return; }
+    if (m.role === "user" && typeof m.content === "string") { box.appendChild(el("div", "asmsg ja", odkoduj(m.content))); return; }
     if (m.role === "assistant") {
       // Mezikroky typu „Podívám se.“ u volání nástrojů se neukazují, jen konečná odpověď.
       if ((m.content || []).some((b) => b.type === "tool_use")) return;
@@ -2566,9 +2598,53 @@ async function volejAsistenta() {
   } finally { clearTimeout(t); }
 }
 
+// Jmena zaku v otazce se pred odeslanim nahradi stejnymi kody jako ve vysledcich nastroju.
+// Cele jmeno (obe poradi) vzdy, samotne prijmeni jen s velkym pismenem a jen kdyz je
+// v appce jedinecne; sklonovane tvary (Nováka, Novákovi) se chytaji podle kmene.
+// Nejednoznacne prijmeni se nahradi „Ž?“, aby jmeno neodeslo.
+function anonymizujOtazku(text) {
+  const zaci = [...S.cache.zakById.values()].filter((z) => !z.neaktivni && z.prijmeni);
+  let t = text;
+  const esc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  // kmeny prijmeni: bez koncovky, a u pohybliveho e i bez nej (Hájek -> Hájk-a, Němec -> Němc-e)
+  const kmeny = (x) => {
+    const k = x.replace(/(ová|á|ý|a|e|o)$/i, "");
+    return /e[kcl]$/i.test(k) ? [k, k.replace(/e([kcl])$/i, "$1")] : [k];
+  };
+  zaci.forEach((z) => {
+    [z.prijmeni + " " + z.jmeno, z.jmeno + " " + z.prijmeni].forEach((cele) => {
+      t = t.replace(new RegExp("(^|[^\\p{L}])" + esc(cele) + "(?![\\p{L}])", "gu"), (m, a) => a + kodZaka(z.id));
+    });
+  });
+  const podleKmene = new Map();
+  zaci.forEach((z) => kmeny(z.prijmeni).forEach((k) => {
+    if (k.length < 3) return;
+    if (!podleKmene.has(k)) podleKmene.set(k, new Set());
+    podleKmene.get(k).add(z.id);
+  }));
+  podleKmene.forEach((ids, k) => {
+    // za prijmenim muze stat i krestni jmeno v libovolnem tvaru (Svobodou Janem), to jde s nim
+    const re = new RegExp("(^|[^\\p{L}])(" + esc(k) + "\\p{L}{0,6})(?![\\p{L}])(\\s+\\p{Lu}\\p{L}*)?", "gu");
+    t = t.replace(re, (m, a, slovo, dalsi) => {
+      if (slovo.charAt(0) !== slovo.charAt(0).toUpperCase()) return m;
+      if (ids.size !== 1) return a + "Ž?" + (dalsi || "");
+      const z = S.cache.zakById.get([...ids][0]);
+      const kj = z.jmeno.replace(/[aeiouyáéíóúůý]$/i, "").slice(0, Math.max(3, z.jmeno.length - 2));
+      const sJmenem = dalsi && dalsi.trim().toLowerCase().startsWith(kj.toLowerCase());
+      return a + kodZaka(z.id) + (sJmenem ? "" : (dalsi || ""));
+    });
+  });
+  return t;
+}
+
+// Slova, ktera nejspis znamenaji zdravotni udaj. Pred odeslanim se Karel zepta.
+const ZDRAVI_SLOVA = /astm|zlomen|diagnóz|epilep|diabet|cukrovk|alergi|operac|nemoc|úraz|zraněn|adhd|porucha|lék[uůy]?\b|léčb|srde[čc]|otřes|skolióz|psych|autis|dyslex|dysprax|nevolnost|migrén|kloub|výron|natržen|sádr/i;
+
 async function asOdeslat() {
-  const text = $("#asText").value.trim();
-  if (!text || AS.bezi) return;
+  const puvodni = $("#asText").value.trim();
+  if (!puvodni || AS.bezi) return;
+  if (ZDRAVI_SLOVA.test(puvodni) && !confirm("Otázka vypadá, že obsahuje zdravotní údaj. Odejde do Claude (jména žáků appka nahradí kódy). Poslat i tak?")) return;
+  const text = anonymizujOtazku(puvodni);
   AS.bezi = true; $("#asSend").disabled = true; $("#asText").value = "";
   const zacatek = AS.zpravy.length;
   AS.zpravy.push({ role: "user", content: text });
@@ -2594,7 +2670,7 @@ async function asOdeslat() {
   } catch (e) {
     // Nedokonceny kus konverzace se zahodi, jinak by dalsi otazka poslala neplatnou historii.
     AS.zpravy.length = zacatek;
-    $("#asText").value = text;
+    $("#asText").value = puvodni;
     kresliAsistenta({ chyba: e.message });
   } finally {
     AS.bezi = false; $("#asSend").disabled = false;
@@ -2652,6 +2728,8 @@ async function spocitejPrehled(skupinaId, ob) {
       if (rec && rec.vedl) r.vedl++;
     });
     r.mimo = r.X + r.N + r.U;
+    // poznamky o chovani a volne poznamky v obdobi (vykony, akce a omluvy sem nepatri)
+    r.pozn = pozn.filter((p) => p.zakId === z.id && (p.typ === "chovani" || p.typ === "pozn") && p.datum >= ob.od && p.datum <= ob.do).length;
     // Malo podkladu ke znamce: necvicil tretinu a vic hodin (az od sesti odučených).
     r.vyst = r.hodin >= 6 && r.mimo * 3 >= r.hodin;
     return r;
@@ -2691,17 +2769,35 @@ async function renderPrehled() {
   const t = $("#pxDoch"); t.innerHTML = "";
   if (!d.hodiny.length) {
     t.innerHTML = "";
-    const tr = el("tr"); const td = el("td", "empty", "V tomhle období zatím nejsou zapsané hodiny."); td.colSpan = 6; tr.appendChild(td);
+    const tr = el("tr"); const td = el("td", "empty", "V tomhle období zatím nejsou zapsané hodiny."); td.colSpan = 7; tr.appendChild(td);
     t.appendChild(tr);
     $("#pxPozn").textContent = ""; $("#pxCopy").hidden = true;
   } else {
     $("#pxCopy").hidden = false;
     const th = el("thead"); const hr = el("tr");
-    [["Žák", ""], ["Cvičil", "cvičil z odučených"], ["X", "nepřítomen"], ["N", "necvičil"], ["Ú", "bez úboru"], ["☆", "vedl rozcvičku"]]
-      .forEach(([k, popis]) => { const c = el("th", null, k); if (popis) c.title = popis; hr.appendChild(c); });
+    // Klepnuti na sloupec seradi tabulku: zak podle abecedy, cisla od nejvetsiho.
+    const raz = S.pxRazeni || "zak";
+    [["zak", "Žák", ""], ["ok", "Cvičil", "cvičil z odučených"], ["X", "X", "nepřítomen"], ["N", "N", "necvičil"], ["U", "Ú", "bez úboru"], ["vedl", "☆", "vedl rozcvičku"], ["pozn", "✎", "poznámky o chování a volné poznámky"]]
+      .forEach(([klic, k, popis]) => {
+        const c = el("th", "razitko" + (klic === raz ? " vybrano" : ""), k + (klic === raz ? (klic === "zak" ? " ▴" : " ▾") : ""));
+        if (popis) c.title = popis;
+        c.setAttribute("role", "button"); c.tabIndex = 0;
+        c.setAttribute("aria-label", "seřadit podle: " + (popis || "jména"));
+        const serad = () => { S.pxRazeni = klic; renderPrehled(); };
+        c.addEventListener("click", serad);
+        c.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); serad(); } });
+        hr.appendChild(c);
+      });
     th.appendChild(hr); t.appendChild(th);
     const tb = el("tbody");
-    d.radky.forEach((r) => {
+    const jmeno = (r) => r.zak.prijmeni + " " + r.zak.jmeno;
+    const radky = d.radky.slice().sort((a, b) => {
+      if (raz === "zak") return jmeno(a).localeCompare(jmeno(b), "cs");
+      // u Cvicil je nejzajimavejsi, kdo cvicil nejmene
+      if (raz === "ok") return a.ok - b.ok || jmeno(a).localeCompare(jmeno(b), "cs");
+      return (b[raz] || 0) - (a[raz] || 0) || jmeno(a).localeCompare(jmeno(b), "cs");
+    });
+    radky.forEach((r) => {
       const tr = el("tr");
       if (r.vyst) tr.classList.add("vyst");
       tr.appendChild(el("td", null, r.zak.prijmeni + " " + r.zak.jmeno));
@@ -2711,6 +2807,7 @@ async function renderPrehled() {
       tr.appendChild(bunka(r.N));
       tr.appendChild(bunka(r.U, r.U >= 3 ? "warn" : ""));
       tr.appendChild(bunka(r.vedl));
+      tr.appendChild(bunka(r.pozn, r.pozn >= 3 ? "warn" : ""));
       tr.setAttribute("aria-label", r.zak.prijmeni + " " + r.zak.jmeno + ", cvičil " + r.ok + " z " + r.hodin);
       tr.addEventListener("click", () => otevriZaka(r.zak.id, iso(new Date())));
       tb.appendChild(tr);
@@ -2718,7 +2815,7 @@ async function renderPrehled() {
     t.appendChild(tb);
     const vyst = d.radky.filter((r) => r.vyst).length, uboru = d.radky.filter((r) => r.U >= 3).length;
     $("#pxPozn").textContent = "● necvičil třetinu a víc odučených hodin, málo podkladů ke známce"
-      + (vyst ? " (" + vyst + ")" : "") + ". Oranžově 3× a víc bez úboru" + (uboru ? " (" + uboru + ")" : "") + ".";
+      + (vyst ? " (" + vyst + ")" : "") + ". Oranžově 3× a víc bez úboru nebo 3 a víc poznámek" + (uboru ? " (" + uboru + " bez úboru)" : "") + ". Klepnutím na sloupec seřadíš.";
   }
 
   // omluvy
@@ -2783,8 +2880,8 @@ async function kopirujPrehled() {
   const pr = S.cache.prehled;
   if (!pr || !pr.d.hodiny.length) return;
   const radky = [[skName(S.pxSk) + " · " + pr.ob.nazev + " (" + dmr(pr.ob.od) + " až " + dmr(pr.d.konec) + ")"],
-    ["Žák", "Cvičil", "Odučeno", "Nepřítomen", "Necvičil", "Bez úboru", "Vedl rozcvičku"]];
-  pr.d.radky.forEach((r) => radky.push([r.zak.prijmeni + " " + r.zak.jmeno, r.ok, r.hodin, r.X, r.N, r.U, r.vedl]));
+    ["Žák", "Cvičil", "Odučeno", "Nepřítomen", "Necvičil", "Bez úboru", "Vedl rozcvičku", "Poznámky"]];
+  pr.d.radky.forEach((r) => radky.push([r.zak.prijmeni + " " + r.zak.jmeno, r.ok, r.hodin, r.X, r.N, r.U, r.vedl, r.pozn]));
   const text = radky.map((r) => r.join("\t")).join("\n");
   try { await navigator.clipboard.writeText(text); toast("Tabulka zkopírována, vlož ji do Numbers nebo Excelu"); }
   catch { toast("Kopírování se nepovedlo"); }

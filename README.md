@@ -469,6 +469,34 @@ se vrátí do pole. Mezikroky u volání nástrojů se neukazují. Bez nastaven�
 Otestováno proti skutečnému `worker.js` v Node s podvrženým Claude API: 26 požadavků
 na API bez jediného příjmení a bez textu omluvy či poznámky o chování.
 
+## Várka z Karlových poznámek (v0.13.0)
+
+**Kurzor v plánu už neskáče na konec.** Pár vteřin po uložení proběhne synchronizace
+a `renderAktualni()` překreslí otevřenou hodinu. Dřív se přitom znovu nastavila hodnota
+všech polí a kurzor skočil na konec textu. Nově `nastavPole()` přeskočí pole, které má
+fokus a patří k téže hodině (`dataset.hodina`). Ostatní pole se z databáze aktualizují dál
+a při přechodu na jinou hodinu se přepíše i pole s fokusem.
+
+**Co naposledy měli** ukazuje 5 hodin místo 3.
+
+**Historie hodin ukazuje hlavní aktivitu**, ne celou náplň (`hlavniAktivita()`): poznané
+činnosti ze zásobníku (hlavní napřed, nejvýš tři), jinak text za „Hlavní část:“, jinak první
+věta, zkrácená na 70 znaků. Celý text je v `title` a o klepnutí dál v hodině.
+
+**Text zálohy podle synchronizace.** Se zapnutou synchronizací karta píše, že jmenný seznam
+zůstává jen v zařízeních, a připomíná se po 30 dnech (`ZALOHA_PO_DNECH_SYNC`), bez ní po 14.
+
+**Statistiky v Přehledu:** nový sloupec ✎ s počtem poznámek o chování a volných poznámek
+v období (oranžově od 3), klepnutí na hlavičku sloupce řadí tabulku (žák abecedně, Cvičil
+od nejmenšího, ostatní od největšího). Kopírovaná tabulka má sloupec Poznámky.
+
+**Pojistka asistenta** (`anonymizujOtazku()`): jména žáků v Karlově otázce se před odesláním
+nahradí stejnými kódy Ž1, Ž2… jako ve výsledcích nástrojů. Celé jméno v obou pořadích vždy,
+samotné příjmení s velkým písmenem podle kmene (Nováka, Novákovi, Hájka, Svobodou), včetně
+následujícího křestního jména. Příjmení, které v appce není jedinečné, se nahradí „Ž?“.
+Samotná křestní jména se nenahrazují. Otázka se zdravotním slovem (`ZDRAVI_SLOVA`) se
+před odesláním potvrzuje. V bublině se otázka zobrazuje s dekódovanými jmény.
+
 ## Co přijde dál
 
 F3 je hotová.
