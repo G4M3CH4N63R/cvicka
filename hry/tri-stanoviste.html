@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Tři stanoviště</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>:root{color-scheme:light}body{margin:0}[hidden]{display:none!important}</style>
+<style>
+/* Layout: karta hodiny ve stejném stylu jako karty her; hlavička, průběh hodiny (úvod a hlavní část), schéma tělocvičny se třemi stanovišti a kolotočem, pravidla stanovišť, varianty a návrh zápisu */
+:root{
+  --bg:#f6f4ef; --paper:#ffffff; --ink:#1d2329; --muted:#5d6670; --line:#dcd6cb;
+  --floor:#efd9b0; --court:#c8743a;
+  --z1:#2c69c9; --z2:#d2423a; --z3:#2f9e63; --gold:#d99a00;
+  --accent:#2c69c9;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Source Sans 3","Segoe UI",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#15191d; --paper:#1d2227; --ink:#eef0f2; --muted:#a3acb6; --line:#323940;
+  --floor:#4a3a26; --court:#d38a4f; --z1:#5b92ee; --z2:#ef6a60; --z3:#4cc483; --gold:#f2b632; --accent:#5b92ee; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#15191d; --paper:#1d2227; --ink:#eef0f2; --muted:#a3acb6; --line:#323940;
+  --floor:#4a3a26; --court:#d38a4f; --z1:#5b92ee; --z2:#ef6a60; --z3:#4cc483; --gold:#f2b632; --accent:#5b92ee; color-scheme:dark }
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
+.wrap{max-width:1080px;margin:0 auto;padding-block:28px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:24px}
+header{display:grid;gap:10px}
+.eyebrow{font-family:var(--display);font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-size:.9rem}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(2.6rem,7vw,4.2rem);line-height:.95;margin:0;text-wrap:balance}
+.lead{margin:0;max-width:64ch;color:var(--muted);font-size:1.08rem}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.chip{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:3px 12px;font-size:.92rem}
+.chip b{font-weight:700}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:18px;min-width:0}
+h2{font-family:var(--display);font-weight:700;font-size:1.55rem;letter-spacing:.02em;margin:0 0 10px;text-transform:uppercase}
+h3{font-family:var(--display);font-weight:700;font-size:1.25rem;margin:0 0 6px}
+.phase{display:grid;grid-template-columns:120px minmax(0,1fr);gap:16px}
+@media (max-width:640px){.phase{grid-template-columns:minmax(0,1fr);gap:4px}}
+.phase .lbl{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);font-size:1.15rem}
+.phase p{margin:0 0 8px}
+ul.tight{margin:0;padding-left:1.15em;display:grid;gap:4px}
+.court-box{overflow-x:auto}
+svg.court{width:100%;height:auto;display:block;min-width:320px}
+.stations{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:820px){.stations{grid-template-columns:minmax(0,1fr)}}
+.st{border:1px solid var(--line);border-radius:10px;padding:14px;background:var(--paper);border-top:6px solid var(--c)}
+.st .num{font-family:var(--display);font-weight:700;font-size:.95rem;letter-spacing:.08em;text-transform:uppercase;color:var(--c)}
+.st .go{margin-top:10px;font-weight:700}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
+@media (max-width:640px){.two{grid-template-columns:minmax(0,1fr)}}
+.zapis{font-size:1.05rem;border-left:4px solid var(--gold);padding:4px 0 4px 14px;margin:0}
+.note{font-size:.9rem;color:var(--muted);margin:8px 0 0}
+.cap{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;align-items:baseline;margin-top:12px;min-height:3.4em}
+.cap .n{font-family:var(--display);font-weight:700;font-size:1.3rem;color:var(--accent);font-variant-numeric:tabular-nums}
+.cap .t{font-weight:700}
+.cap .d{grid-column:2;color:var(--muted)}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
+button{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:6px 14px;cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.dots{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+.dot{width:12px;height:12px;border-radius:50%;padding:0;border:2px solid var(--muted);background:transparent}
+.dot[aria-current="true"]{background:var(--accent);border-color:var(--accent)}
+.steps-print{display:none}
+@media print{
+ @page{size:A4;margin:12mm}
+ body{font-size:10.5pt;line-height:1.4;background:#fff}
+ .wrap{padding:0;gap:10px;max-width:none}
+ .panel,.st{break-inside:avoid;padding:10px 14px}
+ h1{font-size:30pt} h2{font-size:15pt;margin-bottom:6px}
+ .stations{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+ svg.court{max-width:130mm;margin:0 auto}
+ section[aria-labelledby="h-zapis"]{order:1}
+ section[aria-labelledby="h-schema"],section[aria-labelledby="h-st"],section[aria-label="Varianty a pozor"]{order:2}
+ .controls,.cap{display:none!important}
+ .steps-print{display:block;margin:6px 0 0;padding-left:1.3em;font-size:9.5pt;line-height:1.3}
+}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Karta hodiny · tělesná výchova</div>
+    <h1>Tři stanoviště</h1>
+    <p class="lead">Celá hodina běží jako kolotoč: kdo je vybitý, jde na ocásky, kdo přijde o ocásek, jde cvičit, a po splněném úkolu se vrací na vybíjenou. Úvodní honička s ocásky nacvičí hlavně to, aby si děti po sobě uklízely rozlišováky.</p>
+    <div class="chips">
+      <span class="chip"><b>Délka:</b> celá hodina</span>
+      <span class="chip"><b>Prostor:</b> celá tělocvična rozdělená na 3 části</span>
+      <span class="chip"><b>Rozvíjí:</b> házení a chytání, rychlost reakce, sílu, pořádek</span>
+    </div>
+  </header>
+
+  <section class="panel" aria-labelledby="h-pom">
+    <h2 id="h-pom">Pomůcky</h2>
+    <ul class="tight">
+      <li>Ocásky (rozlišováky) pro každého</li>
+      <li>1 až 2 měkké míče na vybíjenou</li>
+      <li>Lavičky, žíněnky, švihadla, případně míč a koš na třetí stanoviště</li>
+    </ul>
+  </section>
+
+  <section class="panel" aria-labelledby="h-uvod">
+    <h2 id="h-uvod">Průběh hodiny</h2>
+    <div class="phase">
+      <div class="lbl">Úvod</div>
+      <div>
+        <h3>Ocásky s chytačem</h3>
+        <p>Všichni mají za kalhotami ocásek, jeden začíná bez ocásku a chytá. Komu ocásek vytáhne, tomu ho hodí na zem. Chycený ho zvedne, uklidí a přidá se k chytačům.</p>
+        <ul class="tight">
+          <li>Ocásek se nesmí držet rukou.</li>
+          <li>Nesmí se opírat o stěnu ani ležet na zemi, všichni jsou pořád v pohybu.</li>
+          <li>Vyhrává poslední hráč s ocáskem, případně všichni, kdo ocásek mají po časovém limitu.</li>
+        </ul>
+        <p class="note">Hlavní smysl: naučit děti, že vytažený ocásek si hned samy uklidí. V hlavní části na tom stojí bezpečnost.</p>
+      </div>
+    </div>
+    <div class="phase" style="margin-top:14px">
+      <div class="lbl">Hlavní část</div>
+      <div><h3>Kolotoč tří stanovišť</h3><p>Tělocvična se rozdělí na tři části. Děti mezi nimi samy rotují a hra může běžet do konce hodiny.</p></div>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-schema">
+    <h2 id="h-schema">Rozdělení tělocvičny a kolotoč</h2>
+    <div class="court-box">
+      <svg class="court" viewBox="0 0 640 330" role="img" aria-label="Tělocvična rozdělená na vybíjenou, ocásky a cvičení, šipky ukazují, kam se jde dál">
+        <defs>
+          <marker id="ar1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--z1)"/></marker><marker id="ar2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--z2)"/></marker><marker id="ar3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="var(--z3)"/></marker>
+        </defs>
+        <rect x="0" y="0" width="640" height="330" rx="12" fill="var(--floor)"/>
+        <rect x="16" y="16" width="608" height="250" fill="none" stroke="var(--court)" stroke-width="3"/>
+        <!-- zóny -->
+        <rect x="18" y="18" width="300" height="246" fill="var(--z1)" opacity=".13"/>
+        <rect x="320" y="18" width="170" height="246" fill="var(--z2)" opacity=".13"/>
+        <rect x="492" y="18" width="130" height="246" fill="var(--z3)" opacity=".15"/>
+        <line x1="319" y1="16" x2="319" y2="266" stroke="var(--court)" stroke-width="3" stroke-dasharray="8 6"/>
+        <line x1="491" y1="16" x2="491" y2="266" stroke="var(--court)" stroke-width="3" stroke-dasharray="8 6"/>
+        <g font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="700" font-size="20" text-anchor="middle">
+          <text x="168" y="46" fill="var(--z1)">1 · VYBÍJENÁ</text>
+          <text x="405" y="46" fill="var(--z2)">2 · OCÁSKY</text>
+          <text x="557" y="46" fill="var(--z3)">3 · CVIČENÍ</text>
+        </g>
+        <!-- ocásky -->
+        <g>
+          <rect x="449" y="226" width="38" height="30" rx="3" fill="none" stroke="var(--z2)" stroke-width="2"/>
+          <text x="468" y="250" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="Source Sans 3, Arial, sans-serif">háček</text>
+        </g>
+        <!-- cvičení -->
+        <g>
+          <rect x="510" y="80" width="95" height="12" rx="3" fill="var(--court)"/>
+          <rect x="510" y="120" width="95" height="12" rx="3" fill="var(--court)"/>
+          <rect x="515" y="160" width="85" height="45" rx="4" fill="var(--z3)" opacity=".55"/>
+          <path d="M520 235 q20 -20 40 0 t40 0" fill="none" stroke="var(--ink)" stroke-width="2.5" stroke-linecap="round"/>
+        </g>
+        <!-- kolotoč -->
+        <g fill="none" stroke-width="3" stroke-linecap="round" opacity=".5">
+          <path d="M268 140 C 300 120, 320 120, 345 135" stroke="var(--z1)" marker-end="url(#ar1)"/>
+          <path d="M455 160 C 480 150, 500 150, 520 150" stroke="var(--z2)" marker-end="url(#ar2)"/>
+          <path d="M560 268 C 540 312, 120 312, 95 268" stroke="var(--z3)" marker-end="url(#ar3)"/>
+        </g>
+        <g font-family="Source Sans 3, Arial, sans-serif" font-size="13" font-weight="700" text-anchor="middle">
+          <text x="296" y="110" fill="var(--z1)">vybitý</text>
+          <text x="452" y="136" fill="var(--z2)">bez ocásku</text>
+          <text x="328" y="320" fill="var(--z3)">splněný úkol, zpět na vybíjenou</text>
+        </g>
+        <g id="dyn"></g>
+      </svg>
+    </div>
+    <div class="cap" aria-live="polite"><span class="n" id="capN"></span><span class="t" id="capT"></span><span class="d" id="capD"></span></div>
+    <div class="controls">
+      <button class="primary" id="play" type="button">Přehrát</button>
+      <button id="prev" type="button" aria-label="Předchozí krok">◀</button>
+      <button id="next" type="button" aria-label="Další krok">▶</button>
+      <div class="dots" id="dots"></div>
+    </div>
+    <ol class="steps-print"><li><b>Rozestavení:</b> Děti hrají vybíjenou, na ocáskách a na cvičení už někdo je. Sledujeme hráče se žlutým kroužkem.</li><li><b>Zásah:</b> Někdo trefí hráče se žlutým kroužkem. Ten je vybitý.</li><li><b>Vybitý jde na ocásky:</b> Přejde na stanoviště 2 a vezme si ocásek.</li><li><b>Chycený míč:</b> Jiný hráč míč chytí. Vybitý je tím pádem ten, kdo házel.</li><li><b>Házející jde na ocásky:</b> Vybitý házející přejde na stanoviště 2 a vezme si ocásek.</li><li><b>Ztráta ocásku:</b> Na ocáskách hrají všichni proti všem. Hráči se žlutým kroužkem někdo vytáhne ocásek.</li><li><b>Úklid ocásku:</b> Ocásek hned uklidí na háček nebo do pytle, ať na něm nikdo neuklouzne.</li><li><b>Cvičení:</b> Jde na stanoviště 3 a splní úkol, třeba cvik na lavičce.</li><li><b>Zpět na vybíjenou:</b> Po splněném úkolu se vrací na vybíjenou a kolotoč jede dál.</li></ol>
+    <p class="note">Poměr velikostí částí je orientační. Vybíjená potřebuje nejvíc místa, cvičení nejméně.</p>
+  </section>
+
+  <section aria-labelledby="h-st">
+    <h2 id="h-st">Pravidla stanovišť</h2>
+    <div class="stations">
+      <div class="st" style="--c:var(--z1)"><div class="num">Stanoviště 1</div><h3>Vybíjená</h3>
+        <ul class="tight"><li>Hrají všichni proti všem, bez týmů.</li><li>Hraje se s jedním nebo dvěma míči.</li><li>S míčem se nechodí.</li><li>Zásah do hlavy neplatí. Kdo trefí do hlavy, je vybitý sám.</li><li>Kdo míč chytí, vybil toho, kdo házel.</li></ul>
+        <div class="go">Vybitý jde na stanoviště 2.</div></div>
+      <div class="st" style="--c:var(--z2)"><div class="num">Stanoviště 2</div><h3>Ocásky</h3>
+        <ul class="tight"><li>Každý si vezme ocásek.</li><li>Kdo je tu sám, počká na soupeře.</li><li>Jakmile jsou tu aspoň dva, hrají všichni proti všem.</li><li>Kdo přijde o ocásek, hned ho uklidí na háček nebo do pytle. Ocásky na zemi kloužou.</li></ul>
+        <div class="go">Bez ocásku jde na stanoviště 3.</div></div>
+      <div class="st" style="--c:var(--z3)"><div class="num">Stanoviště 3</div><h3>Cvičení</h3>
+        <ul class="tight"><li>Posilování nebo dovednost: cviky na lavičkách, švihadlo, případně hod na koš.</li><li>Úkol zadává učitel nebo necvičící žák.</li><li>Obtížnost se může postupně zvyšovat.</li></ul>
+        <div class="go">Po splnění úkolu zpět na stanoviště 1.</div></div>
+    </div>
+  </section>
+
+  <section class="panel two" aria-label="Varianty a pozor">
+    <div><h3>Varianty</h3><ul class="tight">
+      <li>Mírnější verze pro mladší: kdo míč chytí, je jen zachráněný.</li>
+      <li>Při větším počtu dětí hrát vybíjenou se dvěma míči.</li>
+    </ul></div>
+    <div><h3>Na co dát pozor</h3><ul class="tight">
+      <li>Ocásky se uklízejí hned, jinak na nich někdo uklouzne.</li>
+      <li>Cvičení nesmí být moc zábavné, jinak se děti nechávají schválně vybít. Lepší je posilování na lavičkách nebo švihadla.</li>
+    </ul></div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-zapis">
+    <h2 id="h-zapis">Návrh zápisu do ŠOL</h2>
+    <p class="zapis">Uplatní házení a chytání ve hře všichni proti všem, rychle reaguje a uhýbá při honičce, posiluje celé tělo a po vypadnutí si sám uklidí pomůcky a přejde na další stanoviště.</p>
+  </section>
+</div>
+
+<script>
+(function(){
+const NS="http://www.w3.org/2000/svg",root=document.getElementById('dyn');
+const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+function el(t,a,p){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);(p||root).appendChild(e);return e;}
+const S0={
+ B1:{x:80,y:100,c:'z1'},B2:{x:70,y:215,c:'z1'},B3:{x:125,y:235,c:'z1'},A:{x:110,y:165,c:'z1',me:1},
+ R1:{x:230,y:95,c:'z1'},R2:{x:215,y:160,c:'z1'},R3:{x:260,y:200,c:'z1'},R4:{x:240,y:240,c:'z1'},
+ O1:{x:370,y:110,c:'ink',tail:1},O2:{x:430,y:150,c:'ink',tail:1},
+ C1:{x:548,y:182,c:'ink'},C2:{x:585,y:228,c:'ink'},
+ m1:{x:222,y:104,k:'ball'},m2:{x:250,y:192,k:'ball'}
+};
+const scenes=[
+ {t:'Rozestavení',d:'Děti hrají vybíjenou, na ocáskách a na cvičení už někdo je. Sledujeme hráče se žlutým kroužkem.',m:{}},
+ {t:'Zásah',d:'Někdo trefí hráče se žlutým kroužkem. Ten je vybitý.',m:{m1:{x:112,y:166}},after:{A:{hit:1},m1:{x:140,y:186}}},
+ {t:'Vybitý jde na ocásky',d:'Přejde na stanoviště 2 a vezme si ocásek.',m:{A:{x:400,y:205}},start:{A:{hit:0}},after:{A:{tail:1}}},
+ {t:'Chycený míč',d:'Jiný hráč míč chytí. Vybitý je tím pádem ten, kdo házel.',m:{m2:{x:136,y:229}},after:{R3:{hit:1}}},
+ {t:'Házející jde na ocásky',d:'Vybitý házející přejde na stanoviště 2 a vezme si ocásek.',m:{R3:{x:458,y:96}},start:{R3:{hit:0}},after:{R3:{tail:1}}},
+ {t:'Ztráta ocásku',d:'Na ocáskách hrají všichni proti všem. Hráči se žlutým kroužkem někdo vytáhne ocásek.',m:{O2:{x:420,y:190}},after:{A:{tail:0}}},
+ {t:'Úklid ocásku',d:'Ocásek hned uklidí na háček nebo do pytle, ať na něm nikdo neuklouzne.',m:{A:{x:468,y:212}}},
+ {t:'Cvičení',d:'Jde na stanoviště 3 a splní úkol, třeba cvik na lavičce.',m:{A:{x:557,y:106}}},
+ {t:'Zpět na vybíjenou',d:'Po splněném úkolu se vrací na vybíjenou a kolotoč jede dál.',m:{A:[{x:557,y:290},{x:110,y:290},{x:110,y:165}]},dur:2600}
+];
+const clone=o=>JSON.parse(JSON.stringify(o));
+const last=v=>Array.isArray(v)?v[v.length-1]:v;
+const starts=[];let cur=clone(S0);
+scenes.forEach(sc=>{if(sc.start)for(const id in sc.start)Object.assign(cur[id],sc.start[id]);starts.push(clone(cur));for(const id in sc.m)Object.assign(cur[id],last(sc.m[id]));if(sc.after)for(const id in sc.after)Object.assign(cur[id],sc.after[id]);});
+const fx=el('g',{});const nodes={};
+for(const id in S0){const s=S0[id],g=el('g',{});nodes[id]=g;
+ if(s.k==='ball'){el('circle',{r:6.5,fill:'var(--gold)',stroke:'#5a4300','stroke-width':1.2},g);continue;}
+ g._tail=el('rect',{x:-3,y:8,width:6,height:15,rx:2,fill:'var(--z2)',stroke:'#fff','stroke-width':1},g);
+ if(s.me)el('circle',{r:14,fill:'none',stroke:'var(--gold)','stroke-width':3.5},g);
+ g._b=el('circle',{r:9,fill:`var(--${s.c})`,stroke:'#fff','stroke-width':1.5},g);
+ g._x=el('path',{d:'M-5,-5 L5,5 M5,-5 L-5,5',stroke:'#fff','stroke-width':2.5,'stroke-linecap':'round'},g);}
+function draw(st){for(const id in st){const s=st[id],g=nodes[id];g.setAttribute('transform',`translate(${s.x},${s.y})`);
+ if(g._b){g._tail.setAttribute('opacity',s.tail?1:0);g._x.setAttribute('opacity',s.hit?1:0);g._b.setAttribute('opacity',s.hit?.5:1);}}}
+function endState(k){const st=clone(starts[k]),sc=scenes[k];for(const id in sc.m)Object.assign(st[id],last(sc.m[id]));if(sc.after)for(const id in sc.after)Object.assign(st[id],sc.after[id]);return st;}
+function pos(a,t,p){const pts=[{x:a.x,y:a.y}].concat(Array.isArray(t)?t:[t]);const n=pts.length-1,f=Math.min(n-1e-9,p*n),i=Math.floor(f),u=f-i;return{x:pts[i].x+(pts[i+1].x-pts[i].x)*u,y:pts[i].y+(pts[i+1].y-pts[i].y)*u};}
+function arrowFor(k){fx.innerHTML='';const sc=scenes[k],ids=Object.keys(sc.m);if(!ids.length)return;const id=ids[0],a=starts[k][id],t=sc.m[id];
+ const pts=[a].concat(Array.isArray(t)?t:[t]);el('path',{d:'M'+pts.map(p=>p.x+','+p.y).join(' L'),fill:'none',stroke:S0[id].k==='ball'?'#5a4300':'var(--ink)','stroke-width':2,'stroke-dasharray':'6 5',opacity:.6},fx);}
+const capN=document.getElementById('capN'),capT=document.getElementById('capT'),capD=document.getElementById('capD'),dots=document.getElementById('dots'),play=document.getElementById('play');
+scenes.forEach((s,k)=>{const b=document.createElement('button');b.className='dot';b.type='button';b.setAttribute('aria-label','Krok '+(k+1)+': '+s.t);b.onclick=()=>{stop();show(k,true)};dots.appendChild(b);});
+let i=0,playing=false,raf=0,tm=0;const HOLD=1600;
+function caption(k){capN.textContent=(k+1)+'/'+scenes.length;capT.textContent=scenes[k].t;capD.textContent=scenes[k].d;[...dots.children].forEach((d,j)=>d.setAttribute('aria-current',j===k?'true':'false'));}
+function show(k,instant){i=k;caption(k);arrowFor(k);if(instant||reduce){draw(endState(k));return;}animate(k);}
+function animate(k){cancelAnimationFrame(raf);clearTimeout(tm);const a=starts[k],sc=scenes[k],dur=sc.dur||1500,t0=performance.now();
+ const step=now=>{const p=Math.min(1,(now-t0)/dur),e=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2,st=clone(a);
+  for(const id in sc.m)Object.assign(st[id],pos(a[id],sc.m[id],sc.m[id].length?p:e));
+  if(p<1){draw(st);raf=requestAnimationFrame(step);}
+  else{draw(endState(k));if(playing)tm=setTimeout(()=>{if(!playing)return;if(i<scenes.length-1){i++;caption(i);arrowFor(i);animate(i);}else stop();},HOLD);}};
+ raf=requestAnimationFrame(step);}
+function stop(){playing=false;cancelAnimationFrame(raf);clearTimeout(tm);play.textContent='Přehrát';}
+play.onclick=()=>{if(playing){stop();return;}playing=true;play.textContent='Pauza';if(i>=scenes.length-1)i=0;if(i===0)draw(starts[0]);caption(i);arrowFor(i);animate(i);};
+document.getElementById('next').onclick=()=>{stop();show(Math.min(scenes.length-1,i+1),false);};
+document.getElementById('prev').onclick=()=>{stop();show(Math.max(0,i-1),true);};
+window.__start=()=>play.click();
+show(0,true);
+})();
+</script>
+
+</body>
+</html>
