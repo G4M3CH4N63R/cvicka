@@ -177,7 +177,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
       <button id="next" type="button" aria-label="Další krok">▶</button>
       <div class="dots" id="dots"></div>
     </div>
-    <ol class="steps-print"><li><b>Rozestavení:</b> Děti hrají vybíjenou, na ocáskách a na cvičení už někdo je. Sledujeme hráče se žlutým kroužkem.</li><li><b>Zásah:</b> Někdo trefí hráče se žlutým kroužkem. Ten je vybitý.</li><li><b>Vybitý jde na ocásky:</b> Přejde na stanoviště 2 a vezme si ocásek.</li><li><b>Chycený míč:</b> Jiný hráč míč chytí. Vybitý je tím pádem ten, kdo házel.</li><li><b>Házející jde na ocásky:</b> Vybitý házející přejde na stanoviště 2 a vezme si ocásek.</li><li><b>Ztráta ocásku:</b> Na ocáskách hrají všichni proti všem. Hráči se žlutým kroužkem někdo vytáhne ocásek.</li><li><b>Úklid ocásku:</b> Ocásek hned uklidí na háček nebo do pytle, ať na něm nikdo neuklouzne.</li><li><b>Cvičení:</b> Jde na stanoviště 3 a splní úkol, třeba cvik na lavičce.</li><li><b>Zpět na vybíjenou:</b> Po splněném úkolu se vrací na vybíjenou a kolotoč jede dál.</li></ol>
+    <ol class="steps-print"><li><b>Rozestavení:</b> Děti hrají vybíjenou, na ocáskách a na cvičení už někdo je. Sledujeme Toma.</li><li><b>Zásah:</b> Někdo trefí Toma. Tom je vybitý.</li><li><b>Vybitý jde na ocásky:</b> Tom přejde na stanoviště 2 a vezme si ocásek.</li><li><b>Chycený míč:</b> Jiný hráč míč chytí. Vybitý je tím pádem ten, kdo házel.</li><li><b>Házející jde na ocásky:</b> Vybitý házející přejde na stanoviště 2 a vezme si ocásek.</li><li><b>Ztráta ocásku:</b> Na ocáskách hrají všichni proti všem. Tomovi někdo vytáhne ocásek.</li><li><b>Úklid ocásku:</b> Ocásek hned uklidí na háček nebo do pytle, ať na něm nikdo neuklouzne.</li><li><b>Cvičení:</b> Tom jde na stanoviště 3 a splní úkol, třeba cvik na lavičce.</li><li><b>Zpět na vybíjenou:</b> Po splněném úkolu se vrací na vybíjenou a kolotoč jede dál.</li></ol>
     <p class="note">Poměr velikostí částí je orientační. Vybíjená potřebuje nejvíc místa, cvičení nejméně.</p>
   </section>
 
@@ -209,7 +209,7 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 
   <section class="panel" aria-labelledby="h-zapis">
     <h2 id="h-zapis">Návrh zápisu do ŠOL</h2>
-    <p class="zapis">Uplatní házení a chytání ve hře všichni proti všem, rychle reaguje a uhýbá při honičce, posiluje celé tělo a po vypadnutí si sám uklidí pomůcky a přejde na další stanoviště.</p>
+    <p class="zapis">Uplatní házení a chytání ve hře, rychle reaguje při honičce a posiluje celé tělo.</p>
   </section>
 </div>
 
@@ -226,14 +226,14 @@ const S0={
  m1:{x:222,y:104,k:'ball'},m2:{x:250,y:192,k:'ball'}
 };
 const scenes=[
- {t:'Rozestavení',d:'Děti hrají vybíjenou, na ocáskách a na cvičení už někdo je. Sledujeme hráče se žlutým kroužkem.',m:{}},
- {t:'Zásah',d:'Někdo trefí hráče se žlutým kroužkem. Ten je vybitý.',m:{m1:{x:112,y:166}},after:{A:{hit:1},m1:{x:140,y:186}}},
- {t:'Vybitý jde na ocásky',d:'Přejde na stanoviště 2 a vezme si ocásek.',m:{A:{x:400,y:205}},start:{A:{hit:0}},after:{A:{tail:1}}},
+ {t:'Rozestavení',d:'Děti hrají vybíjenou, na ocáskách a na cvičení už někdo je. Sledujeme Toma.',m:{}},
+ {t:'Zásah',d:'Někdo trefí Toma. Tom je vybitý.',m:{m1:{x:112,y:166}},after:{A:{hit:1},m1:{x:140,y:186}}},
+ {t:'Vybitý jde na ocásky',d:'Tom přejde na stanoviště 2 a vezme si ocásek.',m:{A:{x:400,y:205}},start:{A:{hit:0}},after:{A:{tail:1}}},
  {t:'Chycený míč',d:'Jiný hráč míč chytí. Vybitý je tím pádem ten, kdo házel.',m:{m2:{x:136,y:229}},after:{R3:{hit:1}}},
  {t:'Házející jde na ocásky',d:'Vybitý házející přejde na stanoviště 2 a vezme si ocásek.',m:{R3:{x:458,y:96}},start:{R3:{hit:0}},after:{R3:{tail:1}}},
- {t:'Ztráta ocásku',d:'Na ocáskách hrají všichni proti všem. Hráči se žlutým kroužkem někdo vytáhne ocásek.',m:{O2:{x:420,y:190}},after:{A:{tail:0}}},
+ {t:'Ztráta ocásku',d:'Na ocáskách hrají všichni proti všem. Tomovi někdo vytáhne ocásek.',m:{O2:{x:420,y:190}},after:{A:{tail:0}}},
  {t:'Úklid ocásku',d:'Ocásek hned uklidí na háček nebo do pytle, ať na něm nikdo neuklouzne.',m:{A:{x:468,y:212}}},
- {t:'Cvičení',d:'Jde na stanoviště 3 a splní úkol, třeba cvik na lavičce.',m:{A:{x:557,y:106}}},
+ {t:'Cvičení',d:'Tom jde na stanoviště 3 a splní úkol, třeba cvik na lavičce.',m:{A:{x:557,y:106}}},
  {t:'Zpět na vybíjenou',d:'Po splněném úkolu se vrací na vybíjenou a kolotoč jede dál.',m:{A:[{x:557,y:290},{x:110,y:290},{x:110,y:165}]},dur:2600}
 ];
 const clone=o=>JSON.parse(JSON.stringify(o));
@@ -244,10 +244,11 @@ const fx=el('g',{});const nodes={};
 for(const id in S0){const s=S0[id],g=el('g',{});nodes[id]=g;
  if(s.k==='ball'){el('circle',{r:6.5,fill:'var(--gold)',stroke:'#5a4300','stroke-width':1.2},g);continue;}
  g._tail=el('rect',{x:-3,y:8,width:6,height:15,rx:2,fill:'var(--z2)',stroke:'#fff','stroke-width':1},g);
- if(s.me)el('circle',{r:14,fill:'none',stroke:'var(--gold)','stroke-width':3.5},g);
+ 
  g._b=el('circle',{r:9,fill:`var(--${s.c})`,stroke:'#fff','stroke-width':1.5},g);
  g._x=el('path',{d:'M-5,-5 L5,5 M5,-5 L-5,5',stroke:'#fff','stroke-width':2.5,'stroke-linecap':'round'},g);}
-function draw(st){for(const id in st){const s=st[id],g=nodes[id];g.setAttribute('transform',`translate(${s.x},${s.y})`);
+for(const id in S0)if(S0[id].me){const g=el('g',{});nodes[id]._lab=g;const t=el('text',{y:-14,'text-anchor':'middle','font-size':13,'font-weight':700,'font-family':'Source Sans 3, Arial, sans-serif',fill:'#fff',stroke:'#1d2329','stroke-width':3.5,'paint-order':'stroke'},g);t.textContent='Tom';}
+function draw(st){for(const id in st){const s=st[id],g=nodes[id];g.setAttribute('transform',`translate(${s.x},${s.y})`);if(g._lab)g._lab.setAttribute('transform',`translate(${s.x},${s.y})`);
  if(g._b){g._tail.setAttribute('opacity',s.tail?1:0);g._x.setAttribute('opacity',s.hit?1:0);g._b.setAttribute('opacity',s.hit?.5:1);}}}
 function endState(k){const st=clone(starts[k]),sc=scenes[k];for(const id in sc.m)Object.assign(st[id],last(sc.m[id]));if(sc.after)for(const id in sc.after)Object.assign(st[id],sc.after[id]);return st;}
 function pos(a,t,p){const pts=[{x:a.x,y:a.y}].concat(Array.isArray(t)?t:[t]);const n=pts.length-1,f=Math.min(n-1e-9,p*n),i=Math.floor(f),u=f-i;return{x:pts[i].x+(pts[i+1].x-pts[i].x)*u,y:pts[i].y+(pts[i+1].y-pts[i].y)*u};}
