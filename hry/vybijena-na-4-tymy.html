@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Vybíjená na 4 týmy</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>:root{color-scheme:light}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<style>
+/* Layout: karta hry; hlavička s parametry, vlevo tělocvična se čtyřmi vězeními a animací, vpravo pomůcky, pod tím pravidla, tři cesty z vězení, jak vyhrát a tipy */
+:root{
+  --bg:#f6f4ef; --paper:#ffffff; --ink:#1d2329; --muted:#5d6670; --line:#dcd6cb;
+  --floor:#efd9b0; --floorline:#b4874c; --court:#c8743a;
+  --red:#d2423a; --blue:#2c69c9; --green:#2f9e63; --purple:#7d4fc4; --gold:#d99a00; --noodle:#2f9e63; --ball:#f2d22e; --ballstroke:#9b8410;
+  --accent:#2c69c9;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Source Sans 3","Segoe UI",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#15191d; --paper:#1d2227; --ink:#eef0f2; --muted:#a3acb6; --line:#323940;
+  --floor:#4a3a26; --floorline:#c99a5c; --court:#d38a4f;
+  --red:#ef6a60; --blue:#5b92ee; --green:#4cc483; --purple:#a37cf0; --gold:#f2b632; --noodle:#4cc483; --ball:#f5dc4a; --ballstroke:#f5dc4a;
+  --accent:#5b92ee; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#15191d; --paper:#1d2227; --ink:#eef0f2; --muted:#a3acb6; --line:#323940;
+  --floor:#4a3a26; --floorline:#c99a5c; --court:#d38a4f;
+  --red:#ef6a60; --blue:#5b92ee; --green:#4cc483; --purple:#a37cf0; --gold:#f2b632; --noodle:#4cc483; --ball:#f5dc4a; --ballstroke:#f5dc4a;
+  --accent:#5b92ee; color-scheme:dark }
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
+.wrap{max-width:1080px;margin:0 auto;padding-block:28px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:24px}
+header{display:grid;gap:10px}
+.eyebrow{font-family:var(--display);font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-size:.9rem}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(2.6rem,7vw,4.2rem);line-height:.95;margin:0;text-wrap:balance}
+.lead{margin:0;max-width:62ch;color:var(--muted);font-size:1.08rem}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.chip{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:3px 12px;font-size:.92rem}
+.chip b{font-weight:700}
+.grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:18px;min-width:0}
+h2{font-family:var(--display);font-weight:700;font-size:1.55rem;letter-spacing:.02em;margin:0 0 10px;text-transform:uppercase}
+h3{font-family:var(--display);font-weight:700;font-size:1.2rem;margin:0 0 6px}
+.court-box{overflow-x:auto}
+svg.court{width:100%;height:auto;display:block;min-width:300px}
+.cap{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;align-items:baseline;margin-top:12px;min-height:3.4em}
+.cap .n{font-family:var(--display);font-weight:700;font-size:1.3rem;color:var(--accent);font-variant-numeric:tabular-nums}
+.cap .t{font-weight:700}
+.cap .d{grid-column:2;color:var(--muted)}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
+button{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:6px 14px;cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.dots{display:flex;gap:6px;margin-left:auto}
+.dot{width:12px;height:12px;border-radius:50%;padding:0;border:2px solid var(--muted);background:transparent}
+.dot[aria-current="true"]{background:var(--accent);border-color:var(--accent)}
+.note{font-size:.88rem;color:var(--muted);margin:8px 0 0}
+ul.clean{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.item{display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;align-items:start}
+.item svg{width:34px;height:34px}
+.item b{display:block}
+.item span{color:var(--muted)}
+.rules{display:grid;gap:10px;margin:0;padding-left:1.3em}
+.rules li::marker{font-family:var(--display);font-weight:700;color:var(--accent)}
+.vars{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:820px){.vars{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:640px){.vars{grid-template-columns:minmax(0,1fr)}}
+.var{border:1px solid var(--line);border-radius:10px;padding:14px;background:var(--paper)}
+.tag{display:inline-block;font-family:var(--display);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:.85rem;padding:1px 8px;border-radius:4px;background:var(--gold);color:#1d2329;margin-bottom:6px}
+.var p{margin:0}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
+@media (max-width:640px){.two{grid-template-columns:minmax(0,1fr)}}
+.two ul{margin:0;padding-left:1.1em;display:grid;gap:6px}
+
+.steps-print{display:none}
+@media print{
+ @page{size:A4;margin:12mm}
+ body{font-size:10.5pt;line-height:1.4;background:#fff}
+ .wrap{padding:0;gap:14px;max-width:none}
+ .controls,.cap{display:none!important}
+ .steps-print{display:block;margin:10px 0 0;padding-left:1.3em;font-size:10.5pt}
+ .panel,.var{break-inside:avoid}
+ h1{font-size:30pt}
+ .panel{padding:10px 14px}
+ ul.clean,.rules,.two ul{gap:3px}
+ .item svg{width:24px;height:24px}
+ .item{grid-template-columns:26px minmax(0,1fr)}
+ h2{font-size:15pt;margin-bottom:6px}
+ .lead{font-size:11pt}
+ svg.court{max-width:135mm;margin:0 auto}
+ .steps-print{font-size:10pt}
+ .two{gap:14px}
+ aside ul.clean{grid-template-columns:1fr 1fr;column-gap:16px}
+ .wrap{gap:10px}
+ .var{padding:10px}
+ .vars{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px}
+ .grid{grid-template-columns:minmax(0,1fr)!important;gap:10px}
+ svg.court{max-width:120mm}
+ .lead{max-width:none}
+}
+</style>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Karta hry · tělesná výchova</div>
+    <h1>Vybíjená na 4 týmy</h1>
+    <p class="lead">Vybíjená, ve které hrají čtyři týmy všichni proti všem. Vybitý jde do vězení v rohu tělocvičny a může se dostat zpátky do hry třemi způsoby. Vyhrává tým, který jako jediný zůstane v poli.</p>
+    <div class="chips">
+      <span class="chip"><b>Hráči:</b> 4 týmy</span>
+      <span class="chip"><b>Prostor:</b> tělocvična s koši</span>
+      <span class="chip"><b>Délka:</b> asi 30 minut</span>
+      <span class="chip"><b>Rozvíjí:</b> házení, uhýbání, střelbu na koš, přehled ve hře</span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <section class="panel" aria-labelledby="h-schema">
+      <h2 id="h-schema">Jak se hraje</h2>
+      <div class="court-box">
+        <svg class="court" id="court" viewBox="0 0 600 360" role="img" aria-label="Schéma tělocvičny se čtyřmi týmy a čtyřmi vězeními v rozích"></svg>
+      </div>
+      <div class="cap" aria-live="polite">
+        <span class="n" id="capN">1/9</span><span class="t" id="capT"></span>
+        <span class="d" id="capD"></span>
+      </div>
+      <div class="controls">
+        <button class="primary" id="play" type="button">Přehrát</button>
+        <button id="prev" type="button" aria-label="Předchozí krok">◀</button>
+        <button id="next" type="button" aria-label="Další krok">▶</button>
+        <div class="dots" id="dots"></div>
+      </div>
+      <ol class="steps-print" id="stepsPrint"></ol>
+      <p class="note">Ve schématu jsou jen 3 až 4 hráči na tým, aby bylo vidět, co se děje.</p>
+    </section>
+
+    <aside class="panel" aria-labelledby="h-pom">
+      <h2 id="h-pom">Pomůcky</h2>
+      <ul class="clean">
+        <li class="item"><svg viewBox="0 0 34 34" aria-hidden="true"><circle cx="12" cy="13" r="7" fill="var(--ball)" stroke="var(--ballstroke)" stroke-width="1.5"/><circle cx="22" cy="22" r="7" fill="var(--ball)" stroke="var(--ballstroke)" stroke-width="1.5"/></svg><div><b>4 měkké míče</b><span>Hraje se se čtyřmi míči najednou.</span></div></li>
+        <li class="item"><svg viewBox="0 0 34 34" aria-hidden="true"><circle cx="11" cy="11" r="6" fill="var(--red)"/><circle cx="23" cy="11" r="6" fill="var(--blue)"/><circle cx="11" cy="23" r="6" fill="var(--green)"/><circle cx="23" cy="23" r="6" fill="var(--purple)"/></svg><div><b>Rozlišováky ve 4 barvách</b><span>Každý tým jednu barvu.</span></div></li>
+        <li class="item"><svg viewBox="0 0 34 34" aria-hidden="true"><rect x="5" y="5" width="24" height="24" fill="none" stroke="var(--floorline)" stroke-width="3" stroke-dasharray="4 3"/></svg><div><b>4 vězení</b><span>Čtverec v každém rohu tělocvičny, vyznačený kužely nebo páskou.</span></div></li>
+        <li class="item"><svg viewBox="0 0 34 34" aria-hidden="true"><line x1="6" y1="6" x2="6" y2="28" stroke="var(--ink)" stroke-width="3"/><circle cx="16" cy="17" r="8" fill="none" stroke="var(--court)" stroke-width="3"/></svg><div><b>Koše</b><span>Basketbalové koše, na které se hází z vězení.</span></div></li>
+      </ul>
+      <h3 style="margin-top:18px">Ve vězení</h3>
+      <ul class="clean">
+        <li><b>Nevystoupit.</b> <span style="color:var(--muted)">Vězeň nesmí ze čtverce vystoupit, ani když hází nebo se natahuje.</span></li>
+        <li><b>Přebíhat jen s rukou nahoře.</b> <span style="color:var(--muted)">Mezi vězeními se smí přebíhat se zvednutou rukou a bez zapojení do hry v poli.</span></li>
+      </ul>
+    </aside>
+  </div>
+
+  <section class="panel" aria-labelledby="h-prav">
+    <h2 id="h-prav">Pravidla</h2>
+    <ol class="rules">
+      <li>Hrají čtyři týmy, každý proti každému. Hráči se mohou pohybovat po celé tělocvičně.</li>
+      <li>Hraje se se čtyřmi míči.</li>
+      <li>Kdo je trefený, je vybitý a jde do kteréhokoli vězení v rohu.</li>
+      <li>Kdo míč chytí, je zachráněný. Vybitý kvůli tomu není nikdo.</li>
+      <li>Zásah do hlavy neplatí. Kdo trefí soupeře do hlavy, je vybitý sám.</li>
+      <li>Vězeň nesmí z vězení vystoupit. Mezi vězeními smí přebíhat jen se zvednutou rukou a nesmí se přitom zapojit do hry v poli.</li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="h-var">
+    <h2 id="h-var">Tři cesty z vězení</h2>
+    <div class="vars">
+      <div class="var"><span class="tag">1 · Zásah</span><h3>Vybít z vězení</h3><p>Vězeň trefí z vězení hráče jiného týmu. Vězeň jde zpět do hry a trefený jde do vězení.</p></div>
+      <div class="var"><span class="tag">2 · Dotyk</span><h3>Dotknout se soupeře</h3><p>Vězeň se dotkne soupeře, který je blízko vězení, a nevystoupí přitom ze čtverce. Vězeň jde do hry, soupeř do vězení.</p></div>
+      <div class="var"><span class="tag">3 · Koš</span><h3>Trefit koš</h3><p>Vězeň trefí z vězení koš. Zpět do hry jdou všichni, kdo jsou v tom vězení.</p></div>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-win">
+    <h2 id="h-win">Jak vyhrát</h2>
+    <p style="margin:0">Vyhrává tým, který jako jediný zůstane v poli. Nezáleží na tom, kolik jeho hráčů zbývá, stačí jedna barva. Hra trvá dlouho, počítej zhruba s 30 minutami.</p>
+  </section>
+
+  <section class="panel two" aria-label="Tipy">
+    <div><h3>Na co dát pozor</h3><ul><li>Jen měkké míče, ve hře jsou čtyři najednou.</li><li>Rozhodčí z necvičících hlídá zásahy do hlavy a jestli vězni nevystupují ze čtverce.</li><li>Přebíhající vězeň má ruku nahoře, aby bylo vidět, že nehraje.</li></ul></div>
+    <div><h3>Tipy do hodiny</h3><ul><li>Vězení vyznačit tak, aby z nich šel trefit koš.</li><li>Před hrou ukázat všechny tři cesty z vězení.</li><li>Rozlišováky ve výrazně odlišných barvách, ať se čtyři týmy nepletou.</li></ul></div>
+  </section>
+</div>
+
+<script>
+(function(){
+const NS="http://www.w3.org/2000/svg";
+const svg=document.getElementById('court');
+const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+function el(t,a,p){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);(p||svg).appendChild(e);return e;}
+const FONT='Source Sans 3, Arial, sans-serif';
+// tělocvična
+el('rect',{x:0,y:0,width:600,height:360,rx:12,fill:'var(--floor)'});
+el('rect',{x:16,y:16,width:568,height:328,fill:'none',stroke:'var(--court)','stroke-width':3});
+el('circle',{cx:300,cy:180,r:40,fill:'none',stroke:'var(--court)','stroke-width':2,opacity:.6});
+// vězení v rozích
+[[16,16],[504,16],[16,264],[504,264]].forEach(([x,y])=>{el('rect',{x:x+3,y:y+3,width:74,height:74,fill:'var(--floorline)','fill-opacity':.13,stroke:'var(--floorline)','stroke-width':3,'stroke-dasharray':'7 5'});});
+const lab=(x,y,t,a)=>{const e=el('text',{x,y,'text-anchor':a||'middle','font-size':12,'font-family':FONT,'font-weight':700,fill:'var(--muted)'});e.textContent=t;};
+lab(56,112,'vězení');lab(544,112,'vězení');lab(56,258,'vězení');lab(544,258,'vězení');
+// koše na kratších stěnách
+el('line',{x1:20,y1:162,x2:20,y2:198,stroke:'var(--ink)','stroke-width':4});
+el('circle',{cx:33,cy:180,r:9,fill:'none',stroke:'var(--court)','stroke-width':3});
+el('line',{x1:580,y1:162,x2:580,y2:198,stroke:'var(--ink)','stroke-width':4});
+el('circle',{cx:567,cy:180,r:9,fill:'none',stroke:'var(--court)','stroke-width':3});
+lab(52,216,'koš','start');lab(548,216,'koš','end');
+const fx=el('g',{});const pl=el('g',{});const bl=el('g',{});const top=el('g',{});
+
+const S0={
+ T:{x:200,y:150,c:'red',me:1}, R2:{x:330,y:250,c:'red'}, R3:{x:420,y:110,c:'red'},
+ B1:{x:270,y:82,c:'blue'}, B2:{x:160,y:255,c:'blue'}, B3:{x:546,y:52,c:'blue'}, B4:{x:74,y:292,c:'blue'},
+ G1:{x:380,y:175,c:'green'}, G2:{x:250,y:312,c:'green'}, G3:{x:40,y:288,c:'green'},
+ P1:{x:300,y:198,c:'purple'}, P2:{x:450,y:292,c:'purple'}, P3:{x:54,y:322,c:'purple'},
+ m1:{x:282,y:94,k:'ball'}, m2:{x:534,y:64,k:'ball'}, m3:{x:262,y:300,k:'ball'}, m4:{x:462,y:280,k:'ball'}
+};
+const scenes=[
+ {t:'Rozestavení',d:'Čtyři týmy hrají všichni proti všem po celé tělocvičně se čtyřmi míči. V rozích jsou čtyři vězení, v některých už někdo je. Sledujeme Toma.',ph:[]},
+ {t:'Zásah',d:'Modrý hráč trefí Toma. Tom je vybitý.',ph:[{m:{m1:{x:200,y:150}},set:{T:{hit:1},m1:{x:226,y:172}}}]},
+ {t:'Do vězení',d:'Tom jde do kteréhokoli vězení, třeba do nejbližšího.',ph:[{pre:{T:{hit:0}},m:{T:{x:52,y:52}}}]},
+ {t:'Dotyk',d:'Zelený hráč se přiblíží k vězení. Tom se ho dotkne, ale ze čtverce nevystoupí. Zelený jde do vězení a Tom zpět do hry.',ph:[{m:{G1:{x:116,y:80},T:{x:86,y:70}},set:{G1:{hit:1}}},{pre:{G1:{hit:0}},m:{T:{x:175,y:128},G1:{x:46,y:46}}}]},
+ {t:'Přebíhání',d:'Fialový vězeň přebíhá do jiného vězení. Má zvednutou ruku a do hry v poli se nezapojí.',ph:[{pre:{P3:{hand:1}},m:{P3:{x:300,y:334}}},{m:{P3:{x:546,y:306}},}]},
+ {t:'Zásah z vězení',d:'Modrý vězeň trefí z vězení červeného hráče. Modrý jde zpět do hry a červený do vězení.',ph:[{pre:{P3:{hand:0}},m:{m2:{x:420,y:110}},set:{R3:{hit:1},m2:{x:440,y:136}}},{pre:{R3:{hit:0}},m:{B3:{x:470,y:150},R3:{x:548,y:50}}}]},
+ {t:'Koš z vězení',d:'Míč se dokutálí k vězení. Zelený vězeň trefí koš a všichni z tohoto vězení jdou zpět do hry.',ph:[{m:{m1:{x:50,y:278}}},{m:{m1:{x:33,y:180}},set:{flash:1}},{pre:{flash:0},m:{G3:{x:130,y:236},B4:{x:156,y:296},m1:{x:62,y:196}}}]},
+ {t:'Zásah do hlavy',d:'Fialový hráč trefí zeleného do hlavy. Vybitý je ten, kdo házel, a jde do vězení.',ph:[{m:{m4:{x:250,y:302}},set:{P2:{hit:1},m4:{x:276,y:326}}},{pre:{P2:{hit:0}},m:{P2:{x:526,y:290}}}]},
+ {t:'Konec hry',d:'Vyhrává tým, který jako jediný zůstane v poli. Nezáleží na tom, kolik jeho hráčů zbývá.',noArrow:1,ph:[{m:{B1:{x:78,y:40},B2:{x:40,y:302},B3:{x:524,y:72},B4:{x:76,y:326},G2:{x:566,y:330},G3:{x:44,y:276},P1:{x:526,y:330}},set:{win:1}}]}
+];
+document.getElementById('stepsPrint').innerHTML=scenes.map(s=>'<li><b>'+s.t+':</b> '+s.d+'</li>').join('');
+
+const clone=o=>JSON.parse(JSON.stringify(o));
+function apply(st,o){if(!o)return;for(const id in o){if(id==='flash'||id==='win')st[id]=o[id];else Object.assign(st[id],o[id]);}}
+function runPh(st,ph){apply(st,ph.pre);apply(st,ph.m);apply(st,ph.set);}
+const base=Object.assign(clone(S0),{flash:0,win:0});
+const starts=[];let cur=clone(base);
+scenes.forEach(sc=>{starts.push(clone(cur));sc.ph.forEach(ph=>runPh(cur,ph));});
+function endState(k){const st=clone(starts[k]);scenes[k].ph.forEach(ph=>runPh(st,ph));return st;}
+
+// kreslení
+const nodes={};
+for(const id in S0){const s=S0[id];
+ if(s.k==='ball'){const g=el('g',{},bl);nodes[id]=g;el('circle',{r:6.5,fill:'var(--ball)',stroke:'var(--ballstroke)','stroke-width':1.5},g);continue;}
+ const g=el('g',{},pl);nodes[id]=g;
+ g._hand=el('g',{},g);el('line',{x1:6,y1:-8,x2:11,y2:-24,stroke:`var(--${s.c})`,'stroke-width':4,'stroke-linecap':'round'},g._hand);el('circle',{cx:11.5,cy:-26,r:3.5,fill:`var(--${s.c})`,stroke:'#fff','stroke-width':1.2},g._hand);
+ g._b=el('circle',{r:11,fill:`var(--${s.c})`,stroke:'#fff','stroke-width':2},g);
+ g._x=el('path',{d:'M-5,-5 L5,5 M5,-5 L-5,5',stroke:'#fff','stroke-width':2.5,'stroke-linecap':'round'},g);
+ if(s.me){const t=el('g',{},top);g._lab=t;const tx=el('text',{y:-16,'text-anchor':'middle','font-size':13,'font-weight':700,'font-family':FONT,fill:'#fff',stroke:'#1d2329','stroke-width':3.5,'paint-order':'stroke'},t);tx.textContent='Tom';}
+}
+const flash=el('text',{x:56,y:150,'text-anchor':'start','font-size':22,'font-weight':700,'font-family':'Barlow Condensed, Arial Narrow, sans-serif',fill:'var(--green)',stroke:'#fff','stroke-width':3,'paint-order':'stroke'},top);flash.textContent='KOŠ!';
+const win=el('text',{x:300,y:48,'text-anchor':'middle','font-size':26,'font-weight':700,'font-family':'Barlow Condensed, Arial Narrow, sans-serif',fill:'var(--red)',stroke:'#fff','stroke-width':3,'paint-order':'stroke'},top);win.textContent='ČERVENÍ VYHRÁLI';
+function draw(st){for(const id in S0){const s=st[id],g=nodes[id];const tr=`translate(${s.x},${s.y})`;g.setAttribute('transform',tr);
+ if(g._b){g._b.setAttribute('opacity',s.hit?.5:1);g._x.setAttribute('opacity',s.hit?1:0);g._hand.setAttribute('opacity',s.hand?1:0);if(g._lab)g._lab.setAttribute('transform',tr);}}
+ flash.setAttribute('opacity',st.flash?1:0);win.setAttribute('opacity',st.win?1:0);}
+function arrowsFor(k){fx.innerHTML='';const sc=scenes[k];if(sc.noArrow)return;const st=clone(starts[k]);
+ sc.ph.forEach(ph=>{apply(st,ph.pre);for(const id in ph.m){const a=st[id],b=ph.m[id];const col=S0[id].k==='ball'?'var(--ballstroke)':`var(--${S0[id].c})`;el('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:col,'stroke-width':2.5,'stroke-dasharray':'7 6','stroke-linecap':'round',opacity:.8},fx);}apply(st,ph.m);apply(st,ph.set);});}
+
+let i=0,playing=false,raf=0,tm=0;const DUR=1100,HOLD=1700;
+const capN=document.getElementById('capN'),capT=document.getElementById('capT'),capD=document.getElementById('capD'),dots=document.getElementById('dots'),play=document.getElementById('play');
+scenes.forEach((s,k)=>{const b=document.createElement('button');b.className='dot';b.type='button';b.setAttribute('aria-label','Krok '+(k+1)+': '+s.t);b.onclick=()=>{stop();show(k,true)};dots.appendChild(b);});
+function caption(k){capN.textContent=(k+1)+'/'+scenes.length;capT.textContent=scenes[k].t;capD.textContent=scenes[k].d;[...dots.children].forEach((d,j)=>d.setAttribute('aria-current',j===k?'true':'false'));}
+function show(k,instant){i=k;caption(k);arrowsFor(k);if(instant||reduce){draw(endState(k));if(playing)tm=setTimeout(nextAuto,HOLD+800);return;}animate(k);}
+function nextAuto(){if(!playing)return;if(i<scenes.length-1)show(i+1,false);else stop();}
+function animate(k){cancelAnimationFrame(raf);clearTimeout(tm);const sc=scenes[k];const st=clone(starts[k]);let j=0;
+ const runPhase=()=>{if(j>=sc.ph.length){draw(st);if(playing)tm=setTimeout(nextAuto,HOLD);return;}
+  const ph=sc.ph[j];apply(st,ph.pre);draw(st);const from=clone(st);const t0=performance.now();
+  const step=now=>{const p=Math.min(1,(now-t0)/DUR),e=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;const s2=clone(from);
+   for(const id in ph.m){s2[id].x=from[id].x+(ph.m[id].x-from[id].x)*e;s2[id].y=from[id].y+(ph.m[id].y-from[id].y)*e;}
+   draw(s2);if(p<1)raf=requestAnimationFrame(step);else{apply(st,ph.m);apply(st,ph.set);draw(st);j++;tm=setTimeout(runPhase,350);}};
+  raf=requestAnimationFrame(step);};
+ runPhase();}
+function stop(){playing=false;cancelAnimationFrame(raf);clearTimeout(tm);play.textContent='Přehrát';}
+play.onclick=()=>{if(playing){stop();return;}playing=true;play.textContent='Pauza';if(i>=scenes.length-1)i=0;show(i,false);};
+document.getElementById('next').onclick=()=>{stop();show(Math.min(scenes.length-1,i+1),false);};
+document.getElementById('prev').onclick=()=>{stop();show(Math.max(0,i-1),true);};
+draw(starts[0]);show(0,true);
+})();
+</script>
+
+</body>
+</html>
