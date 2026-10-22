@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Paintball</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>:root{color-scheme:light}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<style>
+/* Layout: karta hry Paintball; hlavička, vlevo tělocvična s pevnostmi a animací, vpravo pomůcky, pod tím pravidla, jak vyhrát a tipy */
+:root{
+  --bg:#f6f4ef; --paper:#ffffff; --ink:#1d2329; --muted:#5d6670; --line:#dcd6cb;
+  --floor:#efd9b0; --floorline:#b4874c; --court:#c8743a;
+  --red:#d2423a; --blue:#2c69c9; --mat:#7f9bb5; --box:#a86a3d; --gold:#d99a00; --noodle:#2f9e63; --ball:#f2d22e; --ballstroke:#9b8410;
+  --accent:#2c69c9;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Source Sans 3","Segoe UI",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#15191d; --paper:#1d2227; --ink:#eef0f2; --muted:#a3acb6; --line:#323940;
+  --floor:#4a3a26; --floorline:#c99a5c; --court:#d38a4f;
+  --red:#ef6a60; --blue:#5b92ee; --mat:#6d88a3; --box:#b97a4c; --gold:#f2b632; --noodle:#4cc483; --ball:#f5dc4a; --ballstroke:#f5dc4a;
+  --accent:#5b92ee; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#15191d; --paper:#1d2227; --ink:#eef0f2; --muted:#a3acb6; --line:#323940;
+  --floor:#4a3a26; --floorline:#c99a5c; --court:#d38a4f;
+  --red:#ef6a60; --blue:#5b92ee; --mat:#6d88a3; --box:#b97a4c; --gold:#f2b632; --noodle:#4cc483; --ball:#f5dc4a; --ballstroke:#f5dc4a;
+  --accent:#5b92ee; color-scheme:dark }
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
+.wrap{max-width:1080px;margin:0 auto;padding-block:28px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:24px}
+header{display:grid;gap:10px}
+.eyebrow{font-family:var(--display);font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-size:.9rem}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(2.6rem,7vw,4.2rem);line-height:.95;margin:0;text-wrap:balance}
+.lead{margin:0;max-width:62ch;color:var(--muted);font-size:1.08rem}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.chip{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:3px 12px;font-size:.92rem}
+.chip b{font-weight:700}
+.grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:18px;min-width:0}
+h2{font-family:var(--display);font-weight:700;font-size:1.55rem;letter-spacing:.02em;margin:0 0 10px;text-transform:uppercase}
+h3{font-family:var(--display);font-weight:700;font-size:1.2rem;margin:0 0 6px}
+.court-box{overflow-x:auto}
+svg.court{width:100%;height:auto;display:block;min-width:300px}
+.cap{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;align-items:baseline;margin-top:12px;min-height:3.4em}
+.cap .n{font-family:var(--display);font-weight:700;font-size:1.3rem;color:var(--accent);font-variant-numeric:tabular-nums}
+.cap .t{font-weight:700}
+.cap .d{grid-column:2;color:var(--muted)}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
+button{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:6px 14px;cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.dots{display:flex;gap:6px;margin-left:auto}
+.dot{width:12px;height:12px;border-radius:50%;padding:0;border:2px solid var(--muted);background:transparent}
+.dot[aria-current="true"]{background:var(--accent);border-color:var(--accent)}
+.note{font-size:.88rem;color:var(--muted);margin:8px 0 0}
+ul.clean{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.item{display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;align-items:start}
+.item svg{width:34px;height:34px}
+.item b{display:block}
+.item span{color:var(--muted)}
+.rules{display:grid;gap:10px;margin:0;padding-left:1.3em}
+.rules li::marker{font-family:var(--display);font-weight:700;color:var(--accent)}
+.vars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:640px){.vars{grid-template-columns:minmax(0,1fr)}}
+.var{border:1px solid var(--line);border-radius:10px;padding:14px;background:var(--paper)}
+.tag{display:inline-block;font-family:var(--display);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:.85rem;padding:1px 8px;border-radius:4px;background:var(--gold);color:#1d2329;margin-bottom:6px}
+.var p{margin:0}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
+@media (max-width:640px){.two{grid-template-columns:minmax(0,1fr)}}
+.two ul{margin:0;padding-left:1.1em;display:grid;gap:6px}
+
+.steps-print{display:none}
+@media print{
+ @page{size:A4;margin:12mm}
+ body{font-size:10.5pt;line-height:1.4;background:#fff}
+ .wrap{padding:0;gap:14px;max-width:none}
+ .controls,.cap{display:none!important}
+ .steps-print{display:block;margin:10px 0 0;padding-left:1.3em;font-size:10.5pt}
+ .panel,.var{break-inside:avoid}
+ h1{font-size:30pt}
+ .panel{padding:10px 14px}
+ ul.clean,.rules,.two ul{gap:3px}
+ .item svg{width:24px;height:24px}
+ .item{grid-template-columns:26px minmax(0,1fr)}
+ h2{font-size:15pt;margin-bottom:6px}
+ .lead{font-size:11pt}
+ svg.court{max-width:135mm;margin:0 auto}
+ .steps-print{font-size:10pt}
+ .two{gap:14px}
+ aside ul.clean{grid-template-columns:1fr 1fr;column-gap:16px}
+ .wrap{gap:10px}
+ .var{padding:10px}
+ .grid{grid-template-columns:minmax(0,1fr)!important;gap:10px}
+ svg.court{max-width:120mm}
+ .lead{max-width:none}
+ h2{break-after:avoid}
+}
+</style>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Hlavní část · tělesná výchova</div>
+    <h1>Paintball</h1>
+    <p class="lead">Dva týmy proti sobě na celou tělocvičnu. Každý má pevnost a v ní klobouček. Kdo je trefený, lehne si a spoluhráči ho musí odtáhnout na oživovací stanici. Vyhrává tým, který donese klobouček soupeře do své pevnosti.</p>
+    <div class="chips">
+      <span class="chip"><b>Hráči:</b> 2 týmy</span>
+      <span class="chip"><b>Prostor:</b> celá tělocvična</span>
+      <span class="chip"><b>Délka:</b> 30 až 40 minut i se stavěním pevností</span>
+      <span class="chip"><b>Rozvíjí:</b> házení, uhýbání, spolupráci, taktiku, sílu</span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <section class="panel" aria-labelledby="h-schema">
+      <h2 id="h-schema">Jak se hraje</h2>
+      <div class="court-box">
+        <svg class="court" id="court" viewBox="0 0 600 340" role="img" aria-label="Schéma tělocvičny s pevnostmi, kloboučky a tatami dvou týmů"></svg>
+      </div>
+      <div class="cap" aria-live="polite">
+        <span class="n" id="capN">1/8</span><span class="t" id="capT"></span>
+        <span class="d" id="capD"></span>
+      </div>
+      <div class="controls">
+        <button class="primary" id="play" type="button">Přehrát</button>
+        <button id="prev" type="button" aria-label="Předchozí krok">◀</button>
+        <button id="next" type="button" aria-label="Další krok">▶</button>
+        <div class="dots" id="dots"></div>
+      </div>
+      <ol class="steps-print" id="stepsPrint"></ol>
+      <p class="note">Ve schématu jsou jen 4 hráči na tým a jen pár míčků. Rozmístění tatami je jen příklad, každý tým si je rozmístí po svém.</p>
+    </section>
+
+    <aside class="panel" aria-labelledby="h-pom">
+      <h2 id="h-pom">Pomůcky</h2>
+      <ul class="clean">
+        <li class="item"><svg viewBox="0 0 34 34" aria-hidden="true"><circle cx="11" cy="12" r="6" fill="var(--ball)" stroke="var(--ballstroke)" stroke-width="1.5"/><circle cx="23" cy="14" r="6" fill="var(--ball)" stroke="var(--ballstroke)" stroke-width="1.5"/><circle cx="16" cy="24" r="6" fill="var(--ball)" stroke="var(--ballstroke)" stroke-width="1.5"/></svg><div><b>Žluté míčky</b><span>Asi 8 pro každý tým, klidně 10.</span></div></li>
+        <li class="item"><svg viewBox="0 0 34 34" aria-hidden="true"><rect x="13" y="3" width="9" height="28" rx="2" fill="var(--mat)"/><rect x="24" y="5" width="7" height="7" fill="var(--box)"/><rect x="24" y="22" width="7" height="7" fill="var(--box)"/></svg><div><b>Pevnost</b><span>Pro každý tým velká žíněnka (duchna) a dvě bedny na konci tělocvičny.</span></div></li>
+        <li class="item"><svg viewBox="0 0 34 34" aria-hidden="true"><path d="M5 23 h24 v3 h-24 z M10 23 c0 -9 3 -13 7 -13 s7 4 7 13 z" fill="var(--red)" stroke="var(--ink)" stroke-width="1.2"/></svg><div><b>Klobouček</b><span>Jeden pro každý tým, leží v jeho pevnosti.</span></div></li>
+        <li class="item"><svg viewBox="0 0 34 34" aria-hidden="true"><rect x="3" y="9" width="13" height="13" fill="var(--red)" opacity=".6"/><rect x="18" y="9" width="13" height="13" fill="var(--blue)" opacity=".6"/></svg><div><b>Tatami</b><span>Oživovací stanice, 3 pro každý tým. Jeden tým je otočí na červenou stranu, druhý na modrou.</span></div></li>
+        <li class="item"><svg viewBox="0 0 34 34" aria-hidden="true"><circle cx="11" cy="17" r="8" fill="var(--red)"/><circle cx="23" cy="17" r="8" fill="var(--blue)"/></svg><div><b>Rozlišováky</b><span>Dvě barvy, ať je jasné, kdo hraje za koho.</span></div></li>
+      </ul>
+      <h3 style="margin-top:18px">Taktická porada</h3>
+      <p style="margin:0;color:var(--muted)">Před hrou se každý tým domluví, jak bude hrát a kam si rozmístí svoje tři tatami. Rozmístění je úplně na týmu: tatami smí být kdekoli v tělocvičně, i na polovině soupeře, klidně až u jeho pevnosti.</p>
+    </aside>
+  </div>
+
+  <section class="panel" aria-labelledby="h-prav">
+    <h2 id="h-prav">Pravidla</h2>
+    <ol class="rules">
+      <li>Hrají dva týmy proti sobě po celé tělocvičně. Každý tým má na konci tělocvičny pevnost a v ní svůj klobouček.</li>
+      <li>S míčem se může běhat a míčem v ruce se dá střela odrazit.</li>
+      <li>Vybít se dá jen přímou střelou vzduchem, odraz od země neplatí.</li>
+      <li>Každý tým má tři tatami a rozmístí si je úplně libovolně po celé tělocvičně, i na polovinu soupeře. Domluví se na tom na taktické poradě.</li>
+      <li>Kdo je trefený, lehne si na zem. Spoluhráči ho musí odtáhnout na některé ze svých tatami. Tam hned vstane a hraje dál.</li>
+      <li>Sám se oživit nemůže, ani když leží kousek od tatami a dosáhne na něj. Vždycky mu musí pomoct spoluhráč.</li>
+      <li>Zásah do hlavy neplatí. Kdo trefí soupeře do hlavy, lehne si sám.</li>
+      <li>Kdo je trefený s kloboučkem soupeře, pustí ho na místě. Sebrat ho pak může kdokoli.</li>
+    </ol>
+  </section>
+
+  <section class="panel" aria-labelledby="h-win">
+    <h2 id="h-win">Jak vyhrát</h2>
+    <p style="margin:0">Vyhrává tým, který vezme klobouček soupeře a donese ho k sobě do pevnosti.</p>
+  </section>
+
+  <section class="panel two" aria-label="Pozor a tipy">
+    <div><h3>Na co dát pozor</h3><ul><li>Jen měkké míčky.</li><li>Odtahovat opatrně, nejlépe za ruce, ne za oblečení.</li><li>Rozhodčí z necvičících hlídá zásahy do hlavy a odrazy od země.</li></ul></div>
+    <div><h3>Tipy do hodiny</h3><ul><li>Na taktickou poradu dát týmům minutu nebo dvě.</li><li>Pevnosti postavit stejně velké, ať mají oba týmy stejné podmínky.</li><li>Když míčků není dost, stačí 8 na tým.</li></ul></div>
+  </section>
+</div>
+
+<script>
+(function(){
+const NS="http://www.w3.org/2000/svg";
+const svg=document.getElementById('court');
+const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+function el(t,a,p){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);(p||svg).appendChild(e);return e;}
+const FONT='Source Sans 3, Arial, sans-serif';
+el('rect',{x:0,y:0,width:600,height:340,rx:12,fill:'var(--floor)'});
+el('rect',{x:16,y:16,width:568,height:308,fill:'none',stroke:'var(--court)','stroke-width':3});
+el('line',{x1:300,y1:16,x2:300,y2:324,stroke:'var(--court)','stroke-width':2,opacity:.5});
+// pevnosti: žíněnka + dvě bedny
+function fort(dx,flip){const mx=flip?514:70,bx=flip?486:96;
+ el('rect',{x:mx,y:108,width:16,height:124,rx:4,fill:'var(--mat)'});
+ el('rect',{x:bx,y:112,width:18,height:18,rx:2,fill:'var(--box)'});
+ el('rect',{x:bx,y:210,width:18,height:18,rx:2,fill:'var(--box)'});}
+fort(0,false);fort(0,true);
+const lab=(x,y,t,c)=>{const e=el('text',{x,y,'text-anchor':'middle','font-size':12,'font-family':FONT,'font-weight':700,fill:c||'var(--muted)'});e.textContent=t;};
+lab(62,100,'pevnost','var(--red)');lab(538,100,'pevnost','var(--blue)');
+// tatami
+[[150,272,'red'],[246,30,'red'],[426,30,'blue'],[418,272,'blue'],[322,272,'blue'],[142,30,'red']].forEach(([x,y,c],k)=>{if(k===2)c='red';if(k===5)c='blue';el('rect',{x,y,width:32,height:32,fill:`var(--${c})`,opacity:.45,stroke:`var(--${c})`,'stroke-width':2});});
+const fx=el('g',{});const pl=el('g',{});const it=el('g',{});const top=el('g',{});
+
+const S0={
+ T:{x:230,y:170,c:'red',me:1}, R2:{x:205,y:110,c:'red'}, R3:{x:190,y:235,c:'red'}, R4:{x:120,y:170,c:'red'},
+ B1:{x:370,y:120,c:'blue'}, B2:{x:395,y:228,c:'blue'}, B3:{x:470,y:172,c:'blue'}, B4:{x:520,y:258,c:'blue'},
+ hR:{x:44,y:170,k:'hat',c:'red'}, hB:{x:556,y:170,k:'hat',c:'blue'},
+ mT:{x:241,y:160,k:'ball'}, m1:{x:359,y:128,k:'ball'}, m2:{x:384,y:220,k:'ball'}, m3:{x:459,y:180,k:'ball'}, m4:{x:508,y:250,k:'ball'}
+};
+const scenes=[
+ {t:'Rozestavení',d:'Každý tým má na konci tělocvičny pevnost z velké žíněnky a dvou beden a v ní klobouček. Každý tým si na taktické poradě rozmístil svoje tři tatami, kam chtěl. Tady je mají třeba u sebe, uprostřed a u soupeře. Sledujeme Toma.',ph:[]},
+ {t:'Odražení střely',d:'Modrý hází na Toma. Tom střelu odrazí míčkem, který drží v ruce. Zásah neplatí.',ph:[{m:{m1:{x:244,y:160}},set:{m1:{x:262,y:118}}}]},
+ {t:'Zásah',d:'Jiný modrý trefí Toma přímou střelou vzduchem. Tom si lehne na zem.',ph:[{m:{m2:{x:232,y:172}},set:{T:{down:1},m2:{x:252,y:198},mT:{x:250,y:150}}}]},
+ {t:'Odtažení na tatami',d:'Spoluhráč přiběhne a odtáhne Toma na červené tatami. Tam Tom hned vstane a hraje dál. Sám se oživit nemůže.',ph:[{m:{R3:{x:214,y:190}}},{m:{R3:{x:184,y:270},T:{x:168,y:288}},set:{T:{down:0}}}]},
+ {t:'Zásah do hlavy neplatí',d:'Modrý trefí červeného hráče do hlavy. Lehnout si musí ten, kdo házel.',ph:[{m:{m3:{x:206,y:100}},set:{B3:{down:1},m3:{x:226,y:84}}}]},
+ {t:'Pro klobouček',d:'Tom doběhne za modrou pevnost a vezme klobouček soupeře. Pevnost oběhne zezadu a vrací se druhou stranou.',ph:[{m:{T:{x:566,y:292}}},{m:{T:{x:564,y:194}}},{m:{T:{x:566,y:74},hB:{x:566,y:88}}},{m:{T:{x:440,y:96},hB:{x:452,y:106}}}]},
+ {t:'Klobouček na zemi',d:'Modrý trefí Toma. Tom si lehne a klobouček pustí na místě. Sebrat ho může kdokoli.',ph:[{m:{B4:{x:462,y:252},m4:{x:452,y:244}}},{m:{m4:{x:442,y:98}},set:{T:{down:1},hB:{x:452,y:132},m4:{x:420,y:140}}}]},
+ {t:'Klobouček v pevnosti',d:'Červený spoluhráč klobouček sebere a donese ho do své pevnosti. Červení vyhráli.',noArrow:0,ph:[{m:{R2:{x:446,y:140}}},{m:{R2:{x:110,y:296},hB:{x:122,y:300}}},{m:{R2:{x:44,y:262},hB:{x:44,y:244}}},{m:{R2:{x:46,y:206},hB:{x:44,y:194}},set:{win:1}}]}
+];
+document.getElementById('stepsPrint').innerHTML=scenes.map(s=>'<li><b>'+s.t+':</b> '+s.d+'</li>').join('');
+const clone=o=>JSON.parse(JSON.stringify(o));
+function apply(st,o){if(!o)return;for(const id in o){if(id==='win')st[id]=o[id];else Object.assign(st[id],o[id]);}}
+function runPh(st,ph){apply(st,ph.pre);apply(st,ph.m);apply(st,ph.set);}
+const starts=[];let cur=Object.assign(clone(S0),{win:0});
+scenes.forEach(sc=>{starts.push(clone(cur));sc.ph.forEach(ph=>runPh(cur,ph));});
+function endState(k){const st=clone(starts[k]);scenes[k].ph.forEach(ph=>runPh(st,ph));return st;}
+const nodes={};
+for(const id in S0){const s=S0[id];
+ if(s.k==='ball'){const g=el('g',{},it);nodes[id]=g;el('circle',{r:6,fill:'var(--ball)',stroke:'var(--ballstroke)','stroke-width':1.5},g);continue;}
+ if(s.k==='hat'){const g=el('g',{},it);nodes[id]=g;el('path',{d:'M-11,5 h22 v3 h-22 z M-6,5 c0,-9 2,-12 6,-12 s6,3 6,12 z',fill:`var(--${s.c})`,stroke:'#1d2329','stroke-width':1.3},g);continue;}
+ const g=el('g',{},pl);nodes[id]=g;
+ g._b=el('ellipse',{rx:11,ry:11,fill:`var(--${s.c})`,stroke:'#fff','stroke-width':2},g);
+ g._x=el('path',{d:'M-5,-5 L5,5 M5,-5 L-5,5',stroke:'#fff','stroke-width':2.5,'stroke-linecap':'round'},g);
+ if(s.me){const t=el('g',{},top);g._lab=t;const tx=el('text',{y:-16,'text-anchor':'middle','font-size':13,'font-weight':700,'font-family':FONT,fill:'#fff',stroke:'#1d2329','stroke-width':3.5,'paint-order':'stroke'},t);tx.textContent='Tom';}
+}
+const win=el('text',{x:300,y:44,'text-anchor':'middle','font-size':26,'font-weight':700,'font-family':'Barlow Condensed, Arial Narrow, sans-serif',fill:'var(--red)',stroke:'#fff','stroke-width':3,'paint-order':'stroke'},top);win.textContent='ČERVENÍ VYHRÁLI';
+function draw(st){for(const id in S0){const s=st[id],g=nodes[id];const tr=`translate(${s.x},${s.y})`;g.setAttribute('transform',tr);
+ if(g._b){const d=!!s.down;g._b.setAttribute('rx',d?17:11);g._b.setAttribute('ry',d?8:11);g._b.setAttribute('opacity',d?.6:1);g._x.setAttribute('opacity',d?1:0);if(g._lab)g._lab.setAttribute('transform',tr);}}
+ win.setAttribute('opacity',st.win?1:0);}
+function arrowsFor(k){fx.innerHTML='';const sc=scenes[k];if(sc.noArrow)return;const st=clone(starts[k]);
+ sc.ph.forEach(ph=>{apply(st,ph.pre);for(const id in ph.m){if(S0[id].k==='hat')continue;const a=st[id],b=ph.m[id];const col=S0[id].k==='ball'?'var(--ballstroke)':`var(--${S0[id].c})`;el('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:col,'stroke-width':2.5,'stroke-dasharray':'7 6','stroke-linecap':'round',opacity:.75},fx);}apply(st,ph.m);apply(st,ph.set);});}
+let i=0,playing=false,raf=0,tm=0;const DUR=1100,HOLD=1700;
+const capN=document.getElementById('capN'),capT=document.getElementById('capT'),capD=document.getElementById('capD'),dots=document.getElementById('dots'),play=document.getElementById('play');
+scenes.forEach((s,k)=>{const b=document.createElement('button');b.className='dot';b.type='button';b.setAttribute('aria-label','Krok '+(k+1)+': '+s.t);b.onclick=()=>{stop();show(k,true)};dots.appendChild(b);});
+function caption(k){capN.textContent=(k+1)+'/'+scenes.length;capT.textContent=scenes[k].t;capD.textContent=scenes[k].d;[...dots.children].forEach((d,j)=>d.setAttribute('aria-current',j===k?'true':'false'));}
+function show(k,instant){i=k;caption(k);arrowsFor(k);if(instant||reduce){draw(endState(k));if(playing)tm=setTimeout(nextAuto,HOLD+800);return;}animate(k);}
+function nextAuto(){if(!playing)return;if(i<scenes.length-1)show(i+1,false);else stop();}
+function animate(k){cancelAnimationFrame(raf);clearTimeout(tm);const sc=scenes[k];const st=clone(starts[k]);let j=0;
+ const runPhase=()=>{if(j>=sc.ph.length){draw(st);if(playing)tm=setTimeout(nextAuto,HOLD);return;}
+  const ph=sc.ph[j];apply(st,ph.pre);draw(st);const from=clone(st);const ts=performance.now();
+  const step=now=>{const p=Math.min(1,(now-ts)/DUR),e=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;const s2=clone(from);
+   for(const id in ph.m){s2[id].x=from[id].x+(ph.m[id].x-from[id].x)*e;s2[id].y=from[id].y+(ph.m[id].y-from[id].y)*e;}
+   draw(s2);if(p<1)raf=requestAnimationFrame(step);else{apply(st,ph.m);apply(st,ph.set);draw(st);j++;tm=setTimeout(runPhase,350);}};
+  raf=requestAnimationFrame(step);};
+ runPhase();}
+function stop(){playing=false;cancelAnimationFrame(raf);clearTimeout(tm);play.textContent='Přehrát';}
+play.onclick=()=>{if(playing){stop();return;}playing=true;play.textContent='Pauza';if(i>=scenes.length-1)i=0;show(i,false);};
+document.getElementById('next').onclick=()=>{stop();show(Math.min(scenes.length-1,i+1),false);};
+document.getElementById('prev').onclick=()=>{stop();show(Math.max(0,i-1),true);};
+draw(starts[0]);show(0,true);
+})();
+</script>
+
+</body>
+</html>
