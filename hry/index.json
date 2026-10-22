@@ -1,0 +1,30 @@
+{
+  "popis": "Seznam karet her a celých hodin pro knihovnu ve Cvičce. Při každé nové kartě přidat záznam.",
+  "karty": [
+    {
+      "slug": "bludistak",
+      "nazev": "Bludišťák",
+      "typ": "hra",
+      "okruh": "Pohybové hry",
+      "popis": "Týmová vybíjená s měkkými míčky, kde trefený hráč leží na zemi, dokud ho spoluhráč neoživí nudlí. Vyhrává tým, který donese zlatého bludišťáka do základny soupeře.",
+      "hraci": "2 týmy, např. 6 na 6",
+      "prostor": "tělocvična",
+      "rozviji": "házení, uhýbání, spolupráci, taktiku",
+      "pomucky": "zlatý bludišťák, nudle, měkké míčky, základny (obruč nebo žíněnka), rozlišováky",
+      "url": "hry/bludistak.html"
+    },
+    {
+      "slug": "tri-stanoviste",
+      "nazev": "Tři stanoviště",
+      "typ": "hodina",
+      "okruh": "Pohybové hry",
+      "popis": "Celá hodina běží jako kolotoč: kdo je vybitý, jde na ocásky, kdo přijde o ocásek, jde cvičit, a po splněném úkolu se vrací na vybíjenou.",
+      "delka": "celá hodina",
+      "prostor": "celá tělocvična rozdělená na 3 části",
+      "rozviji": "házení a chytání, rychlost reakce, sílu, pořádek",
+      "pomucky": "ocásky pro každého, 1 až 2 měkké míče, lavičky, žíněnky, švihadla",
+      "zapis": "Uplatní házení a chytání ve hře, rychle reaguje při honičce a posiluje celé tělo.",
+      "url": "hry/tri-stanoviste.html"
+    }
+  ]
+}

@@ -497,6 +497,34 @@ následujícího křestního jména. Příjmení, které v appce není jedinečn
 Samotná křestní jména se nenahrazují. Otázka se zdravotním slovem (`ZDRAVI_SLOVA`) se
 před odesláním potvrzuje. V bublině se otázka zobrazuje s dekódovanými jmény.
 
+## v0.14.0: knihovna příprav a Rekordník
+
+**Knihovna** (nová záložka): karty her a celých hodin ze složky `hry/`. Seznam je v
+`hry/index.json`, **při každé nové kartě do něj přidat záznam** (`slug`, `nazev`, `typ` hra
+nebo hodina, `popis`, `hraci`/`delka`, `prostor`, `rozviji`, `pomucky`, u hodiny `zapis`, `url`).
+Service worker ho bere nejdřív ze sítě, offline je poslední kopie v `meta.knihovnaKopie`.
+Hledání bez diakritiky, filtr Hry / Celé hodiny, u karty kdy byla naposledy v plánu.
+„Do hodiny…“ nabídne nejbližší otevřené hodiny, v hodině vede k vložení odkaz „Z knihovny“
+u plánu. Vložení přidá řádek „Hra: …“ do plánu a u karty hodiny předvyplní prázdný zápis do ŠOL.
+
+**Rekordník.** Cvička se přihlásí Karlovým osobním kódem a heslem kolektivu (Nastavení,
+karta Rekordník). Kód, heslo a stažená data Rekordníku jsou ve vlastní IndexedDB
+`cvicka-rekordnik`, ne v `cvicka`, takže nejsou v záloze ani na serveru Cvičky.
+Žáci se párují v zařízení podle třídy (VI. A = 6.A), příjmení a jména se seznamem Rekordníku.
+Výkon z disciplín Rekordníku dostane id `v_` + `hid("cvicka|" + id zápisu)`, opakované
+odeslání tedy nic nezdvojí, úprava hodnoty ho přepíše a smazání ve Cvičce ho smaže
+i v Rekordníku (jen vlastní). Výkon se stejným žákem, disciplínou, dnem a hodnotou,
+který už v Rekordníku je, se neposílá. Podezřelé hodnoty (mimo rozsah, o 15 % za rekordem)
+čekají v Nastavení na „Je to správně“ (`pozn.rkOk`), 1000 m pod 5. ročníkem a 500 m nad 4.
+se neposílají. Při prvním připojení se dosavadní výkony posílají až po kontrole
+a potvrzení, pak automaticky 15 s po zápisu a po zavření měření.
+
+**Disciplíny** jsou seřazené podle Rekordníku a nástěnky (prvních `RK_POCET`), staré názvy
+se při startu jednou přejmenují (`Sprint 60 m` na `60 m`, `Běh 1000 m` na `1000 m`,
+`meta.discVerze`). Měření ukazuje školní rekord ročníku a značku „školní rekord“.
+Karta žáka ukazuje jeho nejlepší výkony z Rekordníku. Časy přes minutu jdou psát
+jako `3:25,4`, `cisloZ()` je převede na sekundy.
+
 ## Co přijde dál
 
 F3 je hotová.

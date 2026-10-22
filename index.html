@@ -80,7 +80,7 @@ main { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; padd
 /* tabbar */
 nav {
   flex: 0 0 auto; background: var(--surface); border-top: 1px solid var(--line);
-  display: grid; grid-template-columns: repeat(5, 1fr); padding-bottom: var(--safe-b);
+  display: grid; grid-template-columns: repeat(6, 1fr); padding-bottom: var(--safe-b);
 }
 nav button {
   appearance: none; border: 0; background: none; cursor: pointer; color: var(--ink-3);
@@ -412,6 +412,31 @@ select {
 .mbd.horsi { background: var(--surface-3); color: var(--ink-2); }
 .mbd.rek { background: var(--chalk-soft); color: var(--chalk); }
 .mbd.mimo { background: var(--crit-soft); color: var(--crit); }
+.mbd.skol { background: var(--chalk); color: var(--surface); }
+input[type="password"], input[type="search"] {
+  font-size: 16px; background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 8px; padding: 9px 10px; width: 100%; font-family: inherit; color: inherit;
+}
+/* knihovna */
+.kn-popis { font-size: 14px; color: var(--ink-2); line-height: 1.45; margin: 0 0 8px; }
+.kn-meta { display: grid; gap: 3px; font-size: 13px; color: var(--ink-2); }
+.kn-meta b { font-weight: 600; color: var(--ink); }
+.kn-nap { font-size: 12px; color: var(--ink-3); margin-top: 6px; }
+.kn-vyber { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 11px; align-items: center; }
+.kn-vyber .eyebrow { width: 100%; }
+a.btn { display: block; text-align: center; text-decoration: none; }
+.kn-cil { display: flex; align-items: center; gap: 10px; padding-top: 12px; font-size: 13.5px; }
+.kn-cil span { flex: 1 1 auto; min-width: 0; }
+/* rekordnik */
+.rk-info { font-size: 13.5px; color: var(--ink-2); margin: 0; }
+.rk-r { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; font-size: 13.5px; padding: 7px 0; border-top: 1px solid var(--line); }
+.rk-r:nth-child(2) { border-top: 0; }
+.rk-r b { font-family: var(--fm); font-variant-numeric: tabular-nums; }
+.rk-r .kn-nap { grid-column: 1 / -1; margin-top: 0; }
+#rkPanel details { font-size: 13px; margin-top: 4px; }
+#rkPanel .sec { margin-top: 18px; }
+#rkPanel .sec > .eyebrow { display: block; margin-bottom: 4px; }
+#rkPanel summary { cursor: pointer; color: var(--accent); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -506,7 +531,7 @@ select {
     <div class="card">
       <div class="card-h"><h3>Náplň hodiny</h3><span class="eyebrow">jen pro tebe</span></div>
       <div class="card-b">
-        <div class="field"><label for="fPlan">Plán (co chci dělat)</label><textarea id="fPlan" rows="5" placeholder="Úvod: … Hlavní část: …"></textarea></div>
+        <div class="field"><div class="field-h"><label for="fPlan">Plán (co chci dělat)</label><button class="linkbtn" id="bKnih" type="button">Z knihovny</button></div><textarea id="fPlan" rows="5" placeholder="Úvod: … Hlavní část: …"></textarea></div>
         <div class="field"><label for="fNapln">Co se dělalo</label><textarea id="fNapln" rows="3" placeholder="Prázdné znamená, že proběhlo podle plánu"></textarea></div>
         <div class="field"><div class="field-h"><label for="fZapis">Zápis do Školy OnLine</label><button class="linkbtn" id="bNavrh" type="button" aria-expanded="false">Navrhnout</button></div><textarea id="fZapis" rows="3" placeholder="Jedna věta v jednotném čísle"></textarea></div>
         <div class="navrhy" id="zapNavrhy" hidden></div>
@@ -585,6 +610,17 @@ select {
     </div>
   </div></section>
 
+  <!-- KNIHOVNA -->
+  <section class="screen" id="s-knihovna"><div class="wrap">
+    <div class="card" id="knCil" hidden><div class="card-b kn-cil"><span id="knCilTxt"></span><button class="linkbtn" id="knCilZrus" type="button">Zrušit</button></div></div>
+    <div class="card"><div class="card-b" style="padding-top:12px">
+      <input type="search" id="knQ" placeholder="Hledat hru, pomůcku nebo dovednost" autocomplete="off" aria-label="Hledat v knihovně">
+      <div class="chips" id="knTypy" style="margin-top:9px"></div>
+    </div></div>
+    <div id="knList" style="margin-top:11px"></div>
+    <div class="hint" id="knHint"></div>
+  </div></section>
+
   <section class="screen" id="s-nastaveni"><div class="wrap">
     <div class="card">
       <div class="card-h"><h3>Data</h3><span class="eyebrow" id="statLine"></span></div>
@@ -620,6 +656,19 @@ select {
         <div class="hint" id="syncHint"></div>
       </div>
     </div>
+    <div class="card" id="rkCard">
+      <div class="card-h"><h3>Rekordník</h3><span class="eyebrow" id="rkStav"></span></div>
+      <div class="card-b">
+        <div id="rkPrihlaseni">
+          <div class="field"><label for="fRkKod">Osobní kód z Rekordníku</label><input type="password" id="fRkKod" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off"></div>
+          <div class="field"><label for="fRkHeslo">Heslo kolektivu</label><input type="password" id="fRkHeslo" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off"></div>
+          <div class="btns"><button class="btn" id="bRkPripoj" type="button">Připojit Rekordník</button></div>
+          <div class="hint">Výkony z disciplín Rekordníku se pak zapisují i tam, pod tvým jménem. Kód a heslo zůstávají jen v tomhle zařízení.</div>
+        </div>
+        <div class="err" id="rkMsg"></div>
+        <div id="rkPanel"></div>
+      </div>
+    </div>
     <div class="card">
       <div class="card-h"><h3>Záloha</h3></div>
       <div class="card-b">
@@ -636,6 +685,7 @@ select {
       <div class="card-b" style="font-size:13.5px;color:var(--ink-2)">
         Cvička. Data leží v tomhle prohlížeči (IndexedDB). Na server jdou jen kódy, čísla a texty
         hodin, nikdy jméno žáka. Poznámky o chování se odesílají jen zašifrované heslem.
+        Připojený Rekordník dostává výkony z jeho disciplín, jména tam jsou jen zašifrovaná heslem kolektivu.
       </div>
     </div>
   </div></section>
@@ -646,6 +696,7 @@ select {
   <button role="tab" data-tab="tyden" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M9 4v17M15 4v17"/></svg>Týden</button>
   <button role="tab" data-tab="hodina" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>Hodina</button>
   <button role="tab" data-tab="prehled" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Přehled</button>
+  <button role="tab" data-tab="knihovna" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/><path d="M9 8h7M9 12h5"/></svg>Knihovna</button>
   <button role="tab" data-tab="nastaveni" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>Nastavení</button>
 </nav>
 
@@ -680,6 +731,7 @@ select {
         <div class="field"><label for="merJed">Jednotka</label><select id="merJed"></select></div>
       </div>
       <div class="field" id="merJineF" hidden><label for="merJine">Název disciplíny</label><input type="text" id="merJine" placeholder="Hod obouruč"></div>
+      <div class="hint" id="merRk" hidden></div>
       <div class="sec">
         <div class="eyebrow" id="merPocet">Žáci</div>
         <div id="merList"></div>
@@ -725,6 +777,7 @@ select {
         <div class="eyebrow" id="zakPocet">Zápisy</div>
         <div id="zakList"></div>
       </div>
+      <div class="sec" id="zakRk" hidden></div>
     </div>
   </div>
 </div>
@@ -735,18 +788,20 @@ select {
 
 <script>
 "use strict";
-const APP = { ver: "0.13.0", db: null, sync: null, klic: null };
+const APP = { ver: "0.14.0", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
 const POZN_TYPY = { vykon: "Výkon", akce: "Reprezentace", chovani: "Chování", omluva: "Omluva", pozn: "Poznámka" };
+// Prvnich RK_POCET disciplin je stejnych jako v Rekordniku a na nastence, ty se tam i posilaji.
 const DISCIPLINY = [
-  ["Skok daleký", "cm"], ["Skok z místa", "cm"], ["Trojskok z místa", "cm"], ["Sprint 60 m", "s"],
-  ["Sprint 50 m", "s"], ["Běh 1000 m", "min"], ["Vytrvalostní běh 12 min", "m"], ["Hod míčkem", "m"],
-  ["Hod medicinbalem", "cm"], ["Člunkový běh 4x10 m", "s"], ["Shyby", "počet"], ["Kliky", "počet"],
-  ["Leh sedy za minutu", "počet"], ["Švihadlo za minutu", "počet"], ["Přeskok přes švihadlo", "počet"],
-  ["Hluboký předklon", "cm"], ["Výskok z místa", "cm"]
+  ["60 m", "s"], ["200 m", "s"], ["400 m", "min"], ["500 m", "min"], ["1000 m", "min"],
+  ["Skok z místa", "cm"], ["Skok daleký", "cm"], ["Skok vysoký", "cm"], ["Hod raketkou", "m"], ["Vrh koulí", "m"], ["Šplh", "s"],
+  ["Trojskok z místa", "cm"], ["Sprint 50 m", "s"], ["Vytrvalostní běh 12 min", "m"], ["Hod medicinbalem", "cm"],
+  ["Člunkový běh 4x10 m", "s"], ["Shyby", "počet"], ["Kliky", "počet"], ["Leh sedy za minutu", "počet"],
+  ["Švihadlo za minutu", "počet"], ["Přeskok přes švihadlo", "počet"], ["Hluboký předklon", "cm"], ["Výskok z místa", "cm"]
 ];
+const RK_POCET = 11;
 const JEDNOTKY = ["cm", "m", "s", "min", "počet", "body"];
 const POPIS = { ok: "ok", X: "X", N: "N", U: "Ú" };
 const POPIS_STAV = { ok: "cvičí", X: "nepřítomen", N: "necvičí", U: "bez úboru" };
@@ -927,6 +982,7 @@ function stojiZaSync(store, z) {
 }
 
 function dbPut(store, val, tiche) {
+  if (store === "pozn" && !tiche && val && val.typ === "vykon" && typeof rkNaplanuj === "function") rkNaplanuj();
   if (jeSync(store) && !tiche && stojiZaSync(store, val)) {
     val.updatedAt = Date.now();
     if (store === "hodiny") val.sync = 1;
@@ -939,6 +995,7 @@ function dbPut(store, val, tiche) {
 }
 
 function dbDel(store, key, tiche) {
+  if (store === "pozn" && !tiche && typeof rkZaradSmazani === "function") rkZaradSmazani(key).then(() => rkNaplanuj()).catch(() => {});
   if (jeSync(store) && !tiche) {
     const t = tx([store, "fronta"], "readwrite");
     t.objectStore(store).delete(key);
@@ -1788,6 +1845,7 @@ async function renderNastaveni() {
   $("#fSyncZap").checked = await metaGet("syncZap", true);
   await renderSyncStav();
   $("#verLine").textContent = "v" + APP.ver;
+  renderRekordnik().catch(() => {});
 }
 
 async function doImport() {
@@ -2930,6 +2988,7 @@ async function renderZak() {
   S.cache.uprava = S.poznUprava ? await dbGet("pozn", S.poznUprava) : null;
   if (S.poznUprava && !S.cache.uprava) S.poznUprava = null;
   renderZakForm();
+  rkKartaZaka(z).catch(() => {});
 
   const vse = (await dbBy("pozn", "zakId", S.zakId)).slice();
   vse.sort((a, b) => (b.datum || "").localeCompare(a.datum || "") || (b.vytvoreno || "").localeCompare(a.vytvoreno || ""));
@@ -3028,7 +3087,9 @@ function renderZakForm() {
     d.addEventListener("change", () => {
       const nalez = DISCIPLINY.find((x) => x[0].toLowerCase() === d.value.trim().toLowerCase());
       if (nalez) j.value = nalez[1];
+      h.setAttribute("inputmode", j.value === "min" ? "text" : "decimal");
     });
+    j.addEventListener("change", () => h.setAttribute("inputmode", j.value === "min" ? "text" : "decimal"));
     const duo = el("div", "duo"); duo.append(h, j);
     sec.append(pole("Disciplína", d, "pDisc"), pole("Hodnota a jednotka", duo, "pHod"));
   } else if (t === "akce") {
@@ -3119,7 +3180,14 @@ async function ulozPozn() {
 
 /* ---------- hromadne mereni ---------- */
 
-const cisloZ = (x) => { const v = parseFloat(String(x == null ? "" : x).replace(",", ".")); return Number.isFinite(v) ? v : null; };
+// Casy nad minutu se pisou jako 3:25,4 a pocitaji se v sekundach.
+const cisloZ = (x) => {
+  const t = String(x == null ? "" : x).trim().replace(",", ".");
+  const m = /^(\d+):(\d{1,2}(?:\.\d+)?)$/.exec(t);
+  if (m) return Number(m[1]) * 60 + Number(m[2]);
+  const v = parseFloat(t);
+  return Number.isFinite(v) ? v : null;
+};
 const normDisc = (x) => String(x || "").replace(/\s+/g, " ").trim().toLowerCase();
 // u casu je lepsi mensi cislo, u delek a poctu vetsi
 const mensiJeLepsi = (jed) => jed === "s" || jed === "min";
@@ -3183,6 +3251,7 @@ function zavriMereni() {
   $("#merSheet").hidden = true;
   document.body.classList.remove("zamek");
   S.mer = null;
+  rkNaplanuj(1500);
 }
 
 // Radky se staveji jednou pri otevreni. Zmena discipliny nebo jednotky uz jen
@@ -3195,7 +3264,10 @@ async function renderMereni() {
   const d = $("#merDisc"); d.innerHTML = "";
   const prazdne = el("option", null, "Vyber disciplínu"); prazdne.value = "";
   d.appendChild(prazdne);
-  DISCIPLINY.forEach(([nazev]) => { const o = el("option", null, nazev); o.value = nazev; d.appendChild(o); });
+  const skRk = el("optgroup"); skRk.label = "Rekordník a nástěnka";
+  const skCv = el("optgroup"); skCv.label = "Jen Cvička";
+  DISCIPLINY.forEach(([nazev], i) => { const o = el("option", null, nazev); o.value = nazev; (i < RK_POCET ? skRk : skCv).appendChild(o); });
+  d.append(skRk, skCv);
   const jina = el("option", null, "Jiná…"); jina.value = "__jina"; d.appendChild(jina);
   const j = $("#merJed"); j.innerHTML = "";
   JEDNOTKY.forEach((u) => { const o = el("option", null, u); o.value = u; j.appendChild(o); });
@@ -3271,6 +3343,7 @@ async function osvezMereni() {
   const disc = merDisciplina();
   const jed = $("#merJed").value || S.mer.jed;
   S.mer.jed = jed;
+  rkMereniHlavicka(disc);
   const vsePozn = await dbAll("pozn");
   if (moje !== merKresba || !S.mer) return;
 
@@ -3286,6 +3359,7 @@ async function osvezMereni() {
     const vstup = radek.querySelector(".mv");
     const psalSe = document.activeElement === vstup;
     vstup.disabled = !disc;
+    vstup.setAttribute("inputmode", jed === "min" ? "text" : "decimal");
     kresliMerRadek(z, radek, vstup, podleZaka.get(z.id) || [], disc, jed, S.mer.datum, !psalSe);
   });
   aktualizujMerPocet();
@@ -3317,7 +3391,8 @@ function kresliMerRadek(z, radek, vstup, poznZaka, disc, jed, datum, naplnitHodn
   }
 
   if (posledni) mp.appendChild(el("span", null, "naposledy " + posledni.hodnota + " " + (posledni.jednotka || "") + " (" + dm(posledni.datum) + ")"));
-  if (rek !== null && (!posledni || cisloZ(posledni.hodnota) !== rek)) mp.appendChild(el("span", null, "rekord " + rek));
+  if (rek !== null && (!posledni || cisloZ(posledni.hodnota) !== rek)) mp.appendChild(el("span", null, "rekord " + fmtHod(rek, jed)));
+  rkZnackaRadku(z, disc, jed, vstup.value, datum, mp);
 
 }
 
@@ -3379,24 +3454,667 @@ async function obnovZnacku(zakId) {
   b.setAttribute("aria-label", "zápisy u žáka: " + n);
 }
 
+/* ---------- knihovna priprav (karty her a hodin z hry/index.json) ---------- */
+// Karty lezi na stejnem webu jako Cvicka (slozka hry/). Seznam se stahuje vzdy ze site,
+// posledni stazena verze se drzi v meta pro offline. Nic se tu neposila na server.
+const KN = { karty: null, chyba: "", q: "", typ: "vse", cil: null, cilBack: null, vyber: null };
+const bezDiak = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+async function nactiKnihovnu(znovu) {
+  if (KN.karty && !znovu) return KN.karty;
+  try {
+    const r = await fetch("hry/index.json", { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json();
+    KN.karty = Array.isArray(j.karty) ? j.karty : [];
+    KN.chyba = "";
+    await metaSet("knihovnaKopie", KN.karty);
+  } catch (e) {
+    KN.karty = (await metaGet("knihovnaKopie", null)) || [];
+    KN.chyba = KN.karty.length ? "Jsi offline, ukazuji naposledy staženou knihovnu." : "Knihovnu se nepodařilo načíst. Zkus to s připojením.";
+  }
+  return KN.karty;
+}
+
+// Kdy se karta naposledy objevila v odučené hodine (plan nebo co se delalo).
+async function knNaposledy() {
+  const hod = await dbAll("hodiny");
+  const dnes = iso(new Date());
+  return (nazev) => {
+    const k = bezDiak(nazev);
+    let nej = null;
+    hod.forEach((h) => {
+      if (h.datum > dnes) return;
+      if (!bezDiak((h.plan || "") + " " + (h.napln || "")).includes(k)) return;
+      if (!nej || h.datum > nej.datum) nej = h;
+    });
+    return nej;
+  };
+}
+
+async function knBudouciHodiny() {
+  const dnes = iso(new Date());
+  const out = [];
+  for (let i = 0; i < 21 && out.length < 8; i++) {
+    const d = addDays(dnes, i);
+    const h = (await dbBy("hodiny", "datum", d)).filter((x) => x.stav !== "uzavrena");
+    h.sort((a, b) => (a.poradi || 0) - (b.poradi || 0));
+    out.push(...h);
+  }
+  return out.slice(0, 8);
+}
+
+async function renderKnihovna() {
+  const karty = await nactiKnihovnu();
+  const cil = KN.cil ? await dbGet("hodiny", KN.cil) : null;
+  if (KN.cil && !cil) KN.cil = null;
+  $("#knCil").hidden = !cil;
+  if (cil) $("#knCilTxt").textContent = "Vkládáš do hodiny " + skName(cil.skupinaId) + ", " + cz(cil.datum);
+
+  const typy = $("#knTypy"); typy.innerHTML = "";
+  [["vse", "Vše"], ["hra", "Hry"], ["hodina", "Celé hodiny"]].forEach(([k, popis]) => {
+    const b = el("button", "chip", popis); b.type = "button";
+    b.setAttribute("aria-pressed", String(KN.typ === k));
+    b.addEventListener("click", () => { KN.typ = k; renderKnihovna(); });
+    typy.appendChild(b);
+  });
+
+  const q = bezDiak(KN.q).trim();
+  const vyber = karty.filter((k) => (KN.typ === "vse" || k.typ === KN.typ) &&
+    (!q || bezDiak([k.nazev, k.popis, k.rozviji, k.pomucky, k.prostor, k.okruh].join(" ")).includes(q)));
+  const naposledy = await knNaposledy();
+  const list = $("#knList"); list.innerHTML = "";
+  if (!vyber.length) list.appendChild(el("div", "card", null)).appendChild(el("div", "empty", karty.length ? "Nic neodpovídá hledání." : "Knihovna je zatím prázdná."));
+  vyber.forEach((k) => list.appendChild(knKarta(k, cil, naposledy(k.nazev))));
+  $("#knHint").textContent = KN.chyba || (karty.length ? "Karet v knihovně: " + karty.length + ". Kartu otevřeš i v mobilu bez přihlášení." : "");
+}
+
+function knKarta(k, cil, napos) {
+  const c = el("div", "card kn");
+  const h = el("div", "card-h");
+  h.append(el("h3", null, k.nazev), el("span", "eyebrow", k.typ === "hodina" ? "celá hodina" : "hra"));
+  c.appendChild(h);
+  const b = el("div", "card-b");
+  if (k.popis) b.appendChild(el("p", "kn-popis", k.popis));
+  const meta = el("div", "kn-meta");
+  [["Hráči", k.hraci], ["Délka", k.delka], ["Prostor", k.prostor], ["Rozvíjí", k.rozviji], ["Pomůcky", k.pomucky]].forEach(([n, v]) => {
+    if (!v) return;
+    const r = el("div"); r.append(el("b", null, n + ": "), document.createTextNode(v)); meta.appendChild(r);
+  });
+  b.appendChild(meta);
+  b.appendChild(el("div", "kn-nap", napos ? "Naposledy: " + skName(napos.skupinaId) + ", " + dm(napos.datum) : "Zatím jsi ji nehrál."));
+
+  const btns = el("div", "btns two");
+  const a = el("a", "btn ghost", "Otevřít kartu"); a.href = k.url; a.target = "_blank"; a.rel = "noopener";
+  const v = el("button", "btn", cil ? "Vložit do hodiny" : "Do hodiny…"); v.type = "button";
+  v.addEventListener("click", async () => {
+    if (cil) { await knVloz(k, cil.id); return; }
+    KN.vyber = KN.vyber === k.slug ? null : k.slug;
+    await renderKnihovna();
+  });
+  btns.append(a, v);
+  b.appendChild(btns);
+
+  if (!cil && KN.vyber === k.slug) {
+    const box = el("div", "kn-vyber");
+    box.appendChild(el("div", "eyebrow", "Do které hodiny"));
+    knBudouciHodiny().then((hod) => {
+      if (!hod.length) { box.appendChild(el("div", "hint", "V nejbližších třech týdnech nemáš žádnou otevřenou hodinu.")); return; }
+      hod.forEach((x) => {
+        const t = el("button", "chip", cz(x.datum) + " · " + skName(x.skupinaId)); t.type = "button";
+        t.addEventListener("click", () => knVloz(k, x.id));
+        box.appendChild(t);
+      });
+    });
+    b.appendChild(box);
+  }
+  c.appendChild(b);
+  return c;
+}
+
+async function knVloz(k, hodinaId) {
+  const h = await dbGet("hodiny", hodinaId);
+  if (!h) { toast("Hodina se nenašla"); return; }
+  const radek = (k.typ === "hodina" ? "Celá hodina: " : "Hra: ") + k.nazev;
+  const uz = bezDiak(h.plan || "").includes(bezDiak(k.nazev));
+  if (!uz) h.plan = (h.plan || "").trim() ? h.plan.replace(/\s+$/, "") + "\n" + radek : radek;
+  let zapis = false;
+  if (k.typ === "hodina" && k.zapis && !(h.zapis || "").trim()) { h.zapis = k.zapis; zapis = true; }
+  if (!uz || zapis) await dbPut("hodiny", h);
+  const zpet = KN.cil ? KN.cilBack : "knihovna";
+  KN.cil = null; KN.cilBack = null; KN.vyber = null;
+  toast(uz ? "V plánu už je" : zapis ? "Vloženo do plánu i se zápisem do ŠOL" : "Vloženo do plánu");
+  await openHodina(h.id, zpet);
+}
+
+async function knZHodiny() {
+  if (!S.hodinaId) return;
+  await ulozRozepsane();
+  KN.cil = S.hodinaId; KN.cilBack = S.backTo; KN.vyber = null;
+  await switchTab("knihovna");
+}
+
+/* ---------- Rekordnik: propojeni se spolecnou evidenci vykonu ---------- */
+// Cvicka se k Rekordniku hlasi Karlovym osobnim kodem a heslem kolektivu. Kod a heslo
+// zustavaji jen v tomhle zarizeni (vlastni databaze cvicka-rekordnik, neni v zaloze
+// ani na serveru Cvicky). Jmena zaku se s Rekordnikem paruji v telefonu podle tridy,
+// prijmeni a jmena, nikam navic neodchazeji. Vykon z Cvicky dostane v Rekordniku id
+// odvozene z id zapisu, takze opakovane odeslani nic nezdvoji a uprava ho prepise.
+const RK_SERVER = "https://rekordnik.chuanito-bonito.workers.dev";
+const RK_DISC = {
+  d60: { n: "60 m", u: "s", low: true, min: 6, max: 20 },
+  d200: { n: "200 m", u: "s", low: true, min: 22, max: 80 },
+  d400: { n: "400 m", u: "min", low: true, min: 50, max: 200 },
+  d500: { n: "500 m", u: "min", low: true, min: 70, max: 260 },
+  d1000: { n: "1000 m", u: "min", low: true, min: 150, max: 600 },
+  zm: { n: "Skok z místa", u: "cm", low: false, min: 50, max: 350 },
+  dal: { n: "Skok daleký", u: "cm", low: false, min: 100, max: 700 },
+  vys: { n: "Skok vysoký", u: "cm", low: false, min: 50, max: 220 },
+  rak: { n: "Hod raketkou", u: "m", low: false, min: 2, max: 90 },
+  kou: { n: "Vrh koulí", u: "m", low: false, min: 1, max: 20 },
+  spl: { n: "Šplh", u: "s", low: true, min: 2, max: 40 }
+};
+// Stare nazvy z Cvicky a nazvy z nastenky po rocnicich. Prvni sloupec se jednou prejmenuje.
+const RK_PREJMENOVAT = { "sprint 60 m": "60 m", "běh 60 m": "60 m", "běh 200 m": "200 m", "běh 400 m": "400 m", "běh 500 m": "500 m", "běh 1000 m": "1000 m" };
+const RK_ALIAS = { "vrh petanque koulí": "kou", "vrh koulí 3 kg": "kou", "vrh koulí 4 kg": "kou", "vrh koulí (holky 3 kg, kluci 4 kg)": "kou", "šplh 1/2 tyče": "spl" };
+function rkKlicDisc(nazev) {
+  const n = normDisc(nazev);
+  if (!n) return null;
+  for (const [k, d] of Object.entries(RK_DISC)) if (normDisc(d.n) === n) return k;
+  if (RK_ALIAS[n]) return RK_ALIAS[n];
+  if (RK_PREJMENOVAT[n]) return rkKlicDisc(RK_PREJMENOVAT[n]);
+  return null;
+}
+const rkPlatna = (g, d) => d === "d500" ? g <= 4 : d === "d1000" ? g >= 5 : true;
+const rkLepsi = (a, b, d) => RK_DISC[d].low ? a < b : a > b;
+const rkSkolniRok = (s) => { const y = +s.slice(0, 4), m = +s.slice(5, 7); return m >= 9 ? y : y - 1; };
+const rkNorm = (s) => String(s || "").normalize("NFC").replace(/\s+/g, " ").trim().toLocaleLowerCase("cs");
+const RIM = { I: 1, II: 2, III: 3, IV: 4, V: 5, VI: 6, VII: 7, VIII: 8, IX: 9 };
+function rkTrida(t) {
+  const s = String(t || "").trim();
+  let m = /^([IVX]+)\.?\s*([A-Za-z])$/i.exec(s);
+  if (m && RIM[m[1].toUpperCase()]) return RIM[m[1].toUpperCase()] + "." + m[2].toUpperCase();
+  m = /^([1-9])\.?\s*([A-Za-z])$/.exec(s);
+  return m ? m[1] + "." + m[2].toUpperCase() : null;
+}
+function rkFmt(v, u) {
+  if (v == null || !Number.isFinite(v)) return "";
+  const c = (x) => String(x).replace(".", ",");
+  if (u === "s" || u === "m") return c(v.toFixed(2)) + " " + u;
+  if (u === "cm") return Math.round(v) + " cm";
+  const m = Math.floor(v / 60), s = v - m * 60;
+  return m + ":" + c(s.toFixed(1).padStart(4, "0")) + " min";
+}
+// Hodnota z Cvicky prevedena na jednotku Rekordniku (casy nad minutu v sekundach).
+function rkHodnota(hodnota, jednotka, d) {
+  const t = String(hodnota == null ? "" : hodnota).trim().replace(",", ".");
+  if (!t) return null;
+  let v = cisloZ(t);
+  if (v === null || v <= 0) return NaN;
+  const u = RK_DISC[d].u;
+  if (u === "min" && !t.includes(":") && jednotka === "min") v = v * 60;
+  if (u === "cm" && jednotka === "m") v = v * 100;
+  if (u === "m" && jednotka === "cm") v = v / 100;
+  if (u === "cm" && v < 10) v = v * 100;
+  return u === "s" || u === "m" ? Math.round(v * 100) / 100 : u === "min" ? Math.round(v * 10) / 10 : Math.round(v);
+}
+// Zobrazeni hodnoty ve Cvicce: u minut m:ss.
+const fmtHod = (v, jed) => {
+  if (v == null) return "";
+  if (jed !== "min") return String(Math.round(v * 100) / 100);
+  const s = Math.round(v * 10) / 10, m = Math.floor(s / 60), r = Math.round((s - m * 60) * 10) / 10;
+  return m + ":" + (r < 10 ? "0" : "") + r;
+};
+
+const RK = { db: null, key: null, ja: null, zaci: new Map(), vykony: new Map(), rekordy: new Map(), sys: new Map(),
+  par: new Map(), nesparovani: [], bezi: false, znovu: false, casovac: null, posledniVysledek: null, chyba: "" };
+
+function rkOpen() {
+  if (RK.db) return Promise.resolve(RK.db);
+  return new Promise((res, rej) => {
+    const r = indexedDB.open("cvicka-rekordnik", 1);
+    r.onupgradeneeded = () => {
+      const db = r.result;
+      if (!db.objectStoreNames.contains("z")) db.createObjectStore("z", { keyPath: "id" });
+      if (!db.objectStoreNames.contains("m")) db.createObjectStore("m", { keyPath: "k" });
+    };
+    r.onsuccess = () => { RK.db = r.result; res(RK.db); };
+    r.onerror = () => rej(r.error);
+  });
+}
+const rkTx = (st, mode, fn) => new Promise((res, rej) => {
+  const t = RK.db.transaction(st, mode); const r = fn(t.objectStore(st)); let v;
+  if (r && "onsuccess" in r) r.onsuccess = () => { v = r.result; };
+  t.oncomplete = () => res(v); t.onerror = () => rej(t.error);
+});
+const rkMGet = async (k, d) => { const r = await rkTx("m", "readonly", (o) => o.get(k)); return r === undefined ? d : r.v; };
+const rkMSet = (k, v) => rkTx("m", "readwrite", (o) => o.put({ k, v }));
+const rkUnb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
+async function rkKlic(heslo, sul) {
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(heslo), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({ name: "PBKDF2", salt: rkUnb64(sul), iterations: 250000, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+}
+async function rkRozsifruj(s, key) {
+  const u = rkUnb64(s);
+  const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: u.slice(0, 12) }, key, u.slice(12));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+
+async function rkApi(cesta, telo, kod) {
+  const r = await fetch(RK_SERVER + cesta, { method: "POST", headers: { authorization: "Bearer " + kod, "content-type": "application/json" }, body: JSON.stringify(telo || {}), cache: "no-store" });
+  const j = await r.json().catch(() => ({ chyba: "HTTP " + r.status }));
+  if (!r.ok || j.chyba) { const e = new Error(j.chyba || ("HTTP " + r.status)); e.status = r.status; throw e; }
+  return j;
+}
+
+async function rkNactiPamet() {
+  const radky = await rkTx("z", "readonly", (o) => o.getAll());
+  RK.vykony = new Map(); RK.rekordy = new Map(); RK.sys = new Map(); RK.zaci = new Map();
+  const zaci = [], rek = [];
+  radky.forEach((x) => {
+    if (!x.data) return;
+    if (x.store === "vykony") RK.vykony.set(x.rid, x.data);
+    else if (x.store === "sys") RK.sys.set(x.rid, x.data);
+    else if (x.store === "zaci") zaci.push(x);
+    else if (x.store === "rekordy") rek.push(x);
+  });
+  for (const x of rek) {
+    const r = { ...x.data };
+    if (r.enc && RK.key) { try { r.jm = (await rkRozsifruj(r.enc, RK.key)).jm; } catch (e) { r.jm = ""; } }
+    RK.rekordy.set(x.rid, r);
+  }
+  if (RK.key) for (const x of zaci) { try { RK.zaci.set(x.rid, { ...(await rkRozsifruj(x.data.enc, RK.key)), id: x.rid }); } catch (e) { /* jine heslo */ } }
+}
+
+async function rkOdemkni(heslo) {
+  const sul = RK.sys.get("sul"), kon = RK.sys.get("kontrola");
+  if (!sul || !kon) return "Rekordník ještě nemá nastavené heslo kolektivu.";
+  try {
+    const k = await rkKlic(heslo, sul.sul);
+    if ((await rkRozsifruj(kon.enc, k)) !== "rekordnik-ok") throw new Error("x");
+    RK.key = k;
+    return "";
+  } catch (e) { RK.key = null; return "Heslo kolektivu nesedí."; }
+}
+
+// Jedno kolo protokolu: poslat zmeny, stahnout, co je noveho, dokud server neda vsechno.
+async function rkSync(zmeny) {
+  const kod = await rkMGet("kod", "");
+  if (!kod) throw new Error("Rekordník není připojený");
+  let poslat = zmeny || [], odmitnuto = [], prislo = 0;
+  for (let kolo = 0; kolo < 80; kolo++) {
+    const od = await rkMGet("kurzor", 0);
+    const res = await rkApi("/sync", { od, zmeny: poslat }, kod);
+    poslat = [];
+    if (res.odmitnuto && res.odmitnuto.length) odmitnuto = odmitnuto.concat(res.odmitnuto);
+    if (res.zmeny.length) {
+      await rkTx("z", "readwrite", (o) => { res.zmeny.forEach((z) => o.put({ id: z.store + "|" + z.rid, store: z.store, rid: z.rid, data: z.data, updatedAt: z.updatedAt })); });
+      prislo += res.zmeny.length;
+    }
+    await rkMSet("kurzor", res.verze);
+    if (!res.vic) break;
+  }
+  await rkMSet("posledni", Date.now());
+  if (prislo || zmeny) await rkNactiPamet();
+  return { prislo, odmitnuto };
+}
+
+function rkSparuj() {
+  const sy = rkSkolniRok(iso(new Date()));
+  const podle = new Map();
+  RK.zaci.forEach((z) => {
+    const g = sy - z.coh + 1;
+    if (g < 1 || g > 9) return;
+    const k = g + "." + String(z.pis).toUpperCase() + "|" + rkNorm(z.p) + "|" + rkNorm(z.j);
+    podle.set(k, podle.has(k) ? "dvoji" : z);
+  });
+  RK.par = new Map(); RK.nesparovani = [];
+  (S.cache.zakById || new Map()).forEach((z) => {
+    const tr = rkTrida(z.trida);
+    const r = tr ? podle.get(tr + "|" + rkNorm(z.prijmeni) + "|" + rkNorm(z.jmeno)) : null;
+    if (r && r !== "dvoji") RK.par.set(z.id, r);
+    else if (!z.neaktivni) RK.nesparovani.push(z);
+  });
+}
+
+const rkRid = (poznId) => "v_" + hid("cvicka|" + poznId);
+const rkPripojeno = () => !!(RK.db && RK.key && RK.ja);
+
+// Co z Cvicky patri do Rekordniku a v jakem stavu to je. Nic neposila.
+async function rkPlan() {
+  const vse = (await dbAll("pozn")).filter((p) => p.typ === "vykon");
+  const poZaku = new Map();
+  RK.vykony.forEach((v, rid) => {
+    if (!v.z) return;
+    const k = v.z + "|" + v.d + "|" + v.datum;
+    if (!poZaku.has(k)) poZaku.set(k, []);
+    poZaku.get(k).push({ ...v, rid });
+  });
+  const P = { poslat: [], uz: [], kontrola: [], nesedi: [], bezParu: [], jine: 0, smazat: [] };
+  const nase = new Set();
+  const existujici = new Set(vse.map((p) => p.id));
+  for (const p of vse) {
+    const d = rkKlicDisc(p.disciplina);
+    if (!d) { P.jine++; continue; }
+    const rz = RK.par.get(p.zakId);
+    if (!rz) { P.bezParu.push({ p }); continue; }
+    const v = rkHodnota(p.hodnota, p.jednotka, d);
+    if (v === null || Number.isNaN(v)) { P.kontrola.push({ p, d, duvod: "nečitelná hodnota" }); nase.add(rkRid(p.id)); continue; }
+    const g = rkSkolniRok(p.datum) - rz.coh + 1;
+    const rid = rkRid(p.id);
+    nase.add(rid);
+    if (!rkPlatna(g, d)) { P.nesedi.push({ p, d, g, duvod: d === "d1000" ? "1000 m běhá až 5. ročník" : "500 m běhá do 4. ročníku" }); continue; }
+    const data = { z: rz.id, d, v, g, tr: g + "." + rz.pis, sex: rz.sex, datum: p.datum, t: Date.parse(p.vytvoreno) || Date.now(), cv: p.id };
+    const ted = RK.vykony.get(rid);
+    if (ted && ted.z === data.z && ted.d === d && Math.abs(ted.v - v) < 0.001 && ted.datum === p.datum && ted.g === g) { P.uz.push({ p, d, data }); continue; }
+    const dvojce = (poZaku.get(data.z + "|" + d + "|" + p.datum) || []).find((x) => x.rid !== rid && Math.abs(x.v - v) < 0.001);
+    if (dvojce) { P.uz.push({ p, d, data, dvojce: true }); continue; }
+    if (!p.rkOk) {
+      const D = RK_DISC[d], r = RK.rekordy.get(g + "|" + d + "|" + rz.sex);
+      if (v < D.min || v > D.max) { P.kontrola.push({ p, d, data, duvod: "hodnota mimo obvyklý rozsah" }); continue; }
+      if (r && typeof r.v === "number" && (D.low ? v < r.v * 0.85 : v > r.v * 1.15)) { P.kontrola.push({ p, d, data, duvod: "daleko za školním rekordem" }); continue; }
+    }
+    const rek = RK.rekordy.get(g + "|" + d + "|" + rz.sex);
+    P.poslat.push({ p, d, data, rid, rekord: !rek || typeof rek.v !== "number" || rkLepsi(v, rek.v, d) });
+  }
+  // Smazat: zapisy smazane ve Cvicce (fronta) a nase vykony, ktere uz do Rekordniku nepatri.
+  const fronta = new Set(await rkMGet("smazat", []));
+  RK.vykony.forEach((v, rid) => {
+    if (!v.cv || (RK.ja && v.autorId && v.autorId !== RK.ja.id)) return;
+    if (fronta.has(rid) || (existujici.has(v.cv) && !nase.has(rid))) P.smazat.push(rid);
+  });
+  return P;
+}
+
+async function rkOdesli(vcetneStarych) {
+  if (!rkPripojeno()) return null;
+  if (RK.bezi) { RK.znovu = true; return null; }
+  RK.bezi = true; RK.chyba = "";
+  try {
+    await rkSync();
+    rkSparuj();
+    const auto = await rkMGet("auto", false);
+    const P = await rkPlan();
+    if (!auto && !vcetneStarych) { RK.posledniVysledek = { P, odeslano: 0, smazano: 0 }; return RK.posledniVysledek; }
+    const t = Date.now();
+    const zmeny = P.poslat.map((x) => ({ store: "vykony", rid: x.rid, data: x.data, updatedAt: t }))
+      .concat(P.smazat.map((rid) => ({ store: "vykony", rid, data: null, updatedAt: t })));
+    let odmitnuto = [];
+    if (zmeny.length) odmitnuto = (await rkSync(zmeny)).odmitnuto;
+    await rkMSet("smazat", []);
+    if (vcetneStarych) await rkMSet("auto", true);
+    RK.posledniVysledek = { P, odeslano: P.poslat.length, smazano: P.smazat.length, odmitnuto, kdy: Date.now() };
+    if (odmitnuto.length) RK.chyba = "Rekordník odmítl " + odmitnuto.length + " změn.";
+    return RK.posledniVysledek;
+  } catch (e) {
+    RK.chyba = e.status === 401 ? "Osobní kód už neplatí." : "Rekordník teď nejde zastihnout.";
+    return null;
+  } finally {
+    RK.bezi = false;
+    if (RK.znovu) { RK.znovu = false; rkNaplanuj(2000); }
+  }
+}
+
+// Volá se po kazdem ulozeni nebo smazani vykonu. Odklad, at se neposilaji rozepsana cisla.
+function rkNaplanuj(ms) {
+  if (!RK.db) return;
+  clearTimeout(RK.casovac);
+  RK.casovac = setTimeout(async () => {
+    const r = await rkOdesli(false);
+    if (r && (r.odeslano || r.smazano)) {
+      const n = r.P.poslat.filter((x) => x.rekord).length;
+      toast("Rekordník: odesláno " + r.odeslano + (r.smazano ? ", smazáno " + r.smazano : "") + (n ? ", " + n + " možný rekord" : ""));
+    }
+    if (r && r.P.kontrola.length) setTimeout(() => toast("Rekordník: " + r.P.kontrola.length + " ke kontrole v Nastavení"), 2400);
+    if (S.tab === "nastaveni") renderRekordnik();
+  }, ms == null ? 15000 : ms);
+}
+
+async function rkZaradSmazani(poznId) {
+  if (!RK.db || !(await rkMGet("kod", ""))) return;
+  const rid = rkRid(poznId);
+  if (!RK.vykony.has(rid)) return;
+  const f = await rkMGet("smazat", []);
+  if (!f.includes(rid)) { f.push(rid); await rkMSet("smazat", f); }
+}
+
+async function rkStart() {
+  await rkOpen();
+  const kod = await rkMGet("kod", "");
+  if (!kod) return;
+  RK.ja = await rkMGet("ja", null);
+  await rkNactiPamet();
+  const heslo = await rkMGet("heslo", "");
+  if (heslo && !(await rkOdemkni(heslo))) await rkNactiPamet();
+  rkSparuj();
+  rkNaplanuj(3000);
+}
+
+async function rkPripoj() {
+  const kod = $("#fRkKod").value.trim().toLowerCase();
+  const heslo = $("#fRkHeslo").value;
+  const msg = $("#rkMsg");
+  if (!kod || !heslo) { msg.textContent = "Vyplň osobní kód i heslo kolektivu."; return; }
+  msg.textContent = "Připojuji…";
+  try {
+    await rkOpen();
+    const ja = await rkApi("/ja", {}, kod);
+    const stary = await rkMGet("kod", "");
+    if (stary !== kod) { await rkTx("z", "readwrite", (o) => o.clear()); await rkMSet("kurzor", 0); }
+    await rkMSet("kod", kod);
+    await rkMSet("ja", { id: ja.id, jmeno: ja.jmeno, spravce: !!ja.spravce });
+    RK.ja = await rkMGet("ja");
+    await rkSync();
+    const chyba = await rkOdemkni(heslo);
+    if (chyba) { msg.textContent = chyba; return; }
+    await rkMSet("heslo", heslo);
+    await rkNactiPamet();
+    rkSparuj();
+    $("#fRkKod").value = ""; $("#fRkHeslo").value = "";
+    msg.textContent = "";
+    await rkOdesli(false);
+    toast("Rekordník připojen");
+  } catch (e) {
+    msg.textContent = e.status === 401 ? "Kód neplatí. Zkontroluj ho v Rekordníku." : "Server nejde zastihnout: " + e.message;
+  }
+  await renderRekordnik();
+}
+
+async function rkOdpoj() {
+  await rkOpen();
+  await rkTx("z", "readwrite", (o) => o.clear());
+  await rkTx("m", "readwrite", (o) => o.clear());
+  RK.key = null; RK.ja = null; RK.posledniVysledek = null; RK.par = new Map(); RK.nesparovani = [];
+  RK.vykony = new Map(); RK.zaci = new Map(); RK.rekordy = new Map(); RK.sys = new Map();
+  toast("Rekordník odpojen");
+  await renderRekordnik();
+}
+
+const rkJmeno = (zakId) => { const z = S.cache.zakById.get(zakId); return z ? z.prijmeni + " " + z.jmeno : "?"; };
+function rkRadek(x, tlacitko) {
+  const r = el("div", "zrow");
+  r.appendChild(el("span", "d", dm(x.p.datum)));
+  const t = el("span", "x");
+  t.appendChild(document.createTextNode(rkJmeno(x.p.zakId) + ", " + (x.d ? RK_DISC[x.d].n : x.p.disciplina) + " " +
+    (x.data ? rkFmt(x.data.v, RK_DISC[x.d].u) : x.p.hodnota + " " + (x.p.jednotka || ""))));
+  if (x.duvod) t.appendChild(el("span", "kn-nap", " " + x.duvod));
+  if (x.rekord) { const s = el("span", "tp", "rekord?"); s.style.cssText = "margin:0 0 0 6px;background:var(--chalk-soft);color:var(--chalk)"; t.appendChild(s); }
+  r.appendChild(t);
+  const ak = el("span", "ak"); if (tlacitko) ak.appendChild(tlacitko); r.appendChild(ak);
+  return r;
+}
+
+async function renderRekordnik() {
+  await rkOpen();
+  const kod = await rkMGet("kod", "");
+  const panel = $("#rkPanel"); panel.innerHTML = "";
+  $("#rkPrihlaseni").hidden = !!(kod && RK.key);
+  if (kod && !RK.key) $("#rkMsg").textContent = $("#rkMsg").textContent || "Zadej znovu heslo kolektivu.";
+  if (!kod || !RK.key) { $("#rkStav").textContent = "nepřipojeno"; return; }
+  rkSparuj();
+  const auto = await rkMGet("auto", false);
+  const posl = await rkMGet("posledni", 0);
+  $("#rkStav").textContent = RK.chyba ? "offline" : "připojeno";
+
+  const info = el("p", "rk-info");
+  const mojich = [...S.cache.zakById.values()].filter((z) => !z.neaktivni).length;
+  info.textContent = "Přihlášen jako " + (RK.ja ? RK.ja.jmeno : "?") + ". Spárováno " + RK.par.size + " z " + mojich + " tvých žáků" +
+    (posl ? ", poslední spojení " + new Date(posl).toLocaleTimeString("cs", { hour: "2-digit", minute: "2-digit" }) : "") + ".";
+  panel.appendChild(info);
+  if (RK.chyba) panel.appendChild(el("p", "err", RK.chyba));
+
+  const P = await rkPlan();
+  const sec = (nadpis) => { const s = el("div", "sec"); s.appendChild(el("div", "eyebrow", nadpis)); panel.appendChild(s); return s; };
+
+  if (!auto) {
+    const s = sec("Dosavadní výkony ze Cvičky");
+    if (P.poslat.length) {
+      s.appendChild(el("p", "hint", "Tyhle výkony v Rekordníku ještě nejsou. Zkontroluj je a pošli najednou. Pak už se nové výkony z disciplín Rekordníku posílají samy."));
+      P.poslat.forEach((x) => s.appendChild(rkRadek(x)));
+    } else s.appendChild(el("p", "hint", "Nic nového k odeslání, všechno už v Rekordníku je."));
+    const b = el("button", "btn", P.poslat.length ? "Poslat " + P.poslat.length + " do Rekordníku a zapnout automatiku" : "Zapnout automatické posílání");
+    b.type = "button";
+    b.addEventListener("click", async () => {
+      b.disabled = true;
+      const r = await rkOdesli(true);
+      if (r) toast("Odesláno " + r.odeslano);
+      await renderRekordnik();
+    });
+    const bb = el("div", "btns"); bb.appendChild(b); s.appendChild(bb);
+  } else {
+    const r = RK.posledniVysledek;
+    panel.appendChild(el("p", "hint", "Výkony z disciplín Rekordníku se posílají samy chvilku po zapsání. " +
+      "V Rekordníku: " + P.uz.length + (P.poslat.length ? ", čeká na odeslání " + P.poslat.length : "") +
+      (r && r.kdy ? ". Naposledy odesláno " + r.odeslano + "." : ".")));
+  }
+
+  if (P.kontrola.length) {
+    const s = sec("Ke kontrole · " + P.kontrola.length);
+    s.appendChild(el("p", "hint", "Tyhle se neposlaly. Když je hodnota správně, potvrď ji, jinak ji oprav v kartě žáka."));
+    P.kontrola.forEach((x) => {
+      const b = el("button", "konec", "Je to správně"); b.type = "button";
+      if (x.duvod === "nečitelná hodnota") { b.textContent = "Opravit"; b.addEventListener("click", () => otevriZaka(x.p.zakId)); }
+      else b.addEventListener("click", async () => { x.p.rkOk = true; await dbPut("pozn", x.p); RK.posledniVysledek = null; rkNaplanuj(500); await renderRekordnik(); });
+      s.appendChild(rkRadek(x, b));
+    });
+  }
+  if (P.nesedi.length) {
+    const s = sec("Nesedí ročník · " + P.nesedi.length);
+    P.nesedi.forEach((x) => s.appendChild(rkRadek(x)));
+  }
+  if (P.bezParu.length || RK.nesparovani.length) {
+    const s = sec("Nespárovaní žáci · " + RK.nesparovani.length);
+    s.appendChild(el("p", "hint", "Tyhle žáky Rekordník nezná (podle třídy, příjmení a jména)." +
+      (P.bezParu.length ? " Jejich výkony (" + P.bezParu.length + ") se neposílají." : "")));
+    const d = el("details"); d.appendChild(el("summary", null, "Ukázat jména"));
+    d.appendChild(el("p", "hint", RK.nesparovani.map((z) => z.trida + " " + z.prijmeni + " " + z.jmeno).join(", ") || "Všichni spárovaní."));
+    s.appendChild(d);
+  }
+
+  const bb = el("div", "btns two");
+  const t = el("button", "btn ghost", "Synchronizovat teď"); t.type = "button";
+  t.addEventListener("click", async () => { t.disabled = true; RK.posledniVysledek = null; await rkOdesli(false); await renderRekordnik(); toast(RK.chyba || "Hotovo"); });
+  const o = el("button", "btn ghost", "Odpojit"); o.type = "button";
+  let potvrd = false;
+  o.addEventListener("click", async () => {
+    if (!potvrd) { potvrd = true; o.textContent = "Opravdu odpojit?"; setTimeout(() => { potvrd = false; o.textContent = "Odpojit"; }, 3500); return; }
+    await rkOdpoj();
+  });
+  bb.append(t, o);
+  panel.appendChild(bb);
+}
+
+// Karta zaka: osobaky a skolni rekordy z Rekordniku.
+async function rkKartaZaka(z) {
+  const box = $("#zakRk");
+  if (!rkPripojeno()) { box.hidden = true; return; }
+  box.hidden = false; box.innerHTML = "";
+  const rz = RK.par.get(z.id);
+  if (!rz) { box.append(el("div", "eyebrow", "Rekordník"), el("p", "hint", "Tenhle žák se v Rekordníku nenašel.")); return; }
+  const sy = rkSkolniRok(iso(new Date())), g = sy - rz.coh + 1;
+  box.appendChild(el("div", "eyebrow", "Rekordník · " + g + "." + rz.pis));
+  const podle = new Map();
+  RK.vykony.forEach((v) => {
+    if (v.z !== rz.id || !RK_DISC[v.d]) return;
+    const b = podle.get(v.d);
+    if (!b || rkLepsi(v.v, b.v, v.d)) podle.set(v.d, v);
+  });
+  if (!podle.size) { box.appendChild(el("p", "hint", "V Rekordníku zatím nic.")); return; }
+  Object.keys(RK_DISC).forEach((d) => {
+    const v = podle.get(d); if (!v) return;
+    const r = el("div", "rk-r");
+    const rek = RK.rekordy.get(g + "|" + d + "|" + rz.sex);
+    r.append(el("span", null, RK_DISC[d].n), el("b", null, rkFmt(v.v, RK_DISC[d].u)),
+      el("span", "kn-nap", !rek || typeof rek.v !== "number" ? "zatím bez školního rekordu, čeká na schválení"
+        : rkLepsi(v.v, rek.v, d) ? "lepší než školní rekord " + rkFmt(rek.v, RK_DISC[d].u) + ", čeká na schválení"
+        : "školní rekord " + rkFmt(rek.v, RK_DISC[d].u)));
+    box.appendChild(r);
+  });
+}
+
+// Mereni: skolni rekord rocniku nahore a znacka u radku.
+function rkMereniHlavicka(disc) {
+  const box = $("#merRk");
+  const d = rkKlicDisc(disc);
+  if (!d || !rkPripojeno() || !S.mer) { box.hidden = true; return; }
+  const sy = rkSkolniRok(S.mer.datum);
+  const roc = new Set();
+  (S.mer.zaci || []).forEach((z) => { const r = RK.par.get(z.id); if (r) roc.add(sy - r.coh + 1); });
+  if (!roc.size) { box.hidden = true; return; }
+  const radky = [...roc].sort().map((g) => {
+    const m = RK.rekordy.get(g + "|" + d + "|M"), f = RK.rekordy.get(g + "|" + d + "|F");
+    const t = (r) => r && typeof r.v === "number" ? rkFmt(r.v, RK_DISC[d].u) : "zatím nikdo";
+    return g + ". ročník: kluci " + t(m) + ", holky " + t(f);
+  });
+  box.hidden = false;
+  box.textContent = "Školní rekord, " + radky.join(" · ") + ". Zapsané se pošle do Rekordníku.";
+}
+function rkZnackaRadku(z, disc, jed, hodnota, datum, mp) {
+  const d = rkKlicDisc(disc);
+  if (!d || !rkPripojeno()) return;
+  const rz = RK.par.get(z.id);
+  if (!rz) { if (String(hodnota || "").trim()) mp.appendChild(el("span", "mbd horsi", "není v Rekordníku")); return; }
+  const v = rkHodnota(hodnota, jed, d);
+  if (v === null || Number.isNaN(v)) return;
+  const g = rkSkolniRok(datum) - rz.coh + 1;
+  const D = RK_DISC[d], rek = RK.rekordy.get(g + "|" + d + "|" + rz.sex);
+  if (v < D.min || v > D.max) { mp.appendChild(el("span", "mbd horsi", "zkontroluj")); return; }
+  if (rek && typeof rek.v === "number" && rkLepsi(v, rek.v, d)) mp.appendChild(el("span", "mbd skol", "školní rekord"));
+}
+
+async function rkPrejmenujDiscipliny() {
+  if ((await metaGet("discVerze", 0)) >= 1) return;
+  const zmeny = [];
+  (await dbAll("pozn")).forEach((p) => {
+    if (p.typ !== "vykon") return;
+    const nove = RK_PREJMENOVAT[normDisc(p.disciplina)];
+    if (nove && p.disciplina !== nove) { p.disciplina = nove; zmeny.push(p); }
+  });
+  if (zmeny.length) await dbPutMany("pozn", zmeny);
+  await metaSet("discVerze", 1);
+}
+
 /* ---------- navigace ---------- */
 async function switchTab(name) {
   await ulozRozepsane();
   zavriStav();
   if (!$("#merSheet").hidden) zavriMereni();
+  if (name !== "knihovna") { KN.cil = null; KN.vyber = null; }
   S.tab = name;
   document.querySelectorAll(".screen").forEach((s) => s.classList.toggle("on", s.id === "s-" + name));
   document.querySelectorAll("nav button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
   $("#navBack").hidden = !(name === "hodina" && (S.backTo || S.zpet.length));
   if (name !== "hodina") $("#hNav").hidden = true;
   $("#bAsist").hidden = name === "hodina";
-  const titles = { dnes: ["Cvička", "přehled dne"], tyden: ["Příprava na týden", "plán a historie"], prehled: ["Přehled", "docházka, omluvy a výkony"], nastaveni: ["Nastavení", "data a záloha"] };
+  const titles = { dnes: ["Cvička", "přehled dne"], tyden: ["Příprava na týden", "plán a historie"], prehled: ["Přehled", "docházka, omluvy a výkony"], nastaveni: ["Nastavení", "data a záloha"], knihovna: ["Knihovna", "hry a celé hodiny"] };
   if (titles[name]) { $("#hTitle").classList.remove("dve"); $("#hTitle").textContent = titles[name][0]; $("#hSub").textContent = titles[name][1]; }
   if (name === "dnes") await renderDnes();
   if (name === "tyden") await renderTyden();
   if (name === "hodina") await renderHodina();
   if (name === "prehled") await renderPrehled();
   if (name === "nastaveni") await renderNastaveni();
+  if (name === "knihovna") await renderKnihovna();
   document.querySelector("main").scrollTop = 0;
 }
 
@@ -3412,6 +4130,7 @@ async function boot() {
   }
   await refreshCache();
   await seedCinnosti();
+  await rkPrejmenujDiscipliny();
   await odemkni(await metaGet("sifraHeslo", ""));
   if (mig) setTimeout(() => toast("Data převedena na stabilní id (" + mig.zaznamu + " záznamů docházky)"), 900);
   if (!(await metaGet("volno"))) await metaSet("volno", VOLNO_DEFAULT.join("\n"));
@@ -3431,6 +4150,11 @@ async function boot() {
   });
 
   $("#bMereni").addEventListener("click", otevriMereni);
+  $("#bKnih").addEventListener("click", knZHodiny);
+  $("#knCilZrus").addEventListener("click", async () => { const id = KN.cil, zpet = KN.cilBack; KN.cil = null; if (id) await openHodina(id, zpet); });
+  let knCas;
+  $("#knQ").addEventListener("input", (e) => { clearTimeout(knCas); knCas = setTimeout(() => { KN.q = e.target.value; renderKnihovna(); }, 200); });
+  $("#bRkPripoj").addEventListener("click", rkPripoj);
   $("#merX").addEventListener("click", zavriMereni);
   $("#merBg").addEventListener("click", zavriMereni);
   $("#merDisc").addEventListener("change", async () => {
@@ -3604,6 +4328,9 @@ async function boot() {
   if (!prazdno) await skocNaNejblizsiDen();
   await switchTab(prazdno ? "nastaveni" : "dnes");
   if (prazdno) toast("Začni načtením rozvrhu a žáků");
+
+  rkStart().catch(() => {});
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && RK.db) rkNaplanuj(5000); });
 
   // Automaticka synchronizace: pri startu, pri navratu do popredi a s odstupem po zapisu.
   synchronizuj().catch(() => {});

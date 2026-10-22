@@ -1,4 +1,4 @@
-const CACHE = "cvicka-v0.13.0";
+const CACHE = "cvicka-v0.14.0";
 const ASSETS = ["./", "./index.html", "./manifest.webmanifest"];
 
 self.addEventListener("install", (e) => {
@@ -18,7 +18,20 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return;
+  // Cizi servery (Rekordnik) jdou mimo cache.
+  if (new URL(req.url).origin !== self.location.origin) return;
+  // HTML, navigace a seznam karet v knihovne: nejdriv sit.
+  const jeJSON = new URL(req.url).pathname.endsWith(".json");
   const jeHTML = req.mode === "navigate" || (req.headers.get("accept") || "").includes("text/html");
+
+  if (jeJSON) {
+    e.respondWith(
+      fetch(req)
+        .then((res) => { const kopie = res.clone(); caches.open(CACHE).then((c) => c.put(req, kopie)).catch(() => {}); return res; })
+        .catch(() => caches.match(req))
+    );
+    return;
+  }
 
   if (jeHTML) {
     e.respondWith(
