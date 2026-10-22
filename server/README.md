@@ -62,26 +62,27 @@ curl -s -H "Authorization: Bearer <TOKEN>" https://cvicka-sync.<účet>.workers.
 Má vrátit `{"ok":true,"radku":0,"verze":0}`. Po první synchronizaci z telefonu poskočí
 `radku` na zhruba tisíc.
 
-## Asistent (od verze 0.12)
+## Návrh zápisu do ŠOL (od verze 0.15, dřív asistent)
 
-Endpoint `POST /asistent` přeposílá otázky z aplikace do Claude API (model Haiku 4.5).
-Klíč k API je jen tady na serveru jako secret, aplikace ho nikdy nevidí.
+Endpoint `POST /zapis` napíše z náplně hodiny dva návrhy zápisu do Školy OnLine přes
+Claude API (model Haiku 4.5). Pravidla pro zápis (aktivní sloveso z Bloomova seznamu
+vedení školy, jednotné číslo, jedna věta, bez názvů pohybových her, srozumitelně pro
+daný ročník) jsou v `zapisPokyny()` tady ve Workeru. Klíč k API je jen na serveru jako
+secret, aplikace ho nikdy nevidí. Asistent s konverzací (`/asistent`) ve verzi 0.15 skončil.
 
-**Co odchází do Claude:** otázka, docházka jako čísla, výkony, data omluv, plán, náplň
-a zápis hodin, sliby a zásobník činností. Žáci jen jako kódy Ž1, Ž2… přidělené pro jednu
-konverzaci, jména doplní až aplikace. **Nikdy neodchází:** jména, poznámky o chování,
-důvody omluv a volné poznámky.
+**Co odchází do Claude:** text čtyř okének náplně (Rozcvička, Úvodní hra, Hlavní část,
+Závěr), ročník a nejvýš tři Karlovy dřívější zápisy jako ukázka stylu. Jména žáků aplikace
+z textu předem vymaže. **Nikdy neodchází:** jména, docházka, poznámky, omluvy.
 
-**Jednorázové nastavení:**
+**Jednorázové nastavení** (klíč už je uložený od verze 0.12, stačí znovu nasadit):
 
-1. Na [platform.claude.com](https://platform.claude.com) se přihlas, v části Billing dobij
-   kredit a v části Limits nastav měsíční limit útraty (třeba 5 USD).
-2. V API Keys vytvoř klíč a zkopíruj ho. Nikam ho nezapisuj.
-3. Ulož ho do Workeru a Worker znovu nasaď:
+1. Na [platform.claude.com](https://platform.claude.com) v části Billing dobij kredit
+   a v části Limits nastav měsíční limit útraty.
+2. V API Keys vytvoř klíč a ulož ho do Workeru:
 
 ```
 cd ~/Desktop/"Claude Cowork"/"Třídní kniha"/cvicka/server
-npx wrangler secret put ANTHROPIC_API_KEY     # vloží se zkopírovaný klíč
+npx wrangler secret put ANTHROPIC_API_KEY     # jen když klíč ještě není uložený
 npx wrangler deploy
 ```
 
@@ -89,15 +90,15 @@ npx wrangler deploy
 
 ```
 curl -s -X POST -H "Authorization: Bearer <TOKEN>" -H "content-type: application/json" \
-  -d '{"zpravy":[{"role":"user","content":"Ahoj, kolik je dnes?"}]}' \
-  https://cvicka-sync.<účet>.workers.dev/asistent
+  -d '{"rocnik":3,"casti":{"hlavni":"Fotbal, přihrávky ve dvojicích"}}' \
+  https://cvicka-sync.<účet>.workers.dev/zapis
 ```
 
-Má vrátit JSON s `content` a textem odpovědi. `Na serveru chybí ANTHROPIC_API_KEY` znamená,
-že secret není uložený nebo Worker nebyl po jeho uložení znovu nasazený.
+Má vrátit `{"navrhy":["…","…"]}`. `Na serveru chybí ANTHROPIC_API_KEY` znamená, že secret
+není uložený nebo Worker nebyl po jeho uložení znovu nasazený.
 
-Model se dá změnit bez úpravy kódu proměnnou `ASISTENT_MODEL` (`npx wrangler secret put
-ASISTENT_MODEL`), výchozí je `claude-haiku-4-5-20251001`.
+Model se dá změnit bez úpravy kódu proměnnou `ZAPIS_MODEL` (`npx wrangler secret put
+ZAPIS_MODEL`), výchozí je `claude-haiku-4-5-20251001`. Starší `ASISTENT_MODEL` platí taky.
 
 ## Endpointy
 
@@ -106,7 +107,7 @@ ASISTENT_MODEL`), výchozí je `claude-haiku-4-5-20251001`.
 | `GET /stav` | kolik řádků a jaké je pořadové číslo, na rychlou kontrolu |
 | `POST /sync` | jedno kolo: pošle své změny a stáhne cizí |
 | `POST /smazat-vse` | vymaže obsah databáze, hodí se na konci školního roku |
-| `POST /asistent` | otázka pro asistenta, `{ zpravy: [...] }` ve formátu Messages API |
+| `POST /zapis` | návrh zápisu do ŠOL, `{ rocnik, casti: { rozcvicka, uvod, hlavni, zaver }, priklady }` |
 
 Všechno chce hlavičku `Authorization: Bearer <token>`.
 

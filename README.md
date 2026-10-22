@@ -530,6 +530,39 @@ přesně, porovnají se ve stejné třídě všechna slova jména bez ohledu na 
 („Novák Jan“ + „Petr Tomáš“ proti „Novák“ + „Jan Petr Tomáš“), a nakonec
 i shoda, kde jedna strana má navíc další jméno. Kroky 2 a 3 platí jen při jediném kandidátovi.
 
+## v0.15.0: okénka náplně, uzavření jako potvrzení, AI jen na zápis
+
+**Náplň hodiny** má čtyři okénka: Rozcvička, Úvodní hra, Hlavní část, Závěr. Pole
+„Co se dělalo“ zmizelo, upravuje se rovnou náplň. Ukládá se dál do jednoho pole `plan`,
+každá část na řádku se štítkem (`Rozcvička: …`, `Úvodní hra: …`, `Hlavní část: …`,
+`Závěr: …`), takže zápis přes server i hledání fungují beze změny. `rozdelPlan()` rozdělí
+i starší volný text: řádky `Úvod:` a `Závěr:` do svých okének, vše bez štítku do hlavní části
+(ve štítkovém tvaru patří řádek bez štítku k předchozí části, kromě závěru).
+Otevření hodiny starý text nepřepisuje, do štítkového tvaru se převede až při úpravě.
+Zásobník vkládá úvodní hry do Úvodní hry, průpravu do Rozcvičky a zbytek do Hlavní části,
+knihovna do Hlavní části. Stará hodina s vyplněným `napln` ho ukáže nad okénky
+s tlačítkem „Přesunout do hlavní části“.
+
+**Stav:** „plán“ znamená, že hodina ještě neproběhla nebo ji Karel nepotvrdil. Potvrzení je
+tlačítko Uzavřít hodinu (`uzavrena`). Psaní stav nemění. `jeUzavrena()` bere jako potvrzenou
+i proběhlou hodinu ve stavu `zapsana` (zápis přes Claude). Mřížka má jen bez plánu, plán
+a uzavřená. Karta na Dnes se jmenuje Neuzavřené hodiny: proběhlé, nepotvrzené nebo bez zápisu.
+
+**Týden:** karta Hodiny v týdnu zmizela, hodiny se otevírají z rozvrhu. Pod ním sliby,
+omluvení a Dlouho nebylo.
+
+**Co naposledy měli** ukazuje obsah okénka Hlavní část (u starých hodin hlavní část z `napln`)
+a jen hodiny, které proběhly (uzavřené, nebo se zápisem či náplní). Neproběhlý plán se tam
+už neukáže.
+
+**Asistent** (tlačítko Zeptat se a konverzace) je pryč. AI zůstala jen na návrh zápisu do ŠOL:
+Navrhnout pošle okénka náplně, ročník a nejvýš tři dřívější zápisy téhož ročníku na Worker
+`POST /zapis`, který vrátí dva návrhy podle pravidel (Bloomovo sloveso, jednotné číslo, jedna
+věta, bez názvů her, srozumitelně pro ročník). Jména žáků `bezJmen()` předem nahradí slovem
+„spolužák“, při zdravotním slově se appka zeptá. Bez serveru nebo při chybě nabídne šablony
+jako dřív. Návrh se pro stejnou náplň pamatuje, „Jiný návrh“ zavolá znovu.
+Po nasazení appky je potřeba nasadit i Worker (`npx wrangler deploy` ve složce `server`).
+
 ## Co přijde dál
 
 F3 je hotová.

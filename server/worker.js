@@ -9,10 +9,10 @@
 //   odpověď    { verze: <nový kurzor>, zmeny: [ ...totéž... ], vic: bool }
 // data: null znamená smazáno (náhrobek). Konflikt řeší poslední zápis podle updatedAt.
 //
-// POST /asistent: přeposílá konverzaci do Claude API. Klíč ANTHROPIC_API_KEY je jen tady
-// jako secret, aplikace ho nikdy nevidí. Pokyny a nástroje jsou definované tady, aplikace
-// posílá jen zprávy. Nástroje vykonává aplikace u sebe v zařízení a vrací výsledky,
-// ve kterých jsou žáci jen jako kódy Ž1, Ž2…, jména Claude nikdy nedostane.
+// POST /zapis: z náplně hodiny (Rozcvička, Úvodní hra, Hlavní část, Závěr) napíše přes
+// Claude API návrh zápisu do Školy OnLine. Klíč ANTHROPIC_API_KEY je jen tady jako secret,
+// aplikace ho nikdy nevidí. Pravidla pro zápis jsou tady, aplikace posílá jen text náplně
+// (jména žáků z něj předem vymaže) a ročník.
 
 const DAVKA = 500;      // kolik řádků vrátíme na jedno kolo
 const MAX_PRIJEM = 2000; // strop na jednu dávku od klienta
@@ -44,8 +44,8 @@ export default {
       if (cesta === "/stav") return odpoved(await stav(env));
       if (cesta === "/sync" && req.method === "POST") return odpoved(await sync(env, await req.json()));
       if (cesta === "/smazat-vse" && req.method === "POST") return odpoved(await smazatVse(env));
-      if (cesta === "/asistent" && req.method === "POST") {
-        const { status, ...r } = await asistent(env, await req.json());
+      if (cesta === "/zapis" && req.method === "POST") {
+        const { status, ...r } = await navrhZapisu(env, await req.json());
         return odpoved(r, r.chyba ? (status || 500) : 200);
       }
     } catch (e) {
@@ -143,52 +143,51 @@ async function sync(env, telo) {
 }
 
 
-// ---------- asistent ----------
+// ---------- návrh zápisu do ŠOL ----------
 
-const ASISTENT_MODEL = "claude-haiku-4-5-20251001";
-const ASISTENT_MAX_ZPRAV = 40;        // strop na délku konverzace
-const ASISTENT_MAX_BAJTU = 300000;    // strop na velikost požadavku
+const ZAPIS_MODEL = "claude-haiku-4-5-20251001";
+const CASTI = [["rozcvicka", "Rozcvička"], ["uvod", "Úvodní hra"], ["hlavni", "Hlavní část"], ["zaver", "Závěr"]];
 
-const ASISTENT_NASTROJE = [
-  { name: "skupiny", description: "Seznam skupin (tříd nebo jejich částí), které Karel učí, s počtem žáků a rozvrhem.",
-    input_schema: { type: "object", properties: {} } },
-  { name: "zaci", description: "Žáci jedné skupiny jako kódy (Ž1, Ž2…) se třídou. Jména nejsou k dispozici, aplikace je doplní sama.",
-    input_schema: { type: "object", properties: { skupina: { type: "string", description: "id skupiny z nástroje skupiny" } }, required: ["skupina"] } },
-  { name: "dochazka", description: "Docházka skupiny za období po žácích: odučené hodiny, kolikrát cvičil (ok), nepřítomen (X), necvičil (N), bez úboru (U), vedl rozcvičku. Omluvení bez záznamu se počítají jako N.",
-    input_schema: { type: "object", properties: { skupina: { type: "string" }, od: { type: "string", description: "RRRR-MM-DD, výchozí začátek školního roku" }, do: { type: "string", description: "RRRR-MM-DD, výchozí dnešek" } }, required: ["skupina"] } },
-  { name: "vykony", description: "Naměřené výkony (disciplína, hodnota, jednotka, datum, kód žáka). U jednotek s a min je lepší menší číslo.",
-    input_schema: { type: "object", properties: { skupina: { type: "string" }, disciplina: { type: "string" }, zak: { type: "string", description: "kód žáka, např. Ž3" }, od: { type: "string" }, do: { type: "string" } } } },
-  { name: "omluvy", description: "Omluvy žáků z tělocviku (kód žáka, od, do; prázdné do znamená do odvolání). Důvod se nesdílí.",
-    input_schema: { type: "object", properties: { skupina: { type: "string" }, platne_k: { type: "string", description: "RRRR-MM-DD, jen omluvy platné v ten den" } } } },
-  { name: "hodiny", description: "Hodiny s plánem, náplní, zápisem do ŠOL, stavem a poznanými činnostmi. Nejnovější napřed, nejvýš 60.",
-    input_schema: { type: "object", properties: { skupina: { type: "string" }, od: { type: "string" }, do: { type: "string" }, hledat: { type: "string", description: "volitelný text, který má hodina obsahovat" } } } },
-  { name: "dlouho_nebylo", description: "Činnosti ze zásobníku u jedné skupiny seřazené od nejdéle nedělaných, s počtem týdnů od posledního provedení a okruhem ŠVP.",
-    input_schema: { type: "object", properties: { skupina: { type: "string" } }, required: ["skupina"] } },
-  { name: "sliby", description: "Nesplněné sliby třídám.",
-    input_schema: { type: "object", properties: { skupina: { type: "string" } } } }
-];
-
-function asistentPokyny() {
-  const dnes = new Intl.DateTimeFormat("cs-CZ", { timeZone: "Europe/Prague", weekday: "long", year: "numeric", month: "numeric", day: "numeric" }).format(new Date());
-  const iso = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Prague" }).format(new Date());
+function zapisPokyny() {
   return [
-    "Jsi asistent v aplikaci Cvička, třídní knize učitele tělesné výchovy Karla na ZŠ v Praze.",
-    "Dnes je " + dnes + " (" + iso + ").",
-    "Odpovídej česky, stručně a věcně. Nepoužívej pomlčky ani spojovníky jako interpunkci, piš celé věty a čárky.",
-    "Data zjišťuj nástroji, nic si nevymýšlej. Když nástroj nic nevrátí, řekni to.",
-    "Žáci jsou v datech jen jako kódy Ž1, Ž2 atd. V odpovědi je piš přesně v tomto tvaru, aplikace je nahradí jmény. Nikdy se neptej na jména a nehádej je.",
-    "Skupiny označuj jejich názvem (např. III. A), ne id.",
-    "Seznamy dělej krátké. Když je výsledků hodně, shrň je a uveď počet.",
-    "Když Karel chce návrh zápisu do ŠOL, piš jednu větu v jednotném čísle, srozumitelnou pro děti daného ročníku, s aktivním slovesem a konkrétní dovedností, bez názvů konkrétních her."
+    "Píšeš zápisy do třídní knihy (Škola OnLine) pro učitele tělesné výchovy na základní škole v Praze.",
+    "Z náplně hodiny napiš, co se žák v hodině naučil nebo procvičil. Pravidla:",
+    "1. Začni aktivním slovesem ve 3. osobě jednotného čísla, nikdy slovem žáci nebo žák. První sloveso vyber z tohoto seznamu (Bloomova taxonomie, jak to chce vedení školy): cvičí, reaguje, přizpůsobí, řeší, vybere, určí, ukáže, předvede, popíše, vyjmenuje, rozliší, pozoruje, porovná, odhadne, posoudí, ohodnotí, zdůvodní, koordinuje, kombinuje, organizuje, uspořádá, plánuje, navrhne, sestaví, vytvoří, vylepší, testuje, ověří, rozvíjí. Další slovesa ve větě můžou být běžná (spolupracuje, hází, chytá, uhýbá).",
+    "2. Jednotné číslo, stručně: jedna věta nebo souvětí, nejvýš asi 25 slov.",
+    "3. Piš tak, aby tomu rozumělo dítě daného ročníku a jeho rodič. Bez odborných slov (ne uplatní herní činnosti, akcelerace, zdokonalí techniku, rozloží tempo).",
+    "4. Popiš konkrétní dovednost nebo výsledek, ne program hodiny. Místo hráli fotbal napiš Cvičí přihrávky a spolupráci s týmem ve fotbalu.",
+    "5. Nejmenuj konkrétní pohybové hry (třeba Mrazík, Bludišťák, Medvědí doupě, Ocásky, vlajkovaná). Napiš, co hra rozvíjí. Sportovní hry (fotbal, florbal, házená, vybíjená, basketbal, přehazovaná, ragby) jmenovat smíš.",
+    "6. Těžiště je v hlavní části. Úvodní hru přidej jen krátce, když se vejde. Rozcvičku a závěr (protažení, zhodnocení) nezmiňuj, pokud v nich nebylo nic zvláštního.",
+    "7. Nepřipisuj dovednost, která v náplni není. Nic si nevymýšlej.",
+    "8. V souladu s ŠVP tělesné výchovy, ale řečeno lidsky.",
+    "9. Nepoužívej pomlčky ani spojovníky jako interpunkci, jen čárky a spojky.",
+    "Vzory dobrých zápisů:",
+    "Cvičí předávání kolíku ve štafetě a spolupracuje s týmem ve fotbalu.",
+    "Přizpůsobí tempo běhu na 1000 m tak, aby mu vydržely síly až do cíle.",
+    "Reaguje rychle při honičce a spolupracuje s ostatními.",
+    "Koordinuje se s týmem, plní svůj úkol ve hře a vybere volné místo pro přihrávku.",
+    "Vyjmenuje pravidla bezpečnosti v tělocvičně a reaguje na pokyny při hrách na rychlost a spolupráci.",
+    "Odpověz přesně dvěma návrhy, každý na samostatném řádku, druhý jinými slovy nebo kratší. Bez číslování, uvozovek a dalšího textu."
   ].join("\n");
 }
 
-async function asistent(env, telo) {
+const vycisti = (x) => String(x || "").replace(/\r/g, "").trim().slice(0, 1500);
+
+async function navrhZapisu(env, telo) {
   if (!env.ANTHROPIC_API_KEY) return { chyba: "Na serveru chybí ANTHROPIC_API_KEY, postup je v server/README.md.", status: 503 };
-  const zpravy = Array.isArray(telo && telo.zpravy) ? telo.zpravy : null;
-  if (!zpravy || !zpravy.length) return { chyba: "chybí zprávy", status: 400 };
-  if (zpravy.length > ASISTENT_MAX_ZPRAV) return { chyba: "Konverzace je moc dlouhá, začni novou.", status: 400 };
-  if (JSON.stringify(zpravy).length > ASISTENT_MAX_BAJTU) return { chyba: "Požadavek je moc velký, začni novou konverzaci.", status: 400 };
+  const c = (telo && telo.casti) || {};
+  const napln = CASTI.map(([k, n]) => [n, vycisti(c[k])]).filter(([, t]) => t).map(([n, t]) => n + ": " + t).join("\n");
+  if (!napln) return { chyba: "Náplň hodiny je prázdná.", status: 400 };
+  const r0 = Number(telo && telo.rocnik);
+  const rocnik = r0 >= 1 && r0 <= 9 ? r0 : null;
+  const priklady = (telo && Array.isArray(telo.priklady) ? telo.priklady : []).map((x) => vycisti(x).slice(0, 300)).filter(Boolean).slice(0, 3);
+  const dotaz = [
+    rocnik ? "Ročník: " + rocnik + ". (" + (rocnik <= 5 ? "1. stupeň, piš hodně jednoduše" : "2. stupeň") + ")" : "Ročník neznámý, piš jednoduše.",
+    "Náplň hodiny:",
+    napln,
+    priklady.length ? "\nPro představu o stylu, takhle učitel psal dřív (obsah z nich nepřebírej):\n" + priklady.join("\n") : "",
+    "\nNapiš dva návrhy zápisu."
+  ].join("\n");
 
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -198,11 +197,10 @@ async function asistent(env, telo) {
       "anthropic-version": "2023-06-01"
     },
     body: JSON.stringify({
-      model: env.ASISTENT_MODEL || ASISTENT_MODEL,
-      max_tokens: 1024,
-      system: asistentPokyny(),
-      tools: ASISTENT_NASTROJE,
-      messages: zpravy
+      model: env.ZAPIS_MODEL || env.ASISTENT_MODEL || ZAPIS_MODEL,
+      max_tokens: 400,
+      system: zapisPokyny(),
+      messages: [{ role: "user", content: dotaz }]
     })
   });
   const data = await r.json().catch(() => null);
@@ -210,5 +208,10 @@ async function asistent(env, telo) {
     const msg = data && data.error && data.error.message ? data.error.message : ("HTTP " + r.status);
     return { chyba: "Claude API: " + msg, status: 502 };
   }
-  return { content: data.content || [], stop_reason: data.stop_reason, usage: data.usage || null };
+  const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
+  const navrhy = [...new Set(text.split("\n")
+    .map((x) => x.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, "").replace(/^["„“”']+|["„“”']+$/g, "").trim())
+    .filter((x) => x.length > 10))].slice(0, 3);
+  if (!navrhy.length) return { chyba: "Návrh se nepovedl, zkus to znovu.", status: 502 };
+  return { navrhy, usage: data.usage || null };
 }

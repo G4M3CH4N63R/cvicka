@@ -201,7 +201,6 @@ nav button[aria-selected="true"] { color: var(--accent); border-top-color: var(-
 .mleg i { width: 11px; height: 11px; border-radius: 3px; border: 1px solid transparent; }
 .mleg i.bez { background: var(--surface-2); border-color: var(--line); }
 .mleg i.plan { background: var(--accent-soft); border-color: var(--accent); }
-.mleg i.rozepsano { background: var(--warn-soft); border-color: var(--warn); }
 .mleg i.zapsano { background: var(--good-soft); border-color: var(--good); }
 .legend b { font-family: var(--fd); }
 
@@ -344,26 +343,15 @@ select {
 .slib .duvod { display: block; font-size: 12px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .slib .kdy { font-family: var(--fm); font-size: 11px; color: var(--crit); white-space: nowrap; }
 .duo > .field { margin-top: 0; }
-.asbtn { width: auto; padding: 0 10px; font-size: 12.5px; font-weight: 600; color: var(--accent); }
-.as-c { height: 88vh; }
-.as-b { flex: 1; display: flex; flex-direction: column; gap: 9px; padding-bottom: 12px; }
-.asmsg { max-width: 88%; padding: 9px 12px; border-radius: 12px; font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
-.asmsg.ja { align-self: flex-end; background: var(--accent-soft); color: var(--ink); border-bottom-right-radius: 4px; }
-.asmsg.on { align-self: flex-start; background: var(--surface-2); color: var(--ink); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
-.asmsg.chyba { align-self: stretch; max-width: none; background: var(--crit-soft); color: var(--crit); }
-.asmsg p, .asmsg ul { margin: 0; }
-.asmsg p + p, .asmsg p + ul, .asmsg ul + p { margin-top: 6px; }
-.asmsg ul { padding-left: 18px; }
-.asstav { align-self: flex-start; font-family: var(--fm); font-size: 11px; color: var(--ink-3); }
-.as-uvod { display: grid; gap: 8px; }
-.as-uvod .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.as-form { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 10px 13px calc(10px + var(--safe-b)); border-top: 1px solid var(--line); background: var(--surface); }
-.as-form textarea { resize: none; min-height: 44px; }
-.as-form .btn { width: auto; align-self: end; }
 .field-h { display: flex; align-items: baseline; gap: 8px; }
 .linkbtn { appearance: none; border: 0; background: none; color: var(--accent); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; margin-left: auto; padding: 2px 0; }
 .navrhy { display: grid; gap: 6px; margin-top: 8px; }
 .navrhy .eyebrow { margin-top: 4px; }
+.napln-stara { display: grid; gap: 4px; padding: 9px 11px; margin-bottom: 11px; border: 1px dashed var(--line); border-radius: 9px; background: var(--surface-2); font-size: 13.5px; }
+.napln-stara p { margin: 0; white-space: pre-wrap; }
+.napln-stara .linkbtn { margin-left: 0; justify-self: start; }
+.navrhy-ai { display: grid; gap: 6px; }
+.navrhy-ai .linkbtn { margin-left: 0; justify-self: start; }
 .navrh { appearance: none; text-align: left; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); border-radius: 9px; padding: 9px 11px; font: inherit; font-size: 13.5px; line-height: 1.4; cursor: pointer; }
 .navrh:active { background: var(--surface-3); }
 .navrh .odkud { display: block; font-family: var(--fm); font-size: 10.5px; color: var(--ink-3); margin-top: 3px; }
@@ -448,7 +436,6 @@ a.btn { display: block; text-align: center; text-decoration: none; }
     <button class="iconbtn" id="hPrev" type="button" aria-label="předchozí hodina">‹</button>
     <button class="iconbtn" id="hNext" type="button" aria-label="další hodina">›</button>
   </div>
-  <button class="iconbtn asbtn" id="bAsist" type="button" aria-label="Zeptat se asistenta">Zeptat se</button>
 </header>
 
 <main>
@@ -479,7 +466,7 @@ a.btn { display: block; text-align: center; text-decoration: none; }
       <div id="omluvyList"></div>
     </div>
     <div class="card" id="dnesTodoCard" hidden>
-      <div class="card-h"><h3>Chybí zápis</h3><span class="eyebrow" id="dnesTodoCnt"></span></div>
+      <div class="card-h"><h3>Neuzavřené hodiny</h3><span class="eyebrow" id="dnesTodoCnt"></span></div>
       <div id="dnesTodo"></div>
     </div>
   </div></section>
@@ -496,14 +483,10 @@ a.btn { display: block; text-align: center; text-decoration: none; }
       <div class="card-b">
         <div class="rozvrh-box"><div class="rozvrh" id="tydenMrizka"></div></div>
         <div class="mleg">
-          <span><i class="bez"></i>bez plánu</span><span><i class="plan"></i>plán</span>
-          <span><i class="rozepsano"></i>rozepsané</span><span><i class="zapsano"></i>zapsáno</span>
+          <span><i class="bez"></i>bez plánu</span><span><i class="plan"></i>plán, zatím nepotvrzená</span>
+          <span><i class="zapsano"></i>uzavřená</span>
         </div>
       </div>
-    </div>
-    <div class="card">
-      <div class="card-h"><h3>Hodiny v týdnu</h3><span class="eyebrow" id="tydenCnt"></span></div>
-      <div id="tydenList"></div>
     </div>
     <div class="card" id="slibyTydenCard">
       <div class="card-h"><h3>Všechny sliby</h3><span class="eyebrow" id="slibyTydenCnt"></span></div>
@@ -529,11 +512,14 @@ a.btn { display: block; text-align: center; text-decoration: none; }
   <!-- HODINA -->
   <section class="screen" id="s-hodina"><div class="wrap">
     <div class="card">
-      <div class="card-h"><h3>Náplň hodiny</h3><span class="eyebrow">jen pro tebe</span></div>
+      <div class="card-h"><h3>Náplň hodiny</h3><button class="linkbtn" id="bKnih" type="button">Z knihovny</button></div>
       <div class="card-b">
-        <div class="field"><div class="field-h"><label for="fPlan">Plán (co chci dělat)</label><button class="linkbtn" id="bKnih" type="button">Z knihovny</button></div><textarea id="fPlan" rows="5" placeholder="Úvod: … Hlavní část: …"></textarea></div>
-        <div class="field"><label for="fNapln">Co se dělalo</label><textarea id="fNapln" rows="3" placeholder="Prázdné znamená, že proběhlo podle plánu"></textarea></div>
-        <div class="field"><div class="field-h"><label for="fZapis">Zápis do Školy OnLine</label><button class="linkbtn" id="bNavrh" type="button" aria-expanded="false">Navrhnout</button></div><textarea id="fZapis" rows="3" placeholder="Jedna věta v jednotném čísle"></textarea></div>
+        <div class="napln-stara" id="hNapln" hidden><span class="eyebrow">Co se dělalo (starší pole)</span><p id="hNaplnT"></p><button class="linkbtn" id="bNaplnPresun" type="button">Přesunout do hlavní části</button></div>
+        <div class="field"><label for="fRozc">Rozcvička</label><textarea id="fRozc" rows="1" placeholder="např. běžecká abeceda, protažení"></textarea></div>
+        <div class="field"><label for="fUvod">Úvodní hra</label><textarea id="fUvod" rows="1" placeholder="např. honička"></textarea></div>
+        <div class="field"><label for="fHlavni">Hlavní část</label><textarea id="fHlavni" rows="3" placeholder="co je hlavní náplní hodiny"></textarea></div>
+        <div class="field"><label for="fZaver">Závěr</label><textarea id="fZaver" rows="1" placeholder="např. protažení, zhodnocení"></textarea></div>
+        <div class="field"><div class="field-h"><label for="fZapis">Zápis do Školy OnLine</label><button class="linkbtn" id="bNavrh" type="button" aria-expanded="false">Navrhnout</button></div><textarea id="fZapis" rows="3" placeholder="Navrhnout napíše AI z náplně hodiny"></textarea></div>
         <div class="navrhy" id="zapNavrhy" hidden></div>
         <div class="btns two">
           <button class="btn ghost" id="bCopy" type="button">Kopírovat zápis</button>
@@ -741,25 +727,6 @@ a.btn { display: block; text-align: center; text-decoration: none; }
   </div>
 </div>
 
-<div class="sheet" id="asSheet" hidden>
-  <div class="sheet-bg" id="asBg"></div>
-  <div class="sheet-c as-c" role="dialog" aria-modal="true" aria-labelledby="asTtl">
-    <div class="sheet-h">
-      <div style="min-width:0">
-        <h3 id="asTtl">Asistent</h3>
-        <div class="sub">jména žáků zůstávají v zařízení</div>
-      </div>
-      <button class="iconbtn" id="asNova" type="button" style="width:auto;padding:0 10px;font-size:12.5px">Nová</button>
-      <button class="iconbtn" id="asX" type="button" aria-label="Zavřít" style="margin-left:0">&#10005;</button>
-    </div>
-    <div class="sheet-b as-b" id="asList" aria-live="polite"></div>
-    <form class="as-form" id="asForm">
-      <textarea id="asText" rows="2" placeholder="Zeptej se na docházku, výkony, omluvy nebo plán…" aria-label="Otázka pro asistenta"></textarea>
-      <button class="btn" id="asSend" type="submit">Poslat</button>
-    </form>
-  </div>
-</div>
-
 <div class="sheet" id="zakSheet" hidden>
   <div class="sheet-bg" id="zakBg"></div>
   <div class="sheet-c" role="dialog" aria-modal="true" aria-labelledby="zakJm">
@@ -788,7 +755,7 @@ a.btn { display: block; text-align: center; text-decoration: none; }
 
 <script>
 "use strict";
-const APP = { ver: "0.14.1", db: null, sync: null, klic: null };
+const APP = { ver: "0.15.0", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -1191,6 +1158,67 @@ async function seedCinnosti() {
   await metaSet("seedVerze", SEED_VERZE);
 }
 
+// Napln hodiny se uklada do jednoho pole plan, kazda cast na radku se stitkem:
+// "Rozcvička: …", "Úvodní hra: …", "Hlavní část: …", "Závěr: …". Diky tomu zustava citelna
+// i pro zapis pres server a hledani. Starsi volny text bez stitku patri do hlavni casti.
+const CASTI_HODINY = [["rozcvicka", "Rozcvička", "#fRozc"], ["uvod", "Úvodní hra", "#fUvod"], ["hlavni", "Hlavní část", "#fHlavni"], ["zaver", "Závěr", "#fZaver"]];
+const STITKY_CASTI = [
+  [/^(rozcvička|rozcvičení)\s*:\s*/i, "rozcvicka"],
+  [/^(úvodní hra|úvodní hry|úvodní část|úvod)\s*:\s*/i, "uvod"],
+  [/^(hlavní část|hlavní)\s*:\s*/i, "hlavni"],
+  [/^(závěrečná část|závěr)\s*:\s*/i, "zaver"]
+];
+function rozdelPlan(text) {
+  const out = { rozcvicka: "", uvod: "", hlavni: "", zaver: "" };
+  let t = String(text || "").replace(/\r/g, "");
+  if (!t.trim()) return out;
+  // "Úvod: Mrazík. Hlavní část: fotbal" na jednom radku se rozdeli
+  t = t.replace(/[.;]\s+(?=(?:Rozcvička|Rozcvičení|Úvodní hra|Úvodní část|Úvod|Hlavní část|Závěrečná část|Závěr)\s*:)/g, "\n");
+  // Ve stitkovanem tvaru patri radek bez stitku k predchozi casti, ve starem volnem tvaru do hlavni.
+  // Co je pripsane az za zaverem (poznamka na priste), patri taky do hlavni casti.
+  const novy = /^(rozcvička|rozcvičení|úvodní hra|hlavní část)\s*:/im.test(t);
+  const pridej = (k, x) => { out[k] = out[k] ? out[k] + "\n" + x : x; };
+  let akt = null;
+  t.split("\n").forEach((r) => {
+    const radek = r.trim();
+    if (!radek) return;
+    for (const [re, k] of STITKY_CASTI) {
+      if (re.test(radek)) { akt = k; const zb = radek.replace(re, "").trim(); if (zb) pridej(k, zb); return; }
+    }
+    pridej(novy && akt && akt !== "zaver" ? akt : "hlavni", radek);
+  });
+  return out;
+}
+function slozPlan(c) {
+  return CASTI_HODINY.map(([k, n]) => {
+    let x = String(c[k] || "").replace(/\r/g, "").split("\n").map((r) => r.trim()).filter(Boolean).join("\n");
+    if (!x) return "";
+    if (k === "zaver") x = x.replace(/\n/g, " ");
+    return n + ": " + x;
+  }).filter(Boolean).join("\n");
+}
+function ctiCasti() {
+  const c = {};
+  CASTI_HODINY.forEach(([k, , sel]) => { c[k] = $(sel).value.trim(); });
+  return c;
+}
+// Co bylo hlavni napln hodiny: stare pole napln (skutecnost) ma prednost, jinak hlavni cast planu.
+function hlavniText(h) {
+  const n = (h.napln || "").trim();
+  if (n) {
+    const m = /hlavní část\s*:\s*([\s\S]*?)(?=[.;]?\s*(?:závěrečná část|závěr)\s*:|$)/i.exec(n);
+    return m && m[1].trim() ? m[1].trim() : n;
+  }
+  const c = rozdelPlan(h.plan);
+  return c.hlavni || c.uvod || c.rozcvicka || c.zaver || "";
+}
+const naRadek = (t) => String(t || "").replace(/\s*\n\s*/g, " · ").trim();
+// Plan znamena, ze hodina jeste neprobehla nebo ji Karel nepotvrdil. Potvrzeni je Uzavrit hodinu.
+// Stav "zapsana" (zapis hodiny pres Claude) u probehle hodiny plati taky jako potvrzeny.
+function jeUzavrena(h) {
+  return !!h && (h.stav === "uzavrena" || (h.stav === "zapsana" && h.datum <= iso(new Date())));
+}
+
 function textHodiny(h) {
   return ((h.napln || "") + " " + (h.zapis || "") + " " + (h.plan || "")).toLowerCase();
 }
@@ -1276,11 +1304,12 @@ async function renderDnes() {
   // nedodelky: zapsane dny v minulosti bez zapisu
   const vse = await dbAll("hodiny");
   const dnes = iso(new Date());
-  const chybi = vse.filter((h) => h.datum < dnes && h.stav !== "uzavrena" && !h.zapis).sort((a, b) => b.datum.localeCompare(a.datum)).slice(0, 6);
+  // probehle hodiny, ktere Karel jeste nepotvrdil, nebo jim chybi zapis do SOL
+  const chybi = vse.filter((h) => h.datum < dnes && (!jeUzavrena(h) || !h.zapis)).sort((a, b) => b.datum.localeCompare(a.datum));
   $("#dnesTodoCard").hidden = chybi.length === 0;
   $("#dnesTodoCnt").textContent = chybi.length ? chybi.length + "×" : "";
   const todo = $("#dnesTodo"); todo.innerHTML = "";
-  chybi.forEach((h) => todo.appendChild(lessonRow(h, true)));
+  chybi.slice(0, 6).forEach((h) => todo.appendChild(lessonRow(h, true)));
 }
 
 // Na Dnes jen sliby skupin, ktere maji v zobrazeny den hodinu.
@@ -1324,9 +1353,8 @@ function slibRow(sl, sCislem) {
 }
 
 function stavPill(h, tyden) {
-  if (h.stav === "uzavrena") return el("span", "pill ok", "zapsáno");
-  if (h.napln || h.zapis) return el("span", "pill no", "rozepsáno");
-  if (h.plan) return el("span", "pill plan", "plán");
+  if (jeUzavrena(h)) return h.zapis || h.datum >= iso(new Date()) ? el("span", "pill ok", "uzavřeno") : el("span", "pill no", "bez zápisu");
+  if ((h.plan || "").trim() || h.napln) return el("span", "pill plan", "plán");
   return el("span", "pill no", tyden ? "bez plánu" : "prázdná");
 }
 
@@ -1337,7 +1365,7 @@ function lessonRow(h, showDate) {
   mid.appendChild(el("span", "g", skName(h.skupinaId)));
   mid.appendChild(document.createTextNode(" "));
   mid.appendChild(el("span", "m", (h.poradi + ". hodina") + (h.mistnost ? " · " + h.mistnost : "")));
-  const txt = h.napln || h.plan;
+  const txt = naRadek(hlavniText(h));
   if (txt) mid.appendChild(el("span", "note", txt));
   b.append(t, mid, stavPill(h));
   b.addEventListener("click", () => openHodina(h.id, "dnes"));
@@ -1358,9 +1386,8 @@ function skZkratka(nazev) {
 }
 
 function stavTrida(h) {
-  if (h.stav === "uzavrena") return "zapsano";
-  if (h.napln || h.zapis) return "rozepsano";
-  if (h.plan) return "plan";
+  if (jeUzavrena(h)) return "zapsano";
+  if ((h.plan || "").trim() || h.napln) return "plan";
   return "bez";
 }
 
@@ -1401,7 +1428,7 @@ async function renderMrizka(dny, hodiny) {
       const b = el("button", "bu " + stavTrida(h)); b.type = "button";
       const jmeno = skName(h.skupinaId);
       b.append(el("span", "", skZkratka(jmeno)));
-      const co = (h.napln || h.plan || h.zapis || "").trim();
+      const co = naRadek(hlavniText(h) || h.zapis);
       if (co) b.append(el("span", "np", co));
       if (v.length > 1) b.append(el("span", "vic", "+" + (v.length - 1)));
       b.title = jmeno + " · " + p + ". hodina" + (co ? "\n" + co : "");
@@ -1414,28 +1441,9 @@ async function renderMrizka(dny, hodiny) {
 async function renderTyden() {
   const konec = addDays(S.tyden, 4);
   $("#tydenTtl").textContent = `${dm(S.tyden)} až ${dm(konec)}`;
-  const list = $("#tydenList"); list.innerHTML = "";
   const dny = [], vsechny = [];
   for (let i = 0; i < 5; i++) dny.push(addDays(S.tyden, i));
-  let n = 0;
-  for (const d of dny) {
-    const hod = (await dbBy("hodiny", "datum", d)).sort((a, b) => a.poradi - b.poradi);
-    vsechny.push(...hod);
-    hod.forEach((h) => {
-      n++;
-      const b = el("button", "row"); b.type = "button";
-      b.append(el("span", "t", DNY[parseISO(d).getDay()].toLowerCase() + " " + h.poradi + "."));
-      const mid = el("span");
-      mid.appendChild(el("span", "g", skName(h.skupinaId)));
-      const txt = h.plan || h.napln;
-      if (txt) mid.appendChild(el("span", "note", txt));
-      b.append(mid, stavPill(h, true));
-      b.addEventListener("click", () => { S.histSkupina = h.skupinaId; openHodina(h.id, "tyden"); });
-      list.appendChild(b);
-    });
-  }
-  $("#tydenCnt").textContent = n ? n + (n === 1 ? " hodina" : (n < 5 ? " hodiny" : " hodin")) : "";
-  if (!n) list.appendChild(el("div", "empty", "V tomhle týdnu nejsou žádné hodiny. Zkontroluj v nastavení rozsah školního roku."));
+  for (const d of dny) vsechny.push(...(await dbBy("hodiny", "datum", d)));
   await renderMrizka(dny, vsechny);
   await renderSlibyTyden();
   await renderOmluvyTyden();
@@ -1488,7 +1496,7 @@ async function renderHist(skupinaId, kam, opt) {
   $(kam.ttl).textContent = opt.ttl || ("Co " + skName(skupinaId) + " naposledy měla");
   const box = $(kam.list); box.innerHTML = "";
   const zapsane = (await dbBy("hodiny", "skupinaId", skupinaId))
-    .filter((h) => (h.napln || h.zapis) && h.id !== opt.krome)
+    .filter((h) => (jeUzavrena(h) || h.napln || h.zapis) && h.id !== opt.krome)
     .sort((a, b) => b.datum.localeCompare(a.datum));
   const dnesI = iso(new Date());
   const minule = zapsane.filter((h) => h.datum <= dnesI);
@@ -1506,7 +1514,6 @@ async function renderHist(skupinaId, kam, opt) {
     if (stitek) stitek.textContent = rozbal ? vse.length + (vse.length < 5 ? " hodiny" : " hodin") : "poslední hodiny";
   }
   if (!hod.length) { box.appendChild(el("div", "empty", "Zatím žádný zápis.")); return; }
-  const cin = await dbAll("cinnosti");
   let mesic = "";
   hod.forEach((h) => {
     if (rozbal) {
@@ -1515,24 +1522,19 @@ async function renderHist(skupinaId, kam, opt) {
       if (m !== mesic) { mesic = m; box.appendChild(el("p", "mes", m)); }
     }
     const r = el("button"); r.type = "button";
-    r.append(el("span", "d", cz(h.datum)), el("span", "x", hlavniAktivita(h, cin)), el("span", "sip", "›"));
-    r.title = h.napln || h.zapis || "";
+    r.append(el("span", "d", cz(h.datum)), el("span", "x", popisHistorie(h)), el("span", "sip", "›"));
+    r.title = h.napln || h.plan || h.zapis || "";
     r.setAttribute("aria-label", "otevřít hodinu " + czFull(h.datum));
     r.addEventListener("click", () => skocNaHodinu(h.id));
     box.appendChild(r);
   });
 }
 
-// Kratky popis hodiny do historie: poznane cinnosti (hlavni napred), jinak hlavni cast
-// z textu naplne nebo planu, jinak prvni veta. Cela hodina je o klepnuti dal.
-function hlavniAktivita(h, cin) {
-  const c = cinnostiVHodine(h, cin || []);
-  if (c.length) return c.slice(0, 3).map((x) => x.nazev).join(", ");
-  const t = String(h.napln || h.plan || h.zapis || "").replace(/\s+/g, " ").trim();
-  const m = t.match(/hlavní část\s*[:–-]?\s*([^.;]+)/i);
-  let k = (m ? m[1] : t.split(/[.;]/)[0]).trim();
-  if (k.length > 70) k = k.slice(0, 68).replace(/\s+\S*$/, "") + "…";
-  return k || t.slice(0, 70);
+// Kratky popis hodiny do historie: obsah okenka Hlavni cast (u starych hodin pole napln),
+// jinak zapis do SOL. Cela hodina je o klepnuti dal.
+function popisHistorie(h) {
+  const t = naRadek(hlavniText(h) || h.zapis);
+  return t.length > 110 ? t.slice(0, 108).replace(/\s+\S*$/, "") + "…" : t;
 }
 
 const SBAL_KLIC = { hHistCard: "sbalHist", hGapsCard: "sbalGaps" };
@@ -1642,8 +1644,8 @@ async function renderHodina() {
   if (!h) {
     $("#attSum").textContent = "";
     list.appendChild(el("div", "empty", "Vyber hodinu na obrazovce Dnes nebo Týden."));
-    $("#fPlan").value = ""; $("#fNapln").value = ""; $("#fZapis").value = "";
-    $("#fPlan").style.height = "";
+    CASTI_HODINY.forEach(([, , sel]) => { $(sel).value = ""; $(sel).style.height = ""; });
+    $("#fZapis").value = ""; $("#hNapln").hidden = true;
     $("#hTitle").classList.remove("dve"); $("#hTitle").textContent = "Hodina"; $("#hSub").textContent = "nic nevybráno";
     $("#zasTypy").innerHTML = ""; $("#zasList").innerHTML = ""; $("#slibHodinaList").innerHTML = "";
     $("#hHistCard").hidden = true; $("#hGapsCard").hidden = true;
@@ -1655,16 +1657,17 @@ async function renderHodina() {
   // Dlouhy nazev skupiny se zkracuje sam, cislo hodiny zustava videt vzdy.
   const ttl = $("#hTitle"); ttl.textContent = ""; ttl.classList.add("dve");
   ttl.append(el("span", "nm", skName(h.skupinaId)), el("span", "po", "\u00a0· " + h.poradi + ". hodina"));
-  $("#hSub").textContent = czFull(h.datum) + (h.mistnost ? " · " + h.mistnost : "") + (h.stav === "uzavrena" ? " · uzavřená" : "");
+  $("#hSub").textContent = czFull(h.datum) + (h.mistnost ? " · " + h.mistnost : "") + (jeUzavrena(h) ? " · uzavřená" : "");
   kresliUzavreni(h);
   await kresliSousedy(h);
   $("#zapNavrhy").hidden = true; $("#bNavrh").setAttribute("aria-expanded", "false");
   // Synchronizace po ulozeni hodinu prekresluje. Pole, do ktereho se prave pise, se nesmi
   // prepsat, jinak kurzor skoci na konec textu (a rozepsany text by mohl zmizet).
-  nastavPole($("#fPlan"), h.plan || "");
-  nastavPole($("#fNapln"), h.napln || "");
+  const casti = rozdelPlan(h.plan);
+  CASTI_HODINY.forEach(([k, , sel]) => { nastavPole($(sel), casti[k]); rostouciPole($(sel)); });
   nastavPole($("#fZapis"), h.zapis || "");
-  rostouciPole($("#fPlan"));
+  $("#hNapln").hidden = !(h.napln || "").trim();
+  $("#hNaplnT").textContent = h.napln || "";
 
   const zaci = (S.cache.zaciBySk.get(h.skupinaId) || []);
   const zazn = await dbBy("zaznamy", "hodinaId", h.id);
@@ -1744,10 +1747,10 @@ async function sousedniHodina(kam) {
   await switchTab("hodina");
 }
 
-// Uzavrenou hodinu jde vratit zpet do planu. Text (plan, napln, zapis) zustava.
+// Uzavrenou hodinu jde vratit zpet do planu. Text (napln, zapis) zustava.
 function kresliUzavreni(h) {
   const b = $("#bClose");
-  const uz = !!(h && h.stav === "uzavrena");
+  const uz = jeUzavrena(h);
   b.textContent = uz ? "Vrátit do plánu" : "Uzavřít hodinu";
   b.classList.toggle("ghost", uz);
   b.dataset.uz = uz ? "1" : "0";
@@ -1772,14 +1775,17 @@ async function renderZasobnik(h, hotovy) {
     b.textContent = c.nazev + (c.posledni ? " · " + (c.tydnu === 0 ? "teď" : c.tydnu + " t") : (c.jinde ? " · jinde" : " · ještě ne"));
     b.addEventListener("click", async () => {
       const hod = await dbGet("hodiny", S.hodinaId);
-      const pole = $("#fPlan");
+      // uvodni hry do Uvodni hry, pruprava do Rozcvicky, ostatni do Hlavni casti
+      const cast = CASTI_HODINY.find(([k]) => k === (c.typ === "uvod" ? "uvod" : c.typ === "pruprava" ? "rozcvicka" : "hlavni"));
+      const pole = $(cast[2]);
       pole.value = pole.value.trim() ? pole.value.trim() + ", " + c.nazev : c.nazev;
       hod.cinnosti = [...new Set([...(hod.cinnosti || []), c.id])];
-      hod.plan = pole.value;
+      hod.plan = slozPlan(ctiCasti());
+      hod.updatedAt = Date.now();
       rostouciPole(pole);
       if (hod.stav === "plan" && !hod.napln) hod.okruh = c.okruh;
       await dbPut("hodiny", hod);
-      toast(c.nazev + " přidáno do plánu");
+      toast(c.nazev + " přidáno: " + cast[1]);
     });
     list.appendChild(b);
   });
@@ -1795,7 +1801,7 @@ async function renderSlibyHodina() {
   sliby.forEach((sl) => box.appendChild(slibRow(sl, false)));
 }
 
-// Plan byva dlouhy (zasobnik do nej pripisuje cinnosti), tak at neni potreba
+// Okenka naplne byvaji dlouha (zasobnik do nich pripisuje cinnosti), tak at neni potreba
 // scrollovat uvnitr policka. Vyska nikdy neklesne pod vychozich pet radku.
 function nastavPole(pole, hodnota) {
   if (document.activeElement === pole && pole.dataset.hodina === S.hodinaId) return;
@@ -1816,11 +1822,12 @@ async function saveHodinaPole() {
   if (!S.hodinaId) return;
   const h = await dbGet("hodiny", S.hodinaId);
   if (!h) return;
-  h.plan = $("#fPlan").value.trim();
-  h.napln = $("#fNapln").value.trim();
+  // Stav se psanim nemeni. Z planu se hodina stane odučenou jen tlacitkem Uzavrit hodinu.
+  const plan = slozPlan(ctiCasti());
+  // Neupraveny stary volny text se neprepisuje do stitkoveho tvaru jen tim, ze se hodina otevrela.
+  if (plan !== slozPlan(rozdelPlan(h.plan))) h.plan = plan;
   h.zapis = $("#fZapis").value.trim();
   h.updatedAt = Date.now();
-  if (h.stav === "plan" && (h.napln || h.zapis)) h.stav = "zapsana";
   await dbPut("hodiny", h);
 }
 
@@ -1833,7 +1840,7 @@ async function renderNastaveni() {
   $("#fOd").value = await metaGet("od", "2026-09-01");
   $("#fDo").value = await metaGet("do", "2027-06-30");
   $("#fVolno").value = await metaGet("volno", VOLNO_DEFAULT.join("\n"));
-  const zapsane = hod.filter((h) => h.stav === "uzavrena").length;
+  const zapsane = hod.filter(jeUzavrena).length;
   $("#rokLine").textContent = zapsane ? zapsane + " uzavřených" : "";
   $("#fSyncUrl").value = await metaGet("syncUrl", "");
   const maToken = !!(await metaGet("syncToken", ""));
@@ -2442,225 +2449,9 @@ function navrhyZapisu(cin) {
   return [...new Set(vysl)];
 }
 
-async function ukazNavrhy() {
-  const box = $("#zapNavrhy");
-  if (!box.hidden) { box.hidden = true; $("#bNavrh").setAttribute("aria-expanded", "false"); return; }
-  const h = S.hodinaId ? await dbGet("hodiny", S.hodinaId) : null;
-  if (!h) return;
-  const ted = { ...h, plan: $("#fPlan").value, napln: $("#fNapln").value };
-  const cinnosti = await dbAll("cinnosti");
-  const cin = cinnostiVHodine(ted, cinnosti);
-  box.innerHTML = "";
-  const vloz = (text) => {
-    const pole = $("#fZapis");
-    pole.value = text;
-    pole.dispatchEvent(new Event("input"));
-    box.hidden = true; $("#bNavrh").setAttribute("aria-expanded", "false");
-    pole.focus();
-    toast("Zápis vložen, můžeš ho upravit");
-  };
-  const tl = (text, odkud) => {
-    const b = el("button", "navrh", text); b.type = "button";
-    if (odkud) b.appendChild(el("span", "odkud", odkud));
-    b.addEventListener("click", () => vloz(text));
-    return b;
-  };
-  const navrhy = navrhyZapisu(cin);
-  if (navrhy.length) {
-    box.appendChild(el("div", "eyebrow", "Ze šablon · " + cin.slice(0, 3).map((c) => c.nazev).join(", ")));
-    navrhy.forEach((t) => box.appendChild(tl(t)));
-  } else {
-    box.appendChild(el("p", "hint", "Nepoznal jsem žádnou činnost. Vlož je ze zásobníku nebo je napiš do plánu či náplně."));
-  }
-  // Tvoje drivejsi zapisy u hodin se stejnou hlavni cinnosti, nejnovejsi napred
-  if (cin.length) {
-    const hlavni = cin[0];
-    const vse = (await dbAll("hodiny"))
-      .filter((x) => x.id !== h.id && x.zapis && x.datum <= iso(new Date()))
-      .filter((x) => cinnostiVHodine(x, [hlavni]).length)
-      .sort((a, b) => b.datum.localeCompare(a.datum));
-    const videno = new Set(navrhy);
-    const drive = [];
-    for (const x of vse) { if (!videno.has(x.zapis)) { videno.add(x.zapis); drive.push(x); } if (drive.length >= 3) break; }
-    if (drive.length) {
-      box.appendChild(el("div", "eyebrow", "Tvoje dřívější zápisy · " + hlavni.nazev));
-      drive.forEach((x) => box.appendChild(tl(x.zapis, skName(x.skupinaId) + " · " + dm(x.datum))));
-    }
-  }
-  box.hidden = false; $("#bNavrh").setAttribute("aria-expanded", "true");
-}
-
-/* ---------- asistent ---------- */
-// Konverzace jde pres Worker (/asistent) do Claude. Nastroje bezi tady v zarizeni.
-// Zaci se ven posilaji jen jako kody Ž1, Ž2…, prirazene pro tuhle konverzaci. Jmena,
-// poznamky o chovani, duvody omluv ani volne poznamky nikdy neodchazeji.
-const AS = { zpravy: [], kody: new Map(), zpet: new Map(), bezi: false };
-
-function kodZaka(zakId) {
-  if (!AS.kody.has(zakId)) { const k = "Ž" + (AS.kody.size + 1); AS.kody.set(zakId, k); AS.zpet.set(k, zakId); }
-  return AS.kody.get(zakId);
-}
-function odkoduj(text) {
-  return String(text || "").replace(/Ž\d+/g, (k) => {
-    const z = S.cache.zakById.get(AS.zpet.get(k));
-    return z ? z.prijmeni + " " + z.jmeno : k;
-  });
-}
-const normNazev = (x) => String(x || "").toLowerCase().replace(/\s+/g, " ").trim();
-function najdiSkupinu(x) {
-  if (!x) return null;
-  if (S.cache.skupiny.has(x)) return S.cache.skupiny.get(x);
-  const n = normNazev(x), bez = n.replace(/\s/g, "");
-  const vse = [...S.cache.skupiny.values()];
-  return vse.find((s) => normNazev(s.nazev) === n) || vse.find((s) => normNazev(s.nazev).replace(/\s/g, "") === bez)
-    || vse.find((s) => normNazev(s.nazev).startsWith(n)) || null;
-}
-function zakZKodu(k) { return k ? AS.zpet.get(String(k).trim()) || null : null; }
-const vRozsahu = (d, od, doD) => (!od || d >= od) && (!doD || d <= doD);
-function skupinaZaka(zakId) { const z = S.cache.zakById.get(zakId); return z ? skName(z.skupinaId) : "?"; }
-
-const AS_NASTROJE = {
-  async skupiny() {
-    const rz = await dbAll("rozvrh");
-    return [...S.cache.skupiny.values()].map((s) => ({
-      id: s.id, nazev: s.nazev, zaku: (S.cache.zaciBySk.get(s.id) || []).length,
-      rozvrh: rz.filter((r) => r.skupinaId === s.id).sort((a, b) => a.den - b.den || a.poradi - b.poradi).map((r) => DNY[r.den] + " " + r.poradi + ".")
-    }));
-  },
-  async zaci({ skupina }) {
-    const sk = najdiSkupinu(skupina);
-    if (!sk) return { chyba: "neznámá skupina" };
-    return { skupina: sk.nazev, zaci: (S.cache.zaciBySk.get(sk.id) || []).map((z) => ({ kod: kodZaka(z.id), trida: z.trida })) };
-  },
-  async dochazka({ skupina, od, do: doD }) {
-    const sk = najdiSkupinu(skupina);
-    if (!sk) return { chyba: "neznámá skupina" };
-    const ob = { od: od || await metaGet("od", "2026-09-01"), do: doD || iso(new Date()) };
-    const d = await spocitejPrehled(sk.id, ob);
-    return { skupina: sk.nazev, od: ob.od, do: d.konec, oduceno: d.hodiny.length,
-      zaci: d.radky.map((r) => ({ kod: kodZaka(r.zak.id), ok: r.ok, X: r.X, N: r.N, U: r.U, vedl: r.vedl })) };
-  },
-  async vykony({ skupina, disciplina, zak, od, do: doD }) {
-    const sk = skupina ? najdiSkupinu(skupina) : null;
-    if (skupina && !sk) return { chyba: "neznámá skupina" };
-    const moje = sk ? new Set((S.cache.zaciBySk.get(sk.id) || []).map((z) => z.id)) : null;
-    const zid = zakZKodu(zak);
-    const d = disciplina ? normDisc(disciplina) : "";
-    const v = (await dbAll("pozn"))
-      .filter((p) => p.typ === "vykon" && S.cache.zakById.has(p.zakId))
-      .filter((p) => (!moje || moje.has(p.zakId)) && (!zid || p.zakId === zid) && (!d || normDisc(p.disciplina).includes(d)) && vRozsahu(p.datum, od, doD))
-      .sort((a, b) => a.datum.localeCompare(b.datum));
-    return { pocet: v.length, vykony: v.slice(-300).map((p) => ({ kod: kodZaka(p.zakId), skupina: skupinaZaka(p.zakId), datum: p.datum, disciplina: p.disciplina, hodnota: cisloZ(p.hodnota), jednotka: p.jednotka || "" })) };
-  },
-  async omluvy({ skupina, platne_k }) {
-    const sk = skupina ? najdiSkupinu(skupina) : null;
-    if (skupina && !sk) return { chyba: "neznámá skupina" };
-    const moje = sk ? new Set((S.cache.zaciBySk.get(sk.id) || []).map((z) => z.id)) : null;
-    return (await dbAll("pozn"))
-      .filter((p) => p.typ === "omluva" && S.cache.zakById.has(p.zakId) && (!moje || moje.has(p.zakId)))
-      .filter((p) => !platne_k || omluvaPlati(p, platne_k))
-      .map((p) => ({ kod: kodZaka(p.zakId), skupina: skupinaZaka(p.zakId), od: p.datum, do: p.do || "do odvolání" }));
-  },
-  async hodiny({ skupina, od, do: doD, hledat }) {
-    const sk = skupina ? najdiSkupinu(skupina) : null;
-    if (skupina && !sk) return { chyba: "neznámá skupina" };
-    const cin = await dbAll("cinnosti");
-    const q = hledat ? String(hledat).toLowerCase() : "";
-    const h = (await dbAll("hodiny"))
-      .filter((x) => (!sk || x.skupinaId === sk.id) && vRozsahu(x.datum, od, doD))
-      .filter((x) => x.plan || x.napln || x.zapis || (x.stav && x.stav !== "plan"))
-      .filter((x) => !q || textHodiny(x).includes(q))
-      .sort((a, b) => b.datum.localeCompare(a.datum));
-    return { pocet: h.length, hodiny: h.slice(0, 60).map((x) => ({ datum: x.datum, skupina: skName(x.skupinaId), poradi: x.poradi, stav: x.stav,
-      plan: x.plan || "", napln: x.napln || "", zapis: x.zapis || "", cinnosti: cinnostiVHodine(x, cin).map((c) => c.nazev) })) };
-  },
-  async dlouho_nebylo({ skupina }) {
-    const sk = najdiSkupinu(skupina);
-    if (!sk) return { chyba: "neznámá skupina" };
-    return { skupina: sk.nazev, cinnosti: (await dlouhoNebylo(sk.id)).slice(0, 40).map((c) => ({ nazev: c.nazev, typ: TYPY[c.typ] || c.typ, okruh: c.okruh, naposledy: c.posledni, tydnu: c.tydnu })) };
-  },
-  async sliby({ skupina }) {
-    const sk = skupina ? najdiSkupinu(skupina) : null;
-    return (await dbAll("sliby")).filter((x) => !x.splneno && (!sk || x.skupinaId === sk.id))
-      .map((x) => ({ skupina: skName(x.skupinaId), text: x.text, od: iso(new Date(x.vytvoreno)) }));
-  }
-};
-const AS_POPIS = { skupiny: "dívám se na skupiny", zaci: "dívám se na žáky", dochazka: "počítám docházku", vykony: "hledám výkony",
-  omluvy: "dívám se na omluvy", hodiny: "procházím hodiny", dlouho_nebylo: "dívám se, co dlouho nebylo", sliby: "dívám se na sliby" };
-
-// Jednoducha sazba odpovedi: odstavce, odrazky a **tucne**, vsechno pres textContent.
-function sazbaOdpovedi(box, text) {
-  const radky = odkoduj(text).split("\n");
-  let ul = null;
-  const sTucnym = (rodic, t) => t.split("**").forEach((cast, i) => {
-    if (!cast) return;
-    if (i % 2) rodic.appendChild(el("b", null, cast)); else rodic.appendChild(document.createTextNode(cast));
-  });
-  radky.forEach((r) => {
-    const m = r.match(/^\s*(?:[-*•]|\d+\.)\s+(.*)$/);
-    if (m) { if (!ul) { ul = el("ul"); box.appendChild(ul); } const li = el("li"); sTucnym(li, m[1]); ul.appendChild(li); return; }
-    ul = null;
-    if (!r.trim()) return;
-    const p = el("p"); sTucnym(p, r.replace(/^#+\s*/, "")); box.appendChild(p);
-  });
-}
-
-function kresliAsistenta(stav) {
-  const box = $("#asList"); box.innerHTML = "";
-  if (!AS.zpravy.length) {
-    const u = el("div", "as-uvod");
-    u.appendChild(el("p", "hint", "Zeptej se na docházku, výkony, omluvy nebo na to, co se v hodinách dělalo. Asistent vidí žáky jen jako kódy, jména doplní až appka."));
-    const skup = [...S.cache.skupiny.values()].sort((a, b) => a.nazev.localeCompare(b.nazev, "cs"));
-    const sk = skup.length ? skName(S.histSkupina && S.cache.skupiny.has(S.histSkupina) ? S.histSkupina : skup[0].id) : "III. A";
-    const ch = el("div", "chips");
-    [`Kdo v ${sk} nejčastěji necvičí?`, `Co ${sk} dlouho neměla?`, "Kdo je teď omluvený?", `Kdo v ${sk} nemá změřený skok z místa?`].forEach((t) => {
-      const b = el("button", "chip", t); b.type = "button";
-      b.addEventListener("click", () => { $("#asText").value = t; asOdeslat(); });
-      ch.appendChild(b);
-    });
-    u.appendChild(ch); box.appendChild(u);
-  }
-  AS.zpravy.forEach((m) => {
-    if (m.role === "user" && typeof m.content === "string") { box.appendChild(el("div", "asmsg ja", odkoduj(m.content))); return; }
-    if (m.role === "assistant") {
-      // Mezikroky typu „Podívám se.“ u volání nástrojů se neukazují, jen konečná odpověď.
-      if ((m.content || []).some((b) => b.type === "tool_use")) return;
-      const t = (m.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n").trim();
-      if (!t) return;
-      const d = el("div", "asmsg on"); sazbaOdpovedi(d, t); box.appendChild(d);
-    }
-  });
-  if (stav && stav.chyba) box.appendChild(el("div", "asmsg chyba", stav.chyba));
-  else if (stav) box.appendChild(el("div", "asstav", stav));
-  box.scrollTop = box.scrollHeight;
-}
-
-async function volejAsistenta() {
-  const nast = await syncNastaveni();
-  if (!nast.url || !nast.token) throw new Error("Asistent potřebuje nastavenou synchronizaci, tedy adresu serveru a token v Nastavení.");
-  const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 60000);
-  try {
-    const r = await fetch(nast.url + "/asistent", {
-      method: "POST", signal: ctrl.signal,
-      headers: { "content-type": "application/json", authorization: "Bearer " + nast.token },
-      body: JSON.stringify({ zpravy: AS.zpravy })
-    });
-    const data = await r.json().catch(() => null);
-    if (!data) throw new Error("Server neodpověděl (HTTP " + r.status + ").");
-    if (data.chyba) throw new Error(r.status === 404 ? "Server ještě asistenta neumí, je potřeba nasadit nový Worker." : data.chyba);
-    return data;
-  } catch (e) {
-    if (e.name === "AbortError") throw new Error("Odpověď trvala moc dlouho, zkus to znovu.");
-    if (e instanceof TypeError) throw new Error("Nepodařilo se spojit se serverem. Jsi online?");
-    throw e;
-  } finally { clearTimeout(t); }
-}
-
-// Jmena zaku v otazce se pred odeslanim nahradi stejnymi kody jako ve vysledcich nastroju.
-// Cele jmeno (obe poradi) vzdy, samotne prijmeni jen s velkym pismenem a jen kdyz je
-// v appce jedinecne; sklonovane tvary (Nováka, Novákovi) se chytaji podle kmene.
-// Nejednoznacne prijmeni se nahradi „Ž?“, aby jmeno neodeslo.
-function anonymizujOtazku(text) {
+// Jmena zaku v napln se pred odeslanim nahradi slovem „spolužák“. Cele jmeno (obe poradi)
+// vzdy, samotne prijmeni jen s velkym pismenem; sklonovane tvary (Nováka) se chytaji podle kmene.
+function bezJmen(text) {
   const zaci = [...S.cache.zakById.values()].filter((z) => !z.neaktivni && z.prijmeni);
   let t = text;
   const esc = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -2671,7 +2462,7 @@ function anonymizujOtazku(text) {
   };
   zaci.forEach((z) => {
     [z.prijmeni + " " + z.jmeno, z.jmeno + " " + z.prijmeni].forEach((cele) => {
-      t = t.replace(new RegExp("(^|[^\\p{L}])" + esc(cele) + "(?![\\p{L}])", "gu"), (m, a) => a + kodZaka(z.id));
+      t = t.replace(new RegExp("(^|[^\\p{L}])" + esc(cele) + "(?![\\p{L}])", "gu"), (m, a) => a + "spolužák");
     });
   });
   const podleKmene = new Map();
@@ -2685,11 +2476,11 @@ function anonymizujOtazku(text) {
     const re = new RegExp("(^|[^\\p{L}])(" + esc(k) + "\\p{L}{0,6})(?![\\p{L}])(\\s+\\p{Lu}\\p{L}*)?", "gu");
     t = t.replace(re, (m, a, slovo, dalsi) => {
       if (slovo.charAt(0) !== slovo.charAt(0).toUpperCase()) return m;
-      if (ids.size !== 1) return a + "Ž?" + (dalsi || "");
+      if (ids.size !== 1) return a + "spolužák" + (dalsi || "");
       const z = S.cache.zakById.get([...ids][0]);
       const kj = z.jmeno.replace(/[aeiouyáéíóúůý]$/i, "").slice(0, Math.max(3, z.jmeno.length - 2));
       const sJmenem = dalsi && dalsi.trim().toLowerCase().startsWith(kj.toLowerCase());
-      return a + kodZaka(z.id) + (sJmenem ? "" : (dalsi || ""));
+      return a + "spolužák" + (sJmenem ? "" : (dalsi || ""));
     });
   });
   return t;
@@ -2698,52 +2489,124 @@ function anonymizujOtazku(text) {
 // Slova, ktera nejspis znamenaji zdravotni udaj. Pred odeslanim se Karel zepta.
 const ZDRAVI_SLOVA = /astm|zlomen|diagnóz|epilep|diabet|cukrovk|alergi|operac|nemoc|úraz|zraněn|adhd|porucha|lék[uůy]?\b|léčb|srde[čc]|otřes|skolióz|psych|autis|dyslex|dysprax|nevolnost|migrén|kloub|výron|natržen|sádr/i;
 
-async function asOdeslat() {
-  const puvodni = $("#asText").value.trim();
-  if (!puvodni || AS.bezi) return;
-  if (ZDRAVI_SLOVA.test(puvodni) && !confirm("Otázka vypadá, že obsahuje zdravotní údaj. Odejde do Claude (jména žáků appka nahradí kódy). Poslat i tak?")) return;
-  const text = anonymizujOtazku(puvodni);
-  AS.bezi = true; $("#asSend").disabled = true; $("#asText").value = "";
-  const zacatek = AS.zpravy.length;
-  AS.zpravy.push({ role: "user", content: text });
-  kresliAsistenta("přemýšlím…");
-  try {
-    for (let kolo = 0; ; kolo++) {
-      if (kolo >= 8) throw new Error("Otázka byla na asistenta moc složitá, zkus ji rozdělit.");
-      const r = await volejAsistenta();
-      AS.zpravy.push({ role: "assistant", content: r.content });
-      const volani = (r.content || []).filter((b) => b.type === "tool_use");
-      if (r.stop_reason !== "tool_use" || !volani.length) break;
-      kresliAsistenta(volani.map((v) => AS_POPIS[v.name] || v.name).join(", ") + "…");
-      const vysledky = [];
-      for (const v of volani) {
-        let out;
-        try { out = AS_NASTROJE[v.name] ? await AS_NASTROJE[v.name](v.input || {}) : { chyba: "neznámý nástroj" }; }
-        catch (e) { out = { chyba: String(e && e.message || e) }; }
-        vysledky.push({ type: "tool_result", tool_use_id: v.id, content: JSON.stringify(out) });
-      }
-      AS.zpravy.push({ role: "user", content: vysledky });
-    }
-    kresliAsistenta();
-  } catch (e) {
-    // Nedokonceny kus konverzace se zahodi, jinak by dalsi otazka poslala neplatnou historii.
-    AS.zpravy.length = zacatek;
-    $("#asText").value = puvodni;
-    kresliAsistenta({ chyba: e.message });
-  } finally {
-    AS.bezi = false; $("#asSend").disabled = false;
-  }
+
+// Rocnik ze jmena skupiny: "III. A - celá třída" -> 3
+function rocnikSkupiny(skupinaId) {
+  const m = /^\s*([IVX]+)\./.exec(skName(skupinaId));
+  return (m && RIM[m[1].toUpperCase()]) || null;
 }
 
-function otevriAsistenta() {
-  $("#asSheet").hidden = false;
-  document.body.classList.add("zamek");
-  kresliAsistenta();
-  setTimeout(() => $("#asText").focus(), 50);
+// Navrh zapisu pise Claude pres Worker (/zapis) z okenek naplne. Pravidla (Bloomova slovesa,
+// jednotne cislo, jedna veta, bez nazvu her, podle rocniku) jsou na serveru.
+const ZAPIS_AI = new Map(); // hodinaId -> { klic, navrhy }
+async function navrhZapisuAI(h, casti) {
+  const nast = await syncNastaveni();
+  if (!nast.url || !nast.token) throw new Error("Návrh od AI potřebuje nastavenou synchronizaci, tedy adresu serveru a token v Nastavení.");
+  const rocnik = rocnikSkupiny(h.skupinaId);
+  const cisty = {};
+  Object.keys(casti).forEach((k) => { cisty[k] = bezJmen(casti[k]); });
+  const priklady = (await dbAll("hodiny"))
+    .filter((x) => x.id !== h.id && x.zapis && x.datum <= iso(new Date()) && rocnikSkupiny(x.skupinaId) === rocnik)
+    .sort((a, b) => b.datum.localeCompare(a.datum)).slice(0, 3).map((x) => bezJmen(x.zapis));
+  const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 30000);
+  try {
+    const r = await fetch(nast.url + "/zapis", {
+      method: "POST", signal: ctrl.signal,
+      headers: { "content-type": "application/json", authorization: "Bearer " + nast.token },
+      body: JSON.stringify({ rocnik, casti: cisty, priklady })
+    });
+    const data = await r.json().catch(() => null);
+    if (!data) throw new Error("Server neodpověděl (HTTP " + r.status + ").");
+    if (data.chyba) throw new Error(r.status === 404 ? "Server ještě návrh zápisu neumí, je potřeba nasadit nový Worker." : data.chyba);
+    if (!Array.isArray(data.navrhy) || !data.navrhy.length) throw new Error("Návrh se nepovedl, zkus to znovu.");
+    return data.navrhy;
+  } catch (e) {
+    if (e.name === "AbortError") throw new Error("Návrh trval moc dlouho, zkus to znovu.");
+    if (e instanceof TypeError) throw new Error("Nepodařilo se spojit se serverem. Jsi online?");
+    throw e;
+  } finally { clearTimeout(t); }
 }
-function zavriAsistenta() {
-  $("#asSheet").hidden = true;
-  document.body.classList.remove("zamek");
+
+async function ukazNavrhy() {
+  const box = $("#zapNavrhy");
+  const zavri = () => { box.hidden = true; $("#bNavrh").setAttribute("aria-expanded", "false"); };
+  if (!box.hidden) { zavri(); return; }
+  const h = S.hodinaId ? await dbGet("hodiny", S.hodinaId) : null;
+  if (!h) return;
+  const casti = ctiCasti();
+  // u starsi hodiny s polem „Co se dělalo“ se pocita i s nim
+  if ((h.napln || "").trim()) casti.hlavni = [casti.hlavni, h.napln.trim()].filter(Boolean).join("\n");
+  box.innerHTML = "";
+  box.hidden = false; $("#bNavrh").setAttribute("aria-expanded", "true");
+  if (!Object.values(casti).some(Boolean)) {
+    box.appendChild(el("p", "hint", "Nejdřív vyplň náplň hodiny, hlavně hlavní část."));
+    return;
+  }
+  const vloz = (text) => {
+    const pole = $("#fZapis");
+    pole.value = text;
+    pole.dispatchEvent(new Event("input"));
+    zavri();
+    pole.focus();
+    toast("Zápis vložen, můžeš ho upravit");
+  };
+  const tl = (text, odkud) => {
+    const b = el("button", "navrh", text); b.type = "button";
+    if (odkud) b.appendChild(el("span", "odkud", odkud));
+    b.addEventListener("click", () => vloz(text));
+    return b;
+  };
+  const cin = cinnostiVHodine({ ...h, plan: slozPlan(casti) }, await dbAll("cinnosti"));
+  const aiBox = el("div", "navrhy-ai"); box.appendChild(aiBox);
+  const sablony = () => {
+    const navrhy = navrhyZapisu(cin);
+    if (!navrhy.length) return;
+    aiBox.appendChild(el("div", "eyebrow", "Ze šablon · " + cin.slice(0, 3).map((c) => c.nazev).join(", ")));
+    navrhy.forEach((t) => aiBox.appendChild(tl(t)));
+  };
+  const klic = JSON.stringify(casti);
+  const kresliAI = (navrhy) => {
+    aiBox.innerHTML = "";
+    aiBox.appendChild(el("div", "eyebrow", "Návrh od AI"));
+    navrhy.forEach((t) => aiBox.appendChild(tl(t)));
+    const znovu = el("button", "linkbtn", "Jiný návrh"); znovu.type = "button";
+    znovu.addEventListener("click", () => spust());
+    aiBox.appendChild(znovu);
+  };
+  const spust = async () => {
+    aiBox.innerHTML = "";
+    aiBox.appendChild(el("div", "eyebrow", "Píšu návrh…"));
+    try {
+      const navrhy = await navrhZapisuAI(h, casti);
+      ZAPIS_AI.set(h.id, { klic, navrhy });
+      if (S.hodinaId === h.id && !box.hidden) kresliAI(navrhy);
+    } catch (e) {
+      aiBox.innerHTML = "";
+      aiBox.appendChild(el("p", "hint", e.message));
+      sablony();
+    }
+  };
+  const ulozeny = ZAPIS_AI.get(h.id);
+  if (ulozeny && ulozeny.klic === klic) kresliAI(ulozeny.navrhy);
+  else if (ZDRAVI_SLOVA.test(Object.values(casti).join(" ")) && !confirm("Náplň hodiny vypadá, že obsahuje zdravotní údaj. Do AI odejde bez jmen žáků. Poslat?")) {
+    aiBox.appendChild(el("p", "hint", "Návrh od AI jsi neposlal."));
+    sablony();
+  } else spust();
+  // Tvoje drivejsi zapisy u hodin se stejnou hlavni cinnosti, nejnovejsi napred
+  if (cin.length) {
+    const hlavni = cin[0];
+    const vse = (await dbAll("hodiny"))
+      .filter((x) => x.id !== h.id && x.zapis && x.datum <= iso(new Date()))
+      .filter((x) => cinnostiVHodine(x, [hlavni]).length)
+      .sort((a, b) => b.datum.localeCompare(a.datum));
+    const videno = new Set();
+    const drive = [];
+    for (const x of vse) { if (!videno.has(x.zapis)) { videno.add(x.zapis); drive.push(x); } if (drive.length >= 3) break; }
+    if (drive.length) {
+      box.appendChild(el("div", "eyebrow", "Tvoje dřívější zápisy · " + hlavni.nazev));
+      drive.forEach((x) => box.appendChild(tl(x.zapis, skName(x.skupinaId) + " · " + dm(x.datum))));
+    }
+  }
 }
 
 /* ---------- render: PREHLED ---------- */
@@ -3497,7 +3360,7 @@ async function knBudouciHodiny() {
   const out = [];
   for (let i = 0; i < 21 && out.length < 8; i++) {
     const d = addDays(dnes, i);
-    const h = (await dbBy("hodiny", "datum", d)).filter((x) => x.stav !== "uzavrena");
+    const h = (await dbBy("hodiny", "datum", d)).filter((x) => !jeUzavrena(x));
     h.sort((a, b) => (a.poradi || 0) - (b.poradi || 0));
     out.push(...h);
   }
@@ -3577,13 +3440,17 @@ async function knVloz(k, hodinaId) {
   if (!h) { toast("Hodina se nenašla"); return; }
   const radek = (k.typ === "hodina" ? "Celá hodina: " : "Hra: ") + k.nazev;
   const uz = bezDiak(h.plan || "").includes(bezDiak(k.nazev));
-  if (!uz) h.plan = (h.plan || "").trim() ? h.plan.replace(/\s+$/, "") + "\n" + radek : radek;
+  if (!uz) {
+    const c = rozdelPlan(h.plan);
+    c.hlavni = c.hlavni ? c.hlavni + "\n" + radek : radek;
+    h.plan = slozPlan(c); h.updatedAt = Date.now();
+  }
   let zapis = false;
   if (k.typ === "hodina" && k.zapis && !(h.zapis || "").trim()) { h.zapis = k.zapis; zapis = true; }
   if (!uz || zapis) await dbPut("hodiny", h);
   const zpet = KN.cil ? KN.cilBack : "knihovna";
   KN.cil = null; KN.cilBack = null; KN.vyber = null;
-  toast(uz ? "V plánu už je" : zapis ? "Vloženo do plánu i se zápisem do ŠOL" : "Vloženo do plánu");
+  toast(uz ? "V náplni už je" : zapis ? "Vloženo do hlavní části i se zápisem do ŠOL" : "Vloženo do hlavní části");
   await openHodina(h.id, zpet);
 }
 
@@ -4129,7 +3996,6 @@ async function switchTab(name) {
   document.querySelectorAll("nav button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
   $("#navBack").hidden = !(name === "hodina" && (S.backTo || S.zpet.length));
   if (name !== "hodina") $("#hNav").hidden = true;
-  $("#bAsist").hidden = name === "hodina";
   const titles = { dnes: ["Cvička", "přehled dne"], tyden: ["Příprava na týden", "plán a historie"], prehled: ["Přehled", "docházka, omluvy a výkony"], nastaveni: ["Nastavení", "data a záloha"], knihovna: ["Knihovna", "hry a celé hodiny"] };
   if (titles[name]) { $("#hTitle").classList.remove("dve"); $("#hTitle").textContent = titles[name][0]; $("#hSub").textContent = titles[name][1]; }
   if (name === "dnes") await renderDnes();
@@ -4162,7 +4028,6 @@ async function boot() {
   $("#zakX").addEventListener("click", zavriZaka);
   $("#zakBg").addEventListener("click", zavriZaka);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#zakSheet").hidden) zavriZaka(); });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#asSheet").hidden) zavriAsistenta(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#merSheet").hidden) zavriMereni(); });
 
   STAVY.forEach((k) => {
@@ -4217,12 +4082,16 @@ async function boot() {
   DISCIPLINY.forEach(([nazev]) => { const o = el("option"); o.value = nazev; $("#dlDisc").appendChild(o); });
 
  $("#bNavrh").addEventListener("click", ukazNavrhy);
-  $("#bAsist").addEventListener("click", otevriAsistenta);
-  $("#asX").addEventListener("click", zavriAsistenta);
-  $("#asBg").addEventListener("click", zavriAsistenta);
-  $("#asNova").addEventListener("click", () => { if (AS.bezi) return; AS.zpravy = []; AS.kody.clear(); AS.zpet.clear(); kresliAsistenta(); $("#asText").focus(); });
-  $("#asForm").addEventListener("submit", (e) => { e.preventDefault(); asOdeslat(); });
-  $("#asText").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); asOdeslat(); } });
+  $("#bNaplnPresun").addEventListener("click", async () => {
+    const h = S.hodinaId ? await dbGet("hodiny", S.hodinaId) : null;
+    if (!h || !(h.napln || "").trim()) return;
+    const pole = $("#fHlavni");
+    pole.value = pole.value.trim() ? pole.value.trim() + "\n" + h.napln.trim() : h.napln.trim();
+    h.plan = slozPlan(ctiCasti()); h.napln = ""; h.updatedAt = Date.now();
+    await dbPut("hodiny", h);
+    $("#hNapln").hidden = true; rostouciPole(pole);
+    toast("Přesunuto do hlavní části");
+  });
   $("#pxSk").addEventListener("change", async (e) => { S.pxSk = e.target.value; await renderPrehled(); });
   $("#pxObd").addEventListener("change", async (e) => { S.pxObd = e.target.value; await renderPrehled(); });
   $("#pxCopy").addEventListener("click", kopirujPrehled);
@@ -4255,8 +4124,8 @@ async function boot() {
     if (SBAL_KLIC[card.id]) await metaSet(SBAL_KLIC[card.id], sbaleno);
   }));
 
-  ["#fPlan", "#fNapln", "#fZapis"].forEach((sel) => $(sel).addEventListener("input", () => {
-    if (sel === "#fPlan") rostouciPole($("#fPlan"));
+  [...CASTI_HODINY.map((x) => x[2]), "#fZapis"].forEach((sel) => $(sel).addEventListener("input", () => {
+    if (sel !== "#fZapis") rostouciPole($(sel));
     clearTimeout(S.saveTimer);
     S.saveTimer = setTimeout(() => { S.saveTimer = null; saveHodinaPole(); }, 600);
   }));
@@ -4270,7 +4139,7 @@ async function boot() {
     await saveHodinaPole();
     if (!S.hodinaId) return;
     const h = await dbGet("hodiny", S.hodinaId);
-    if (h.stav !== "uzavrena") {
+    if (!jeUzavrena(h)) {
       // Pri uzavreni se dopocitane N omluvenych ulozi jako skutecny zaznam docházky,
       // aby v uzavrene hodine zustalo, i kdyby se omluva pozdeji zmenila.
       const om = omluvyZe(await dbAll("pozn"), h.datum);
@@ -4279,7 +4148,7 @@ async function boot() {
         if (om.has(z.id) && !maji.has(z.id)) await dbPut("zaznamy", { id: h.id + "|" + z.id, hodinaId: h.id, zakId: z.id, stav: "N", vedl: false });
       }
     }
-    if (h.stav === "uzavrena") {
+    if (jeUzavrena(h)) {
       h.stav = "plan"; h.updatedAt = Date.now();
       await dbPut("hodiny", h);
       toast("Hodina vrácena do plánu");
