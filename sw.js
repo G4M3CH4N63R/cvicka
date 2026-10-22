@@ -1,4 +1,4 @@
-const CACHE = "cvicka-v0.14.0";
+const CACHE = "cvicka-v0.14.1";
 const ASSETS = ["./", "./index.html", "./manifest.webmanifest"];
 
 self.addEventListener("install", (e) => {

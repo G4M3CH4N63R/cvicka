@@ -788,7 +788,7 @@ a.btn { display: block; text-align: center; text-decoration: none; }
 
 <script>
 "use strict";
-const APP = { ver: "0.14.0", db: null, sync: null, klic: null };
+const APP = { ver: "0.14.1", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -3760,21 +3760,44 @@ async function rkSync(zmeny) {
   return { prislo, odmitnuto };
 }
 
+// Parovani se seznamem Rekordniku ve trech krocich, vzdy jen uvnitr stejne tridy:
+// 1. stejne prijmeni a jmeno, 2. stejna slova jen jinak rozdelena mezi prijmeni a jmeno
+// (ŠOL nekdy dava "Novák Jan" + "Petr Tomáš", jinde "Novák" + "Jan Petr Tomáš"),
+// 3. jedna strana ma navic dalsi jmeno, ostatni slova sedi. Krok 2 a 3 jen kdyz je shoda jedina.
+const rkSlova = (p, j) => rkNorm(p + " " + j).split(" ").filter(Boolean).sort();
 function rkSparuj() {
   const sy = rkSkolniRok(iso(new Date()));
-  const podle = new Map();
+  const presne = new Map(), poTride = new Map();
   RK.zaci.forEach((z) => {
     const g = sy - z.coh + 1;
     if (g < 1 || g > 9) return;
-    const k = g + "." + String(z.pis).toUpperCase() + "|" + rkNorm(z.p) + "|" + rkNorm(z.j);
-    podle.set(k, podle.has(k) ? "dvoji" : z);
+    const tr = g + "." + String(z.pis).toUpperCase();
+    const k = tr + "|" + rkNorm(z.p) + "|" + rkNorm(z.j);
+    presne.set(k, presne.has(k) ? "dvoji" : z);
+    if (!poTride.has(tr)) poTride.set(tr, []);
+    poTride.get(tr).push({ z, s: rkSlova(z.p, z.j) });
   });
   RK.par = new Map(); RK.nesparovani = [];
+  const zbyli = [];
   (S.cache.zakById || new Map()).forEach((z) => {
     const tr = rkTrida(z.trida);
-    const r = tr ? podle.get(tr + "|" + rkNorm(z.prijmeni) + "|" + rkNorm(z.jmeno)) : null;
+    const r = tr ? presne.get(tr + "|" + rkNorm(z.prijmeni) + "|" + rkNorm(z.jmeno)) : null;
     if (r && r !== "dvoji") RK.par.set(z.id, r);
+    else if (tr && !r) zbyli.push({ z, tr, s: rkSlova(z.prijmeni, z.jmeno) });
     else if (!z.neaktivni) RK.nesparovani.push(z);
+  });
+  const obsazeno = new Set([...RK.par.values()].map((r) => r.id));
+  const jen = (pole) => pole.length === 1 ? pole[0] : null;
+  const podmnozina = (a, b) => a.every((x) => b.includes(x));
+  zbyli.forEach((x) => {
+    const kand = (poTride.get(x.tr) || []).filter((k) => !obsazeno.has(k.z.id));
+    let hit = jen(kand.filter((k) => k.s.join(" ") === x.s.join(" ")));
+    if (!hit) hit = jen(kand.filter((k) => {
+      const [m, v] = k.s.length < x.s.length ? [k.s, x.s] : [x.s, k.s];
+      return m.length >= 2 && podmnozina(m, v);
+    }));
+    if (hit) { RK.par.set(x.z.id, hit.z); obsazeno.add(hit.z.id); }
+    else if (!x.z.neaktivni) RK.nesparovani.push(x.z);
   });
 }
 

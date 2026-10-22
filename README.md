@@ -525,6 +525,11 @@ se při startu jednou přejmenují (`Sprint 60 m` na `60 m`, `Běh 1000 m` na `1
 Karta žáka ukazuje jeho nejlepší výkony z Rekordníku. Časy přes minutu jdou psát
 jako `3:25,4`, `cisloZ()` je převede na sekundy.
 
+**v0.14.1:** párování s Rekordníkem snese jinak rozdělené jméno. Když nesedí příjmení a jméno
+přesně, porovnají se ve stejné třídě všechna slova jména bez ohledu na to, kde končí příjmení
+(„Novák Jan“ + „Petr Tomáš“ proti „Novák“ + „Jan Petr Tomáš“), a nakonec
+i shoda, kde jedna strana má navíc další jméno. Kroky 2 a 3 platí jen při jediném kandidátovi.
+
 ## Co přijde dál
 
 F3 je hotová.
