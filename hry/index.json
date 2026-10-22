@@ -25,6 +25,19 @@
       "pomucky": "ocásky pro každého, 1 až 2 měkké míče, lavičky, žíněnky, švihadla",
       "zapis": "Uplatní házení a chytání ve hře, rychle reaguje při honičce a posiluje celé tělo.",
       "url": "hry/tri-stanoviste.html"
+    },
+    {
+      "slug": "vybijena-na-4-tymy",
+      "nazev": "Vybíjená na 4 týmy",
+      "typ": "hra",
+      "okruh": "Pohybové hry",
+      "popis": "Vybíjená čtyř týmů všichni proti všem se čtyřmi míči. Vybitý jde do vězení v rohu a zpátky do hry se dostane zásahem soupeře, dotykem soupeře nebo trefou do koše. Vyhrává tým, který jako jediný zůstane v poli.",
+      "hraci": "4 týmy",
+      "prostor": "tělocvična s koši",
+      "delka": "asi 30 minut",
+      "rozviji": "házení, uhýbání, střelbu na koš, přehled ve hře",
+      "pomucky": "4 měkké míče, rozlišováky ve 4 barvách, 4 vězení v rozích (kužely nebo páska), basketbalové koše",
+      "url": "hry/vybijena-na-4-tymy.html"
     }
   ]
 }
