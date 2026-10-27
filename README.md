@@ -563,6 +563,12 @@ věta, bez názvů her, srozumitelně pro ročník). Jména žáků `bezJmen()` 
 jako dřív. Návrh se pro stejnou náplň pamatuje, „Jiný návrh“ zavolá znovu.
 Po nasazení appky je potřeba nasadit i Worker (`npx wrangler deploy` ve složce `server`).
 
+**v0.15.1:** Rozcvička a Úvodní hra jsou spojené do jednoho okénka Úvodní část (napíše se tam
+rozcvička nebo úvodní hra). V `plan` je štítek `Úvodní část:`, starší štítky `Rozcvička:`
+a `Úvodní hra:` se načtou do téhož okénka. Zásobník tam vkládá úvodní hry i průpravu.
+Worker posílá Claude `Úvodní část` místo `Úvodní hra`, je potřeba ho znovu nasadit
+(starší appka s okénkem Rozcvička funguje i s novým Workerem).
+
 ## Co přijde dál
 
 F3 je hotová.

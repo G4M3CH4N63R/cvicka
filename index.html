@@ -515,8 +515,7 @@ a.btn { display: block; text-align: center; text-decoration: none; }
       <div class="card-h"><h3>Náplň hodiny</h3><button class="linkbtn" id="bKnih" type="button">Z knihovny</button></div>
       <div class="card-b">
         <div class="napln-stara" id="hNapln" hidden><span class="eyebrow">Co se dělalo (starší pole)</span><p id="hNaplnT"></p><button class="linkbtn" id="bNaplnPresun" type="button">Přesunout do hlavní části</button></div>
-        <div class="field"><label for="fRozc">Rozcvička</label><textarea id="fRozc" rows="1" placeholder="např. běžecká abeceda, protažení"></textarea></div>
-        <div class="field"><label for="fUvod">Úvodní hra</label><textarea id="fUvod" rows="1" placeholder="např. honička"></textarea></div>
+        <div class="field"><label for="fUvod">Úvodní část</label><textarea id="fUvod" rows="1" placeholder="rozcvička nebo úvodní hra"></textarea></div>
         <div class="field"><label for="fHlavni">Hlavní část</label><textarea id="fHlavni" rows="3" placeholder="co je hlavní náplní hodiny"></textarea></div>
         <div class="field"><label for="fZaver">Závěr</label><textarea id="fZaver" rows="1" placeholder="např. protažení, zhodnocení"></textarea></div>
         <div class="field"><div class="field-h"><label for="fZapis">Zápis do Školy OnLine</label><button class="linkbtn" id="bNavrh" type="button" aria-expanded="false">Navrhnout</button></div><textarea id="fZapis" rows="3" placeholder="Navrhnout napíše AI z náplně hodiny"></textarea></div>
@@ -755,7 +754,7 @@ a.btn { display: block; text-align: center; text-decoration: none; }
 
 <script>
 "use strict";
-const APP = { ver: "0.15.0", db: null, sync: null, klic: null };
+const APP = { ver: "0.15.1", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -1159,24 +1158,25 @@ async function seedCinnosti() {
 }
 
 // Napln hodiny se uklada do jednoho pole plan, kazda cast na radku se stitkem:
-// "Rozcvička: …", "Úvodní hra: …", "Hlavní část: …", "Závěr: …". Diky tomu zustava citelna
+// "Úvodní část: …" (rozcvička nebo úvodní hra), "Hlavní část: …", "Závěr: …". Diky tomu zustava citelna
 // i pro zapis pres server a hledani. Starsi volny text bez stitku patri do hlavni casti.
-const CASTI_HODINY = [["rozcvicka", "Rozcvička", "#fRozc"], ["uvod", "Úvodní hra", "#fUvod"], ["hlavni", "Hlavní část", "#fHlavni"], ["zaver", "Závěr", "#fZaver"]];
+const CASTI_HODINY = [["uvod", "Úvodní část", "#fUvod"], ["hlavni", "Hlavní část", "#fHlavni"], ["zaver", "Závěr", "#fZaver"]];
+// starsi stitky Rozcvička a Úvodní hra (verze 0.15.0) patri obe do Úvodní části
 const STITKY_CASTI = [
-  [/^(rozcvička|rozcvičení)\s*:\s*/i, "rozcvicka"],
+  [/^(rozcvička|rozcvičení)\s*:\s*/i, "uvod"],
   [/^(úvodní hra|úvodní hry|úvodní část|úvod)\s*:\s*/i, "uvod"],
   [/^(hlavní část|hlavní)\s*:\s*/i, "hlavni"],
   [/^(závěrečná část|závěr)\s*:\s*/i, "zaver"]
 ];
 function rozdelPlan(text) {
-  const out = { rozcvicka: "", uvod: "", hlavni: "", zaver: "" };
+  const out = { uvod: "", hlavni: "", zaver: "" };
   let t = String(text || "").replace(/\r/g, "");
   if (!t.trim()) return out;
   // "Úvod: Mrazík. Hlavní část: fotbal" na jednom radku se rozdeli
   t = t.replace(/[.;]\s+(?=(?:Rozcvička|Rozcvičení|Úvodní hra|Úvodní část|Úvod|Hlavní část|Závěrečná část|Závěr)\s*:)/g, "\n");
   // Ve stitkovanem tvaru patri radek bez stitku k predchozi casti, ve starem volnem tvaru do hlavni.
   // Co je pripsane az za zaverem (poznamka na priste), patri taky do hlavni casti.
-  const novy = /^(rozcvička|rozcvičení|úvodní hra|hlavní část)\s*:/im.test(t);
+  const novy = /^(rozcvička|rozcvičení|úvodní hra|úvodní část|hlavní část)\s*:/im.test(t);
   const pridej = (k, x) => { out[k] = out[k] ? out[k] + "\n" + x : x; };
   let akt = null;
   t.split("\n").forEach((r) => {
@@ -1210,7 +1210,7 @@ function hlavniText(h) {
     return m && m[1].trim() ? m[1].trim() : n;
   }
   const c = rozdelPlan(h.plan);
-  return c.hlavni || c.uvod || c.rozcvicka || c.zaver || "";
+  return c.hlavni || c.uvod || c.zaver || "";
 }
 const naRadek = (t) => String(t || "").replace(/\s*\n\s*/g, " · ").trim();
 // Plan znamena, ze hodina jeste neprobehla nebo ji Karel nepotvrdil. Potvrzeni je Uzavrit hodinu.
@@ -1775,8 +1775,8 @@ async function renderZasobnik(h, hotovy) {
     b.textContent = c.nazev + (c.posledni ? " · " + (c.tydnu === 0 ? "teď" : c.tydnu + " t") : (c.jinde ? " · jinde" : " · ještě ne"));
     b.addEventListener("click", async () => {
       const hod = await dbGet("hodiny", S.hodinaId);
-      // uvodni hry do Uvodni hry, pruprava do Rozcvicky, ostatni do Hlavni casti
-      const cast = CASTI_HODINY.find(([k]) => k === (c.typ === "uvod" ? "uvod" : c.typ === "pruprava" ? "rozcvicka" : "hlavni"));
+      // uvodni hry a pruprava do Uvodni casti, ostatni do Hlavni casti
+      const cast = CASTI_HODINY.find(([k]) => k === (c.typ === "uvod" || c.typ === "pruprava" ? "uvod" : "hlavni"));
       const pole = $(cast[2]);
       pole.value = pole.value.trim() ? pole.value.trim() + ", " + c.nazev : c.nazev;
       hod.cinnosti = [...new Set([...(hod.cinnosti || []), c.id])];

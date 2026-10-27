@@ -9,7 +9,7 @@
 //   odpověď    { verze: <nový kurzor>, zmeny: [ ...totéž... ], vic: bool }
 // data: null znamená smazáno (náhrobek). Konflikt řeší poslední zápis podle updatedAt.
 //
-// POST /zapis: z náplně hodiny (Rozcvička, Úvodní hra, Hlavní část, Závěr) napíše přes
+// POST /zapis: z náplně hodiny (Úvodní část, Hlavní část, Závěr) napíše přes
 // Claude API návrh zápisu do Školy OnLine. Klíč ANTHROPIC_API_KEY je jen tady jako secret,
 // aplikace ho nikdy nevidí. Pravidla pro zápis jsou tady, aplikace posílá jen text náplně
 // (jména žáků z něj předem vymaže) a ročník.
@@ -146,7 +146,8 @@ async function sync(env, telo) {
 // ---------- návrh zápisu do ŠOL ----------
 
 const ZAPIS_MODEL = "claude-haiku-4-5-20251001";
-const CASTI = [["rozcvicka", "Rozcvička"], ["uvod", "Úvodní hra"], ["hlavni", "Hlavní část"], ["zaver", "Závěr"]];
+// rozcvicka zustava kvuli starsim aplikacim (0.15.0), od 0.15.1 je rozcvicka soucasti uvodni casti
+const CASTI = [["rozcvicka", "Rozcvička"], ["uvod", "Úvodní část"], ["hlavni", "Hlavní část"], ["zaver", "Závěr"]];
 
 function zapisPokyny() {
   return [
@@ -157,7 +158,7 @@ function zapisPokyny() {
     "3. Piš tak, aby tomu rozumělo dítě daného ročníku a jeho rodič. Bez odborných slov (ne uplatní herní činnosti, akcelerace, zdokonalí techniku, rozloží tempo).",
     "4. Popiš konkrétní dovednost nebo výsledek, ne program hodiny. Místo hráli fotbal napiš Cvičí přihrávky a spolupráci s týmem ve fotbalu.",
     "5. Nejmenuj konkrétní pohybové hry (třeba Mrazík, Bludišťák, Medvědí doupě, Ocásky, vlajkovaná). Napiš, co hra rozvíjí. Sportovní hry (fotbal, florbal, házená, vybíjená, basketbal, přehazovaná, ragby) jmenovat smíš.",
-    "6. Těžiště je v hlavní části. Úvodní hru přidej jen krátce, když se vejde. Rozcvičku a závěr (protažení, zhodnocení) nezmiňuj, pokud v nich nebylo nic zvláštního.",
+    "6. Těžiště je v hlavní části. Úvodní část (rozcvička nebo úvodní hra) přidej jen krátce, když se vejde, a obyčejnou rozcvičku nebo závěr (protažení, zhodnocení) nezmiňuj, pokud v nich nebylo nic zvláštního.",
     "7. Nepřipisuj dovednost, která v náplni není. Nic si nevymýšlej.",
     "8. V souladu s ŠVP tělesné výchovy, ale řečeno lidsky.",
     "9. Nepoužívej pomlčky ani spojovníky jako interpunkci, jen čárky a spojky.",

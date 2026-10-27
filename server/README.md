@@ -70,8 +70,7 @@ vedení školy, jednotné číslo, jedna věta, bez názvů pohybových her, sro
 daný ročník) jsou v `zapisPokyny()` tady ve Workeru. Klíč k API je jen na serveru jako
 secret, aplikace ho nikdy nevidí. Asistent s konverzací (`/asistent`) ve verzi 0.15 skončil.
 
-**Co odchází do Claude:** text čtyř okének náplně (Rozcvička, Úvodní hra, Hlavní část,
-Závěr), ročník a nejvýš tři Karlovy dřívější zápisy jako ukázka stylu. Jména žáků aplikace
+**Co odchází do Claude:** text okének náplně (Úvodní část, Hlavní část, Závěr), ročník a nejvýš tři Karlovy dřívější zápisy jako ukázka stylu. Jména žáků aplikace
 z textu předem vymaže. **Nikdy neodchází:** jména, docházka, poznámky, omluvy.
 
 **Jednorázové nastavení** (klíč už je uložený od verze 0.12, stačí znovu nasadit):
@@ -107,7 +106,7 @@ ZAPIS_MODEL`), výchozí je `claude-haiku-4-5-20251001`. Starší `ASISTENT_MODE
 | `GET /stav` | kolik řádků a jaké je pořadové číslo, na rychlou kontrolu |
 | `POST /sync` | jedno kolo: pošle své změny a stáhne cizí |
 | `POST /smazat-vse` | vymaže obsah databáze, hodí se na konci školního roku |
-| `POST /zapis` | návrh zápisu do ŠOL, `{ rocnik, casti: { rozcvicka, uvod, hlavni, zaver }, priklady }` |
+| `POST /zapis` | návrh zápisu do ŠOL, `{ rocnik, casti: { uvod, hlavni, zaver }, priklady }` |
 
 Všechno chce hlavičku `Authorization: Bearer <token>`.
 
