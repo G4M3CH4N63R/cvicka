@@ -394,6 +394,25 @@ select {
   background: var(--surface-2); color: var(--ink);
 }
 .mv:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+#merStopky { margin-top: 10px; }
+.st-sheet { z-index: 61; }
+.st-c { height: 88vh; }
+.st-cas { font-size: 52px; font-weight: 600; text-align: center; letter-spacing: -.01em; padding: 6px 0 12px; color: var(--ink); }
+.st-hl {
+  appearance: none; display: block; width: 100%; height: 104px; border: 0; border-radius: 16px;
+  background: var(--accent); color: #fff; font: inherit; font-size: 24px; font-weight: 700;
+  cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none;
+}
+.st-hl[data-stav="bezi"] { background: var(--good); }
+.st-hl:active { filter: brightness(.9); }
+.st-hl:disabled { opacity: .4; cursor: default; }
+.st-row { display: grid; grid-template-columns: 28px 74px 1fr; gap: 8px; align-items: center; width: 100%; padding: 8px 0; border: 0; border-top: 1px solid var(--line); background: none; color: var(--ink); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+.st-row:first-child { border-top: 0; }
+.st-row .n { font-family: var(--fm); font-size: 11px; color: var(--ink-3); }
+.st-row .c { font-family: var(--fm); font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.st-row .j { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-row .j.nic { color: var(--ink-3); }
+.st-row.dalsi .j.nic { color: var(--accent); font-weight: 600; }
 .mv:disabled { opacity: .45; }
 .mbd { font-family: var(--fm); font-size: 9.5px; font-weight: 600; padding: 2px 6px; border-radius: 99px; white-space: nowrap; }
 .mbd.lepsi { background: var(--good-soft); color: var(--good); }
@@ -717,11 +736,37 @@ a.btn { display: block; text-align: center; text-decoration: none; }
       </div>
       <div class="field" id="merJineF" hidden><label for="merJine">Název disciplíny</label><input type="text" id="merJine" placeholder="Hod obouruč"></div>
       <div class="hint" id="merRk" hidden></div>
+      <button class="btn ghost" id="merStopky" type="button" hidden>Měřit stopkami</button>
       <div class="sec">
         <div class="eyebrow" id="merPocet">Žáci</div>
         <div id="merList"></div>
       </div>
       <div class="hint">Zapisuje se rovnou, nic se nepotvrzuje. Prázdné pole zápis smaže.</div>
+    </div>
+  </div>
+</div>
+
+<div class="sheet st-sheet" id="stSheet" hidden>
+  <div class="sheet-bg"></div>
+  <div class="sheet-c st-c" role="dialog" aria-modal="true" aria-labelledby="stTtl">
+    <div class="sheet-h">
+      <div style="min-width:0">
+        <h3 id="stTtl">Stopky</h3>
+        <div class="sub" id="stSub"></div>
+      </div>
+      <button class="iconbtn" id="stX" type="button" aria-label="Zpět na měření">&#10005;</button>
+    </div>
+    <div class="sheet-b">
+      <div class="st-cas mono" id="stCas">0:00,00</div>
+      <button class="st-hl" id="stHl" type="button" data-stav="start">Start</button>
+      <div class="btns two">
+        <button class="btn ghost" id="stZpet" type="button" disabled>Smazat poslední čas</button>
+        <button class="btn ghost" id="stStop" type="button" disabled>Zastavit</button>
+      </div>
+      <div class="sec"><div class="eyebrow" id="stCasyTtl">Časy</div><div id="stCasy"></div></div>
+      <div class="sec" id="stZaciBox" hidden><div class="eyebrow">Klepej jména v pořadí doběhu</div><div class="chips" id="stZaci" style="margin-top:6px"></div></div>
+      <div class="btns"><button class="btn" id="stZapsat" type="button" disabled>Zapsat časy</button></div>
+      <div class="hint">Časy se zapisují na setiny, tak jak je ukazují stopky. Když už má žák dnes čas, zůstane ten lepší. Jméno u času zrušíš klepnutím na řádek.</div>
     </div>
   </div>
 </div>
@@ -754,7 +799,7 @@ a.btn { display: block; text-align: center; text-decoration: none; }
 
 <script>
 "use strict";
-const APP = { ver: "0.15.1", db: null, sync: null, klic: null };
+const APP = { ver: "0.16.0", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -3111,6 +3156,7 @@ async function otevriMereni() {
 }
 
 function zavriMereni() {
+  stZavrit(true);
   $("#merSheet").hidden = true;
   document.body.classList.remove("zamek");
   S.mer = null;
@@ -3207,6 +3253,7 @@ async function osvezMereni() {
   const jed = $("#merJed").value || S.mer.jed;
   S.mer.jed = jed;
   rkMereniHlavicka(disc);
+  $("#merStopky").hidden = !(disc && (jed === "s" || jed === "min"));
   const vsePozn = await dbAll("pozn");
   if (moje !== merKresba || !S.mer) return;
 
@@ -3315,6 +3362,173 @@ async function obnovZnacku(zakId) {
   b.textContent = n ? String(n) : "✎";
   b.dataset.has = n ? "1" : "0";
   b.setAttribute("aria-label", "zápisy u žáka: " + n);
+}
+
+/* ---------- stopky v mereni ---------- */
+// Jeden beh = Start, pri kazdem dobehu Cil, pak se k casum v poradi klepou jmena a Zapsat.
+// Cas se meri pres Date.now(), aby sedel i po kratkem prepnuti appky do pozadi.
+const ST = { bezi: false, start: 0, konec: 0, casy: [], kdo: [], raf: 0, zobrazeno: "", wake: null };
+
+// na setiny jako stopky: zbytek se usekne, takze zapsany cas je ten, ktery byl videt
+const stSekundy = (ms) => Math.floor(ms / 10 + 1e-9) / 100;
+function stFormat(sek, jed) {
+  if (jed === "min") {
+    const m = Math.floor(sek / 60), r = Math.round((sek - m * 60) * 100) / 100;
+    return m + ":" + (r < 10 ? "0" : "") + r.toFixed(2).replace(".", ",");
+  }
+  return sek.toFixed(2).replace(".", ",");
+}
+function stDisplej(ms) {
+  const c = Math.floor(ms / 10), m = Math.floor(c / 6000), s = Math.floor((c % 6000) / 100), st = c % 100;
+  return m + ":" + (s < 10 ? "0" : "") + s + "," + (st < 10 ? "0" : "") + st;
+}
+function stTik() {
+  if (!ST.bezi) return;
+  const t = stDisplej(Date.now() - ST.start);
+  if (t !== ST.zobrazeno) { ST.zobrazeno = t; $("#stCas").textContent = t; }
+  ST.raf = requestAnimationFrame(stTik);
+}
+async function stWake(zapnout) {
+  try {
+    if (zapnout && !ST.wake && navigator.wakeLock) ST.wake = await navigator.wakeLock.request("screen");
+    if (!zapnout && ST.wake) { const w = ST.wake; ST.wake = null; await w.release(); }
+  } catch { ST.wake = null; }
+}
+function stReset() {
+  cancelAnimationFrame(ST.raf);
+  Object.assign(ST, { bezi: false, start: 0, konec: 0, casy: [], kdo: [], zobrazeno: "" });
+  $("#stCas").textContent = stDisplej(0);
+  stWake(false);
+}
+
+function stOtevrit() {
+  if (!S.mer) return;
+  const disc = merDisciplina();
+  if (!disc) return;
+  stReset();
+  $("#stSub").textContent = disc + " · " + skName(S.mer.skupinaId);
+  $("#stSheet").hidden = false;
+  stKresli();
+}
+function stZavrit(tiche) {
+  if ($("#stSheet").hidden) return;
+  if (!tiche && ST.casy.length && !confirm("Naměřené časy nejsou zapsané. Zahodit je?")) return;
+  stReset();
+  $("#stSheet").hidden = true;
+  if (S.mer) osvezMereni();
+}
+
+// zaci, kteri muzou bezet: bez nepritomnych a necvicicich
+function stZaci() {
+  return (S.mer && S.mer.zaci || []).filter((z) => {
+    const r = $("#merList").querySelector('.mrow[data-zak="' + z.id + '"]');
+    return !(r && r.dataset.mimo === "1");
+  });
+}
+function stDnes(zakId) {
+  const v = $("#merList").querySelector('.mrow[data-zak="' + zakId + '"] .mv');
+  return v ? v.value.trim() : "";
+}
+
+function stKresli() {
+  const hl = $("#stHl");
+  hl.dataset.stav = ST.bezi ? "bezi" : (ST.casy.length ? "stop" : "start");
+  hl.textContent = ST.bezi ? "Cíl" + (ST.casy.length ? " (" + (ST.casy.length + 1) + ".)" : "") : (ST.casy.length ? "Zastaveno" : "Start");
+  hl.disabled = !ST.bezi && ST.casy.length > 0;
+  // po zastaveni se z tlacitka Zastavit stane Zahodit beh
+  $("#stStop").disabled = !ST.bezi && !ST.casy.length;
+  $("#stStop").textContent = ST.bezi || !ST.casy.length ? "Zastavit" : "Zahodit běh";
+  $("#stZpet").disabled = !ST.casy.length;
+  const jed = S.mer ? S.mer.jed : "s";
+  const box = $("#stCasy"); box.innerHTML = "";
+  $("#stCasyTtl").textContent = ST.casy.length ? "Časy (" + ST.casy.length + ")" : "Časy";
+  if (!ST.casy.length) box.appendChild(el("div", "hint", "Start spustí čas. Při každém doběhu klepni na Cíl."));
+  const prvni = ST.kdo.findIndex((x) => !x);
+  ST.casy.forEach((ms, i) => {
+    const r = el("button", "st-row" + (i === prvni ? " dalsi" : "")); r.type = "button";
+    const z = ST.kdo[i] && S.cache.zakById.get(ST.kdo[i]);
+    const c = stFormat(stSekundy(ms), jed);
+    r.append(el("span", "n", (i + 1) + "."), el("span", "c", c),
+      el("span", "j" + (z ? "" : " nic"), z ? z.prijmeni + " " + z.jmeno : (i === prvni ? "← klepni jméno" : "bez jména")));
+    r.setAttribute("aria-label", (i + 1) + ". čas " + c + (z ? ", " + z.prijmeni + " " + z.jmeno + ", klepnutím zrušíš" : ", bez jména"));
+    r.addEventListener("click", () => { if (ST.kdo[i]) { ST.kdo[i] = null; stKresli(); } });
+    box.appendChild(r);
+  });
+  const zb = $("#stZaci"); zb.innerHTML = "";
+  $("#stZaciBox").hidden = !ST.casy.length;
+  const prirazeni = new Set(ST.kdo.filter(Boolean));
+  stZaci().filter((z) => !prirazeni.has(z.id)).forEach((z) => {
+    const b = el("button", "chip"); b.type = "button";
+    const ma = stDnes(z.id);
+    b.textContent = z.prijmeni + " " + z.jmeno + (ma ? " · " + ma : "");
+    b.disabled = prvni < 0;
+    b.addEventListener("click", () => {
+      const i = ST.kdo.findIndex((x) => !x);
+      if (i < 0) return;
+      ST.kdo[i] = z.id; stKresli();
+    });
+    zb.appendChild(b);
+  });
+  const n = ST.kdo.filter(Boolean).length;
+  $("#stZapsat").disabled = ST.bezi || !n;
+  $("#stZapsat").textContent = ST.bezi && n ? "Nejdřív zastav stopky" : n ? "Zapsat " + n + (n === 1 ? " čas" : n < 5 ? " časy" : " časů") : "Zapsat časy";
+}
+
+function stHlavni() {
+  const ted = Date.now();
+  if (!ST.bezi && ST.casy.length) return;
+  if (!ST.bezi) {
+    ST.bezi = true; ST.start = ted;
+    stWake(true);
+    ST.raf = requestAnimationFrame(stTik);
+  } else {
+    ST.casy.push(ted - ST.start); ST.kdo.push(null);
+    if (navigator.vibrate) navigator.vibrate(15);
+  }
+  stKresli();
+}
+function stZastavit() {
+  if (!ST.bezi) {
+    if (ST.casy.length && confirm("Zahodit tenhle běh i s časy?")) { stReset(); stKresli(); }
+    return;
+  }
+  ST.bezi = false; ST.konec = Date.now() - ST.start;
+  cancelAnimationFrame(ST.raf);
+  $("#stCas").textContent = stDisplej(ST.konec);
+  stWake(false);
+  // zastaveno bez jedineho dobehu: rovnou zpet na start
+  if (!ST.casy.length) stReset();
+  stKresli();
+}
+function stZpet() {
+  if (!ST.casy.length) return;
+  ST.casy.pop(); ST.kdo.pop();
+  if (!ST.bezi && !ST.casy.length) stReset();
+  stKresli();
+}
+
+async function stZapsat() {
+  if (!S.mer || ST.bezi) return;
+  const bez = ST.kdo.filter((x) => !x).length;
+  if (bez && !confirm(bez + (bez === 1 ? " čas nemá" : " časy nemají") + " jméno a zahodí se. Zapsat ostatní?")) return;
+  const jed = S.mer.jed;
+  let zapsano = 0, lepsi = 0;
+  for (let i = 0; i < ST.casy.length; i++) {
+    const z = ST.kdo[i] && S.cache.zakById.get(ST.kdo[i]);
+    if (!z) continue;
+    const radek = $("#merList").querySelector('.mrow[data-zak="' + z.id + '"]');
+    const vstup = radek && radek.querySelector(".mv");
+    if (!vstup) continue;
+    const sek = stSekundy(ST.casy[i]);
+    const dosud = cisloZ(vstup.value);
+    if (dosud !== null && dosud <= sek) { lepsi++; continue; }
+    vstup.value = stFormat(sek, jed);
+    await ulozMereni(z, vstup, radek);
+    zapsano++;
+  }
+  stReset();
+  stKresli();
+  toast("Zapsáno " + zapsano + (lepsi ? ", u " + lepsi + " zůstal lepší dřívější čas" : ""));
 }
 
 /* ---------- knihovna priprav (karty her a hodin z hry/index.json) ---------- */
@@ -3529,7 +3743,7 @@ function rkHodnota(hodnota, jednotka, d) {
 const fmtHod = (v, jed) => {
   if (v == null) return "";
   if (jed !== "min") return String(Math.round(v * 100) / 100);
-  const s = Math.round(v * 10) / 10, m = Math.floor(s / 60), r = Math.round((s - m * 60) * 10) / 10;
+  const s = Math.round(v * 100) / 100, m = Math.floor(s / 60), r = Math.round((s - m * 60) * 100) / 100;
   return m + ":" + (r < 10 ? "0" : "") + r;
 };
 
@@ -4028,7 +4242,11 @@ async function boot() {
   $("#zakX").addEventListener("click", zavriZaka);
   $("#zakBg").addEventListener("click", zavriZaka);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#zakSheet").hidden) zavriZaka(); });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#merSheet").hidden) zavriMereni(); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if (!$("#stSheet").hidden) { stZavrit(false); return; }
+    if (!$("#merSheet").hidden) zavriMereni();
+  });
 
   STAVY.forEach((k) => {
     const b = el("button", "sv"); b.type = "button"; b.dataset.s = k;
@@ -4044,6 +4262,14 @@ async function boot() {
   $("#knQ").addEventListener("input", (e) => { clearTimeout(knCas); knCas = setTimeout(() => { KN.q = e.target.value; renderKnihovna(); }, 200); });
   $("#bRkPripoj").addEventListener("click", rkPripoj);
   $("#merX").addEventListener("click", zavriMereni);
+  $("#merStopky").addEventListener("click", stOtevrit);
+  $("#stX").addEventListener("click", () => stZavrit(false));
+  // Cil se bere uz pri dotyku, ne az pri pusteni prstu. Klavesnice jde pres click.
+  $("#stHl").addEventListener("pointerdown", (e) => { if (e.button === 0) { e.preventDefault(); stHlavni(); } });
+  $("#stHl").addEventListener("click", (e) => { if (e.detail === 0) stHlavni(); });
+  $("#stStop").addEventListener("click", stZastavit);
+  $("#stZpet").addEventListener("click", stZpet);
+  $("#stZapsat").addEventListener("click", stZapsat);
   $("#merBg").addEventListener("click", zavriMereni);
   $("#merDisc").addEventListener("change", async () => {
     if (!S.mer) return;

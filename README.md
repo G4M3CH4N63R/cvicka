@@ -569,6 +569,19 @@ a `Úvodní hra:` se načtou do téhož okénka. Zásobník tam vkládá úvodn�
 Worker posílá Claude `Úvodní část` místo `Úvodní hra`, je potřeba ho znovu nasadit
 (starší appka s okénkem Rozcvička funguje i s novým Workerem).
 
+## v0.16.0: stopky v měření
+
+V Měření se u časové disciplíny (jednotka s nebo min) ukáže tlačítko **Měřit stopkami**.
+Start, při každém doběhu velké tlačítko Cíl (reaguje už na dotyk, ne na puštění prstu),
+Zastavit. Ke časům 1., 2., 3. se pak klepou jména v pořadí doběhu, klepnutí na řádek jméno
+zruší, Smazat poslední čas odstraní omylem klepnutý cíl, po zastavení jde celý běh zahodit.
+Zapsat uloží časy přes `ulozMereni()` jako ruční zápis, takže výkony jdou i do Rekordníku.
+Čas je celkový od startu, ne rozdíl od prvního. Zapisuje se na setiny tak, jak ho ukazují
+stopky, zbytek se usekne (`stSekundy`), u minut ve tvaru `3:25,43`. Do Rekordníku jdou
+minutové disciplíny dál na desetiny (`rkHodnota`), sekundové na setiny. Když už má žák dnes čas,
+zůstane lepší z obou. Nepřítomní a necvičící v nabídce jmen nejsou. Měří se přes `Date.now()`,
+aby čas seděl i po krátkém přepnutí do pozadí, a během běhu drží Wake Lock rozsvícený displej.
+
 ## Co přijde dál
 
 F3 je hotová.
