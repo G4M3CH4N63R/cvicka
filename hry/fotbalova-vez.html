@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Fotbalová věž</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>:root{color-scheme:light}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<style>
+/* Layout: karta úvodní hry; hlavička, vlevo pohled z boku na dítě s míčem a animace patra, vpravo pomůcky a organizace, pod tím pravidla, deset pater věže, úpravy podle ročníku a tipy */
+:root{
+  --bg:#f6f4ef; --paper:#ffffff; --ink:#1d2329; --muted:#5d6670; --line:#dcd6cb;
+  --floor:#e3f1d8; --floorline:#4f9a3f; --court:#c8743a;
+  --red:#d2423a; --blue:#2c69c9; --gold:#d99a00; --noodle:#2f9e63; --ball:#f2d22e; --ballstroke:#9b8410;
+  --accent:#2c69c9;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Source Sans 3","Segoe UI",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#15191d; --paper:#1d2227; --ink:#eef0f2; --muted:#a3acb6; --line:#323940;
+  --floor:#22351f; --floorline:#6fbf5a; --court:#d38a4f;
+  --red:#ef6a60; --blue:#5b92ee; --gold:#f2b632; --noodle:#4cc483; --ball:#f5dc4a; --ballstroke:#f5dc4a;
+  --accent:#5b92ee; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#15191d; --paper:#1d2227; --ink:#eef0f2; --muted:#a3acb6; --line:#323940;
+  --floor:#22351f; --floorline:#6fbf5a; --court:#d38a4f;
+  --red:#ef6a60; --blue:#5b92ee; --gold:#f2b632; --noodle:#4cc483; --ball:#f5dc4a; --ballstroke:#f5dc4a;
+  --accent:#5b92ee; color-scheme:dark }
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5}
+.wrap{max-width:1080px;margin:0 auto;padding-block:28px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:24px}
+header{display:grid;gap:10px}
+.eyebrow{font-family:var(--display);font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-size:.9rem}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(2.6rem,7vw,4.2rem);line-height:.95;margin:0;text-wrap:balance}
+.lead{margin:0;max-width:62ch;color:var(--muted);font-size:1.08rem}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.chip{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:3px 12px;font-size:.92rem}
+.chip b{font-weight:700}
+.grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:18px;min-width:0}
+h2{font-family:var(--display);font-weight:700;font-size:1.55rem;letter-spacing:.02em;margin:0 0 10px;text-transform:uppercase}
+h3{font-family:var(--display);font-weight:700;font-size:1.2rem;margin:0 0 6px}
+.court-box{overflow-x:auto}
+svg.court{width:100%;height:auto;display:block;min-width:300px}
+.cap{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;align-items:baseline;margin-top:12px;min-height:3.4em}
+.cap .n{font-family:var(--display);font-weight:700;font-size:1.3rem;color:var(--accent);font-variant-numeric:tabular-nums}
+.cap .t{font-weight:700}
+.cap .d{grid-column:2;color:var(--muted)}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
+button{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:6px 14px;cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.dots{display:flex;gap:6px;margin-left:auto}
+.dot{width:12px;height:12px;border-radius:50%;padding:0;border:2px solid var(--muted);background:transparent}
+.dot[aria-current="true"]{background:var(--accent);border-color:var(--accent)}
+.note{font-size:.88rem;color:var(--muted);margin:8px 0 0}
+ul.clean{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.item{display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;align-items:start}
+.item svg{width:34px;height:34px}
+.item b{display:block}
+.item span{color:var(--muted)}
+.rules{display:grid;gap:10px;margin:0;padding-left:1.3em}
+.rules li::marker{font-family:var(--display);font-weight:700;color:var(--accent)}
+.vars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:640px){.vars{grid-template-columns:minmax(0,1fr)}}
+.var{border:1px solid var(--line);border-radius:10px;padding:14px;background:var(--paper)}
+.tag{display:inline-block;font-family:var(--display);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:.85rem;padding:1px 8px;border-radius:4px;background:var(--gold);color:#1d2329;margin-bottom:6px}
+.var p{margin:0}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}
+@media (max-width:640px){.two{grid-template-columns:minmax(0,1fr)}}
+.two ul{margin:0;padding-left:1.1em;display:grid;gap:6px}
+
+.floors{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (max-width:640px){.floors{grid-template-columns:minmax(0,1fr)}}
+.floors li{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:start;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--paper);border-left:6px solid var(--fc)}
+.floors .fn{font-family:var(--display);font-weight:700;font-size:1.5rem;line-height:1;color:var(--fc)}
+.floors b{display:block}
+.floors span{color:var(--muted);font-size:.95rem}
+.floors .cnt{font-family:var(--display);font-weight:700;font-size:1.25rem;white-space:nowrap}
+.steps-print{display:none}
+@media print{
+ @page{size:A4;margin:12mm}
+ body{font-size:10.5pt;line-height:1.4;background:#fff}
+ .wrap{padding:0;gap:14px;max-width:none}
+ .controls,.cap{display:none!important}
+ .steps-print{display:block;margin:10px 0 0;padding-left:1.3em;font-size:10.5pt}
+ .panel,.var{break-inside:avoid}
+ h1{font-size:30pt}
+ .panel{padding:10px 14px}
+ ul.clean,.rules,.two ul{gap:3px}
+ .item svg{width:24px;height:24px}
+ .item{grid-template-columns:26px minmax(0,1fr)}
+ h2{font-size:15pt;margin-bottom:6px}
+ .lead{font-size:11pt}
+ svg.court{max-width:135mm;margin:0 auto}
+ .steps-print{font-size:10pt}
+ .two{gap:14px}
+ aside ul.clean{grid-template-columns:1fr 1fr;column-gap:16px}
+ .wrap{gap:10px}
+ .var{padding:10px}
+ .grid{grid-template-columns:minmax(0,1fr)!important;gap:10px}
+ svg.court{max-width:110mm}
+ .lead{max-width:none}
+ h2{break-after:avoid}
+ .floors{gap:5px}
+ .floors li{padding:5px 8px;break-inside:avoid}
+ .floors span{font-size:9.5pt}
+}
+</style>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Úvodní hra · tělesná výchova</div>
+    <h1>Fotbalová věž</h1>
+    <p class="lead">Fotbalová školka, každý se svým míčem. Věž má deset pater, od kopu po odskoku až po královské kombo hlava, stehno, nárt. Kdo patro splní, postupuje o patro výš. Ke každému patru je karta k zalaminování s obrázky, podle které děti cvičí samy.</p>
+    <div class="chips">
+      <span class="chip"><b>Hráči:</b> každý se svým míčem</span>
+      <span class="chip"><b>Prostor:</b> tělocvična nebo hřiště, rozestupy 2 až 3 metry</span>
+      <span class="chip"><b>Ročníky:</b> celý 1. stupeň</span>
+      <span class="chip"><b>Rozvíjí:</b> práci s míčem nohou, koordinaci, rovnováhu, odhad dopadu</span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <section class="panel" aria-labelledby="h-schema">
+      <h2 id="h-schema">Jak se hraje</h2>
+      <div class="court-box">
+        <svg class="court" id="court" viewBox="120 26 360 248" role="img" aria-label="Pohled z boku: dítě pracuje s fotbalovým míčem, každé patro jinak"></svg>
+      </div>
+      <div class="cap" aria-live="polite">
+        <span class="n" id="capN">1/10</span><span class="t" id="capT"></span>
+        <span class="d" id="capD"></span>
+      </div>
+      <div class="controls">
+        <button class="primary" id="play" type="button">Přehrát</button>
+        <button id="prev" type="button" aria-label="Předchozí patro">◀</button>
+        <button id="next" type="button" aria-label="Další patro">▶</button>
+        <div class="dots" id="dots"></div>
+      </div>
+      <p class="note">Pohled z boku. Šipkami nebo tečkami se přepíná patro, Přehrát ukáže všechna patra po sobě.</p>
+    </section>
+
+    <aside class="panel" aria-labelledby="h-pom">
+      <h2 id="h-pom">Pomůcky a organizace</h2>
+      <ul class="clean">
+        <li class="item"><svg viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="11" fill="#fff" stroke="#1d2329" stroke-width="2"/><polygon points="17,12 21.8,15.5 20,21 14,21 12.2,15.5" fill="#1d2329"/></svg><div><b>Fotbalový míč</b><span>Každé dítě má svůj. Na hlavičky a pro nejmenší se hodí lehčí míč.</span></div></li>
+        <li class="item"><svg viewBox="0 0 34 34" aria-hidden="true"><circle cx="8" cy="17" r="4" fill="var(--blue)"/><circle cx="26" cy="17" r="4" fill="var(--blue)"/><path d="M13 17 h8 M13 17 l3 -3 M13 17 l3 3 M21 17 l-3 -3 M21 17 l-3 3" stroke="var(--ink)" stroke-width="1.6" fill="none"/></svg><div><b>Volné místo</b><span>Rozestupy 2 až 3 metry, ať se děti ani míče nesrazí.</span></div></li>
+        <li class="item"><svg viewBox="0 0 34 34" aria-hidden="true"><rect x="3" y="8" width="28" height="19" rx="2" fill="none" stroke="var(--ink)" stroke-width="2"/><circle cx="12" cy="17" r="3" fill="#fff" stroke="#1d2329"/><path d="M18 14 h9 M18 20 h7" stroke="var(--ink)" stroke-width="1.5"/></svg><div><b>Karty k zalaminování</b><span>Titulní karta s věží a karta pro každé patro: obrázky krok za krokem a popis velkými tiskacími písmeny, počet opakování i jako míče. Rozvěsit po tělocvičně nebo položit na zem.</span></div></li>
+      </ul>
+      <h3 style="margin-top:18px">Každý sám za sebe</h3>
+      <ul class="clean">
+        <li><b>Nahlas počítá,</b> <span style="color:var(--muted)">kolikrát se mu to povedlo za sebou.</span></li>
+        <li><b>Po chybě</b> <span style="color:var(--muted)">začne patro znovu od nuly.</span></li>
+      </ul>
+    </aside>
+  </div>
+
+  <section class="panel" aria-labelledby="h-prav">
+    <h2 id="h-prav">Pravidla</h2>
+    <ol class="rules">
+      <li>Každý začíná dole, na patře 1.</li>
+      <li>Patro je splněné, když se úkol povede tolikrát za sebou, kolik je u patra napsáno.</li>
+      <li>Míč smí dopadnout na zem jen tam, kde to patro říká. Jinak pokus neplatí.</li>
+      <li>Po chybě se začíná znovu jen to patro, ne celá věž. Splněné patro už nikdo nikomu nebere.</li>
+      <li>Kde kdo skončil, si děti pamatují, případně si to zapíše učitel. Další hodinu se pokračuje tam.</li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="h-floors">
+    <h2 id="h-floors">Deset pater věže</h2>
+    <ol class="floors" id="floors"></ol>
+  </section>
+
+  <section class="panel two" aria-label="Úpravy podle ročníku a pozor">
+    <div><h3>Podle ročníku</h3><ul><li><b>Úleva pro 1. a 2. třídu:</b> na patrech 6 až 10 smí míč mezi doteky jednou dopadnout na zem.</li><li><b>Ztížení pro páťáky:</b> na patrech 1 až 5 kopou všechno slabší nohou.</li><li>Mladší dělají patro, dokud ho nesplní. Počet opakování jde snížit.</li></ul></div><div><h3>Na co dát pozor</h3><ul><li>Rozestupy 2 až 3 metry, ať se děti nesrazí.</li><li>Hlavička: nízký nadhoz, odrazit čelem, ne temenem. Pro mladší lehčí míč.</li><li>Zašlápnutí: na míč jen lehce podrážkou, ne celou vahou, ať nikdo neuklouzne.</li></ul></div>
+  </section>
+</div>
+
+<script>
+(function(){
+const FLOORS=[
+ {n:'O zem do ruky',c:5,d:'Pustit míč z rukou, nechat ho odskočit, kopnout ho nártem nahoru a chytit. Pravou i levou.',col:'#2f9e63'},
+ {n:'Z voleje do ruky',c:5,d:'Pustit míč a kopnout ho hned ze vzduchu, bez dopadu na zem. Pak chytit. Pravou i levou.',col:'#2f9e63'},
+ {n:'Dvoják o zem',c:5,d:'Pustit a kopnout, nechat jednou dopadnout, kopnout druhou nohou a chytit. Střídat nohy.',col:'#2f9e63'},
+ {n:'Kolínka',c:4,d:'Pustit míč, odrazit ho kolenem nahoru a chytit. Pravou i levou.',col:'#c9a400'},
+ {n:'Hlavička',c:4,d:'Vyhodit si míč, odrazit ho čelem nahoru a chytit. Oči otevřené.',col:'#c9a400'},
+ {n:'Pravá a levá',c:4,d:'Pustit, kopnout pravou a hned levou, mezi kopy bez dopadu na zem. Pak chytit.',col:'#c9a400'},
+ {n:'Stehno a nárt',c:3,d:'Pustit, odrazit stehnem, pak nártem a chytit. Mezi doteky žádný dopad.',col:'#e07a1f'},
+ {n:'Zašlápnutí',c:3,d:'Vyhodit míč nahoru, a když dopadne, zašlápnout ho podrážkou, aby neodskočil.',col:'#e07a1f'},
+ {n:'Tři nožičky',c:3,d:'Pustit míč a udržet ho ve vzduchu třemi doteky nártem za sebou. Pak chytit.',col:'#d2423a'},
+ {n:'Královské kombo',c:3,d:'Vyhodit, odrazit hlavou, stehnem, nártem a chytit. Všechno bez dopadu na zem.',col:'#d2423a'}
+];
+document.getElementById('floors').innerHTML=FLOORS.map((f,k)=>`<li style="--fc:${f.col}"><span class="fn">${k+1}</span><div><b>${f.n}</b><span>${f.d}</span></div><span class="cnt">${f.c}×</span></li>`).join('');
+
+const NS="http://www.w3.org/2000/svg",svg=document.getElementById('court');
+const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+function el(t,a,p){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);(p||svg).appendChild(e);return e;}
+const FONT='Source Sans 3, Arial, sans-serif';
+el('rect',{x:120,y:26,width:360,height:248,rx:12,fill:'var(--floor)'});
+el('rect',{x:20,y:260,width:560,height:10,rx:4,fill:'var(--floorline)',opacity:.45});el('line',{x1:20,y1:260,x2:580,y2:260,stroke:'var(--floorline)','stroke-width':3});
+const trail=el('g',{});const kid=el('g',{});const ballG=el('g',{});
+el('circle',{r:10,fill:'#fff',stroke:'#1d2329','stroke-width':2},ballG);el('polygon',{points:'0,-4.6 4.4,-1.4 2.7,3.7 -2.7,3.7 -4.4,-1.4',fill:'#1d2329'},ballG);
+const label=el('text',{x:300,y:78,'text-anchor':'middle','font-size':22,'font-weight':700,'font-family':'Barlow Condensed, Arial Narrow, sans-serif',fill:'var(--ink)'});
+const floorTag=el('text',{x:300,y:48,'text-anchor':'middle','font-size':16,'font-weight':700,'font-family':'Barlow Condensed, Arial Narrow, sans-serif',fill:'var(--muted)'});
+// postavička: počátek u chodidel, dívá se doprava
+const P={
+ stand:{h:[[16,-62],[16,-58]],l:[[-9,0,-4,-20],[9,0,4,-20]]},
+ throw1:{h:[[14,-104],[6,-48]],l:[[-9,0,-4,-20],[9,0,4,-20]]},
+ clap:{h:[[18,-74],[18,-74]],l:[[-9,0,-4,-20],[9,0,4,-20]],mark:'clap'},
+ clapback:{h:[[-14,-52],[-14,-52]],l:[[-9,0,-4,-20],[9,0,4,-20]],mark:'clapback'},
+ oneleg:{h:[[16,-62],[16,-58]],l:[[-2,0,-1,-20],[4,-18,12,-28]]},
+ crouch:{y:22,h:[[16,-30],[10,-20]],l:[[-14,0,-16,-14],[14,0,16,-14]]},
+ turn:{h:[[-6,-56],[6,-56]],l:[[-9,0,-4,-20],[9,0,4,-20]],mark:'turn'},
+ back:{f:-1,h:[[-4,-112],[4,-112]],l:[[-9,0,-4,-20],[9,0,4,-20]]},
+ hit:{h:[[22,-96],[4,-50]],l:[[-9,0,-4,-20],[9,0,4,-20]]},
+ jump:{y:-36,h:[[12,-112],[18,-108]],l:[[-6,0,-4,-20],[10,-2,4,-20]]},
+ hold:{h:[[20,-64],[20,-60]],l:[[-9,0,-4,-20],[9,0,4,-20]]},
+ drop:{h:[[22,-72],[22,-68]],l:[[-9,0,-4,-20],[9,0,4,-20]]},
+ watch:{h:[[-14,-54],[14,-54]],l:[[-9,0,-6,-20],[9,0,6,-20]]},
+ kick:{h:[[-22,-62],[22,-60]],l:[[-4,0,-2,-20],[30,-28,16,-36]]},
+ knee:{h:[[-22,-62],[22,-60]],l:[[-3,0,-2,-20],[20,-20,22,-46]]},
+ head:{h:[[-20,-60],[20,-60]],l:[[-9,0,-6,-20],[9,0,6,-20]]},
+ toss:{h:[[30,-108],[34,-104]],l:[[-9,0,-4,-20],[9,0,4,-20]]},
+ fcatch:{h:[[22,-74],[22,-68]],l:[[-9,0,-4,-20],[9,0,4,-20]]},
+ stamp:{h:[[-22,-62],[22,-60]],l:[[-6,0,-4,-20],[24,-30,14,-38]]}
+};
+function drawKid(x,poseName){kid.innerHTML='';const p=P[poseName]||P.stand;const f=p.f||1;const g=el('g',{transform:`translate(${x},${260+(p.y||0)}) scale(${f},1)`},kid);
+ const st={stroke:'#2c69c9','stroke-width':6,'stroke-linecap':'round','stroke-linejoin':'round',fill:'none'};
+ const hip=-40, sh=-78;
+ p.l.forEach(([fx,fy,kx,ky])=>el('polyline',Object.assign({points:`0,${hip} ${kx},${ky} ${fx},${fy}`},st),g));
+ el('line',Object.assign({x1:0,y1:hip,x2:0,y2:sh},st),g);
+ p.h.forEach(([hx,hy])=>el('polyline',Object.assign({points:`0,${sh+4} ${(hx)/2},${(sh+hy)/2+4} ${hx},${hy}`},st),g));
+ el('circle',{cx:0,cy:-94,r:12,fill:'#2c69c9'},g);
+ if(p.mark==='clap'){const t=el('text',{x:30,y:-84,'font-size':13,'font-weight':700,'font-family':FONT,fill:'var(--ink)'},g);t.textContent='tlesk';}
+ if(p.mark==='clapback'){const t=el('text',{x:-62,y:-50,'font-size':13,'font-weight':700,'font-family':FONT,fill:'var(--ink)'},g);t.textContent='tlesk';}
+ if(p.mark==='turn'){el('path',{d:'M -28 -60 A 28 12 0 1 0 28 -60',fill:'none',stroke:'var(--ink)','stroke-width':2.5},g);el('path',{d:'M 28 -60 l -9 -4 l 3 9 z',fill:'var(--ink)'},g);}
+}
+// patra: x postavičky a klíčové body míčku [x,y,póza,popisek]
+const K=[
+ {x:300,f:[[322,198,'hold',''],[328,234,'drop','pusť'],[332,249,'watch','odraz'],[333,206,'kick','kopni nahoru'],[333,140,'kick',''],[330,188,'fcatch','chyť']]},
+ {x:300,f:[[322,198,'hold',''],[328,226,'drop','pusť'],[333,206,'kick','kopni ze vzduchu'],[333,140,'kick',''],[330,188,'fcatch','chyť']]},
+ {x:300,f:[[322,198,'hold',''],[328,226,'drop','pusť'],[333,206,'kick','kopni'],[333,150,'kick',''],[332,249,'watch','odraz'],[333,206,'kick','druhou nohou'],[333,150,'kick',''],[330,188,'fcatch','chyť']]},
+ {x:300,f:[[322,198,'hold',''],[328,226,'drop','pusť'],[324,196,'knee','kolenem'],[324,140,'knee',''],[330,188,'fcatch','chyť']]},
+ {x:300,f:[[322,198,'hold',''],[334,134,'toss','vyhoď'],[330,84,'toss',''],[310,138,'head','čelem'],[310,86,'head',''],[330,188,'fcatch','chyť']]},
+ {x:300,f:[[322,198,'hold',''],[328,226,'drop','pusť'],[333,206,'kick','pravou'],[333,160,'kick',''],[333,206,'kick','hned levou'],[333,150,'kick',''],[330,188,'fcatch','chyť']]},
+ {x:300,f:[[322,198,'hold',''],[328,226,'drop','pusť'],[324,196,'knee','stehnem'],[324,160,'knee',''],[333,206,'kick','nártem'],[333,150,'kick',''],[330,188,'fcatch','chyť']]},
+ {x:300,f:[[322,198,'hold',''],[334,134,'toss','vyhoď'],[334,86,'toss',''],[326,248,'stamp','zašlápni']]},
+ {x:300,f:[[322,198,'hold',''],[328,226,'drop','pusť'],[333,206,'kick','1'],[333,165,'kick',''],[333,206,'kick','2'],[333,165,'kick',''],[333,206,'kick','3'],[333,150,'kick',''],[330,188,'fcatch','chyť']]},
+ {x:300,f:[[322,198,'hold',''],[334,134,'toss','vyhoď'],[330,90,'toss',''],[310,138,'head','hlava'],[312,112,'head',''],[324,196,'knee','stehno'],[324,170,'knee',''],[333,206,'kick','nárt'],[333,150,'kick',''],[330,188,'fcatch','chyť']]}
+];
+const SEG=650,HOLD=1300;
+const capN=document.getElementById('capN'),capT=document.getElementById('capT'),capD=document.getElementById('capD'),dots=document.getElementById('dots'),play=document.getElementById('play');
+let i=0,playing=false,raf=0,tm=0;
+FLOORS.forEach((f,k)=>{const b=document.createElement('button');b.className='dot';b.type='button';b.setAttribute('aria-label','Patro '+(k+1)+': '+f.n);b.onclick=()=>{stop();show(k,true)};dots.appendChild(b);});
+function caption(k){const f=FLOORS[k];capN.textContent=(k+1)+'/10';capT.textContent=`Patro ${k+1}: ${f.n} (${f.c}× za sebou)`;capD.textContent=f.d;floorTag.textContent='PATRO '+(k+1);[...dots.children].forEach((d,j)=>d.setAttribute('aria-current',j===k?'true':'false'));}
+function drawTrail(k){trail.innerHTML='';const fr=K[k].f;el('polyline',{points:fr.map(p=>p[0]+','+p[1]).join(' '),fill:'none',stroke:'var(--ink)','stroke-width':2,'stroke-dasharray':'5 5',opacity:.45},trail);}
+function setFrame(k,j){const p=K[k].f[j];ballG.setAttribute('transform',`translate(${p[0]},${p[1]})`);drawKid(K[k].x,p[2]);label.textContent=p[3];}
+function show(k,instant){i=k;caption(k);drawTrail(k);cancelAnimationFrame(raf);clearTimeout(tm);
+ if(instant||reduce){const fr=K[k].f;let key=fr.findIndex(q=>q[3]&&!['hold','drop','toss'].includes(q[2]));if(key<0)key=0;setFrame(k,key);label.textContent=fr.map(p=>p[3]).filter(Boolean).join(' · ');if(playing)tm=setTimeout(nextAuto,HOLD+1500);return;}
+ animate(k);}
+function nextAuto(){if(!playing)return;if(i<9)show(i+1,false);else stop();}
+function animate(k){const fr=K[k].f;let j=0;setFrame(k,0);
+ const seg=()=>{if(j>=fr.length-1){if(playing)tm=setTimeout(nextAuto,HOLD);else tm=setTimeout(()=>{if(!playing)show(k,true)},HOLD);return;}
+  const a=fr[j],b=fr[j+1];drawKid(K[k].x,b[2]);label.textContent=b[3];const t0=performance.now();
+  const step=now=>{const p=Math.min(1,(now-t0)/SEG);const x=a[0]+(b[0]-a[0])*p;const y=a[1]+(b[1]-a[1])*p-Math.sin(Math.PI*p)*18;ballG.setAttribute('transform',`translate(${x},${y})`);
+   if(p<1)raf=requestAnimationFrame(step);else{j++;seg();}};raf=requestAnimationFrame(step);};
+ seg();}
+function stop(){playing=false;cancelAnimationFrame(raf);clearTimeout(tm);play.textContent='Přehrát';}
+play.onclick=()=>{if(playing){stop();return;}playing=true;play.textContent='Pauza';show(i,false);};
+document.getElementById('next').onclick=()=>{stop();show(Math.min(9,i+1),false);};
+document.getElementById('prev').onclick=()=>{stop();show(Math.max(0,i-1),false);};
+show(0,true);
+})();
+</script>
+
+</body>
+</html>
