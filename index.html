@@ -801,7 +801,7 @@ a.btn { display: block; text-align: center; text-decoration: none; }
 
 <script>
 "use strict";
-const APP = { ver: "0.17.0", db: null, sync: null, klic: null };
+const APP = { ver: "0.17.1", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -3540,6 +3540,8 @@ async function stZapsat() {
 // (hry/uvodni-z-excelu.py). Do zasobniku se z nich doplni chybejici cinnosti.
 const KN = { karty: null, chyba: "", q: "", typ: "vse", cil: null, cilBack: null, vyber: null };
 const bezDiak = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+// Odkaz z knihovny se zobrazi jen jako https:// nebo karta na webu Cvicky (hry/*.html).
+const knOdkaz = (u) => { const t = String(u || "").trim(); return /^https:\/\//i.test(t) || /^hry\/[a-z0-9-]+\.html$/i.test(t) ? t : ""; };
 const knSlug = (x) => bezDiak(x).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 async function knStahni(soubor, klic, pole) {
@@ -3564,7 +3566,7 @@ async function nactiKnihovnu(znovu) {
   const hry = uvodni.data.filter((h) => h && h.nazev).map((h) => ({
     slug: "u-" + knSlug(h.nazev), nazev: h.nazev, typ: "uvodni", okruh: "Pohybové hry",
     popis: h.popis || "", rozviji: h.rozviji || "", varianty: h.varianty || "", pomucky: h.pomucky || "",
-    url: h.karta || "", lamin: h.lamin || "", video: h.video || "", cinnost: h.cinnost || ""
+    url: h.web || h.karta || "", disk: h.web ? h.karta || "" : "", lamin: h.lamin || "", video: h.video || "", cinnost: h.cinnost || ""
   }));
   KN.karty = [...karty.data, ...hry];
   const offline = karty.offline || uvodni.offline;
@@ -3648,7 +3650,7 @@ async function renderKnihovna() {
   vyber.forEach((k) => list.appendChild(knKarta(k, cil, naposledy(k.nazev, k.cinnost))));
   const nUv = karty.filter((k) => k.typ === "uvodni").length;
   $("#knHint").textContent = KN.chyba || (karty.length ? "Úvodních her: " + nUv + ", karet hlavní části a celých hodin: " + (karty.length - nUv)
-    + ". Úvodní hry jsou ze společné tabulky na školním Disku, jejich karty se otevírají na Disku." : "");
+    + ". Úvodní hry jsou ze společné tabulky na školním Disku." : "");
 }
 
 function knKarta(k, cil, napos) {
@@ -3664,22 +3666,24 @@ function knKarta(k, cil, napos) {
     if (!v) return;
     const r = el("div"); r.append(el("b", null, n + ": "), document.createTextNode(v)); meta.appendChild(r);
   });
-  [["Karty k laminování", k.lamin], ["Video", k.video]].forEach(([n, u]) => {
+  [["Karta na Disku (PDF)", k.disk], ["Karty k laminování", k.lamin], ["Video", k.video]].forEach(([n, u0]) => {
+    const u = knOdkaz(u0);
     if (!u) return;
     const r = el("div"); const l = el("a", null, n); l.href = u; l.target = "_blank"; l.rel = "noopener"; r.appendChild(l); meta.appendChild(r);
   });
   b.appendChild(meta);
   b.appendChild(el("div", "kn-nap", napos ? "Naposledy: " + skName(napos.skupinaId) + ", " + dm(napos.datum) : "Zatím jsi ji nehrál."));
 
-  const btns = el("div", k.url ? "btns two" : "btns");
-  const a = el("a", "btn ghost", k.typ === "uvodni" ? "Karta na Disku" : "Otevřít kartu"); a.href = k.url; a.target = "_blank"; a.rel = "noopener";
+  const url = knOdkaz(k.url);
+  const btns = el("div", url ? "btns two" : "btns");
+  const a = el("a", "btn ghost", /^https:/i.test(url) ? "Karta na Disku" : "Otevřít kartu"); a.href = url; a.target = "_blank"; a.rel = "noopener";
   const v = el("button", "btn", cil ? "Vložit do hodiny" : "Do hodiny…"); v.type = "button";
   v.addEventListener("click", async () => {
     if (cil) { await knVloz(k, cil.id); return; }
     KN.vyber = KN.vyber === k.slug ? null : k.slug;
     await renderKnihovna();
   });
-  if (k.url) btns.append(a);
+  if (url) btns.append(a);
   btns.append(v);
   b.appendChild(btns);
 

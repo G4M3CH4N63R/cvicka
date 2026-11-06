@@ -600,6 +600,10 @@ a připíše ji do činností hodiny. Při startu a otevření knihovny `knDopln
 Nic se nemaže ani nepřepisuje. Kopie seznamu je v meta (`uvodniKopie`) pro offline.
 Do `hry/index.json` přibyla chybějící karta Paintball.
 
+**v0.17.1:** skript bere z tabulky jen odkazy `https://` a appka zobrazí jen `https://` nebo kartu
+na webu Cvičky (`knOdkaz`). Když má úvodní hra kartu v `hry/<slug>.html` (Fotbalová věž, Věž míčového
+mistra), otevírá se ta, bez přihlášení; PDF na Disku zůstává jako odkaz pod hrou.
+
 ## Co přijde dál
 
 F3 je hotová.

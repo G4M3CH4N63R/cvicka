@@ -1,12 +1,24 @@
 # Prevede tabulku „Úvodní hry - seznam.xlsx“ ze skolniho Disku na hry/uvodni.json pro knihovnu ve Cvicce.
 # Pouziti: python3 uvodni-z-excelu.py "<cesta k Úvodní hry - seznam.xlsx>" uvodni.json
-import sys, json, datetime, openpyxl
+import sys, os, json, datetime, unicodedata, re, openpyxl
 
 # hry z tabulky, ktere uz v zasobniku Cvicky jsou pod jinym nazvem
 STEJNE_JAKO = {
     "Vítr, voda, oheň, blesk": "Oheň, voda, vítr",
     "Kámen, nůžky, papír kolem hřiště": "Kámen, nůžky, papír",
 }
+
+# Do appky jdou jen odkazy https://, tabulku muzou upravovat i kolegove.
+def bezpecny(u):
+    u = (u or "").strip()
+    return u if u.lower().startswith("https://") else ""
+
+# Karta hry na webu Cvicky (hry/<slug>.html), pokud existuje. Otevre se bez prihlaseni.
+SLOZKA = os.path.dirname(os.path.abspath(sys.argv[2]))
+def web(nazev):
+    s = unicodedata.normalize("NFD", nazev.lower())
+    s = re.sub(r"[^a-z0-9]+", "-", "".join(c for c in s if unicodedata.category(c) != "Mn")).strip("-")
+    return "hry/" + s + ".html" if os.path.exists(os.path.join(SLOZKA, s + ".html")) else ""
 
 def text(v):
     if v is None: return ""
@@ -27,8 +39,8 @@ for row in ws.iter_rows():
     pridano = sl.get("datum přidání").value if "datum přidání" in sl else None
     h = {"nazev": nazev, "popis": text(sl["krátký popis"].value), "rozviji": text(sl["rozvíjí"].value),
          "varianty": text(sl["varianty a úpravy"].value), "pomucky": text(sl["pomůcky"].value),
-         "karta": odkaz("karta hry"), "lamin": odkaz("karty k laminování"),
-         "video": odkaz("video") or (text(sl["video"].value) if text(sl["video"].value).startswith("http") else ""),
+         "web": web(nazev), "karta": bezpecny(odkaz("karta hry")), "lamin": bezpecny(odkaz("karty k laminování")),
+         "video": bezpecny(odkaz("video") or text(sl["video"].value)),
          "pridano": pridano.date().isoformat() if isinstance(pridano, datetime.datetime) else ""}
     if nazev in STEJNE_JAKO: h["cinnost"] = STEJNE_JAKO[nazev]
     hry.append({k: v for k, v in h.items() if v})
