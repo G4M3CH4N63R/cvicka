@@ -8,3 +8,4 @@ zaloha/
 # skutecne wrangler.toml nese database_id, v repu je jen vzor
 server/wrangler.toml
 !hry/index.json
+!hry/uvodni.json

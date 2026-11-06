@@ -582,6 +582,24 @@ minutové disciplíny dál na desetiny (`rkHodnota`), sekundové na setiny. Kdy�
 zůstane lepší z obou. Nepřítomní a necvičící v nabídce jmen nejsou. Měří se přes `Date.now()`,
 aby čas seděl i po krátkém přepnutí do pozadí, a během běhu drží Wake Lock rozsvícený displej.
 
+## v0.17.0: úvodní hry ze společné tabulky
+
+Knihovna má filtr Vše, Úvodní hry, Hlavní část, Celé hodiny. Úvodní hry se berou z `hry/uvodni.json`,
+který se generuje ze společné tabulky na školním Disku (Nápady na TV/Úvodní hry/Úvodní hry - seznam.xlsx):
+
+```
+cd hry
+python3 uvodni-z-excelu.py "<cesta k Úvodní hry - seznam.xlsx>" uvodni.json
+```
+
+Soubor se ručně neupravuje, změny patří do tabulky. Hry, které už jsou v zásobníku pod jiným názvem,
+mapuje `STEJNE_JAKO` ve skriptu (pole `cinnost`). U hry se ukáže popis, co rozvíjí, varianty, pomůcky,
+odkaz na kartu a karty k laminování na Disku. „Do hodiny…“ vloží úvodní hru do okénka Úvodní část
+a připíše ji do činností hodiny. Při startu a otevření knihovny `knDoplnZasobnik()` přidá do zásobníku
+úvodní hry, které tam ještě nejsou (typ uvod, `zdroj: "uvodni"`), takže je hlídá i Dlouho nebylo.
+Nic se nemaže ani nepřepisuje. Kopie seznamu je v meta (`uvodniKopie`) pro offline.
+Do `hry/index.json` přibyla chybějící karta Paintball.
+
 ## Co přijde dál
 
 F3 je hotová.

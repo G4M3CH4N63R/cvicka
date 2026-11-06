@@ -38,6 +38,19 @@
       "rozviji": "házení, uhýbání, střelbu na koš, přehled ve hře",
       "pomucky": "4 měkké míče, rozlišováky ve 4 barvách, 4 vězení v rozích (kužely nebo páska), basketbalové koše",
       "url": "hry/vybijena-na-4-tymy.html"
+    },
+    {
+      "slug": "paintball",
+      "nazev": "Paintball",
+      "typ": "hra",
+      "okruh": "Pohybové hry",
+      "popis": "Dva týmy proti sobě na celou tělocvičnu. Každý má pevnost a v ní klobouček. Kdo je trefený, lehne si a spoluhráči ho musí odtáhnout na oživovací stanici. Vyhrává tým, který donese klobouček soupeře do své pevnosti.",
+      "hraci": "2 týmy",
+      "prostor": "celá tělocvična",
+      "delka": "30 až 40 minut i se stavěním pevností",
+      "rozviji": "házení, uhýbání, spolupráci, taktiku, sílu",
+      "pomucky": "žluté míčky (asi 8 pro tým), pevnost z duchny a dvou beden, klobouček pro každý tým, 3 tatami pro tým, rozlišováky",
+      "url": "hry/paintball.html"
     }
   ]
 }

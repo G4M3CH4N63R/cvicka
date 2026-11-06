@@ -1,0 +1,317 @@
+{
+  "popis": "Úvodní hry ze společné tabulky na školním Disku (Nápady na TV/Úvodní hry). Generuje uvodni-z-excelu.py, ručně neupravovat.",
+  "hry": [
+    {
+      "nazev": "Zombíci",
+      "popis": "Všichni se pohybují jen po čarách na zemi. Na začátku učitel určí dva super zombíky s nudlemi, kteří šíří nákazu a jako jediní zombíci smějí běhat. Koho chytí, vezme si klobouček (nebo natáhne ruce před sebe) a stává se zombíkem, který jen chodí. Ostatní děti běhají. Vyhrávají poslední přeživší.",
+      "rozviji": "Orientaci v prostoru, zahřátí organismu, u chytačů taktiku. Zábava a trochu adrenalinu.",
+      "pomucky": "2 nudle, kloboučky",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Jelen",
+      "popis": "Vybíjená v kruhu: hráči venku trefují jelena uprostřed. Varianta: po obvodu kruhu z kloboučků leží na kloboučcích tenisáky a jelen je kromě uhýbání musí posbírat. Když posbírá všechny, vyhrál a vybere dalšího jelena. Po prvním zásahu se jelen drží jednou rukou za místo, kam byl trefen, po druhém jde ven a vystřídá ho ten, kdo ho trefil podruhé. Hraje se s jedním nebo dvěma míči podle počtu hráčů.",
+      "rozviji": "Postřeh, orientaci, reakci, přesnost míření, házení a chytání, koordinaci.",
+      "pomucky": "1 až 2 míče, kloboučky, tenisáky",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Rybičky",
+      "popis": "Klasické rybičky: rybáři chytají rybičky. Na začátku jsou jeden nebo dva rybáři a dokud jsou nejvýš tři, chytá každý zvlášť. Rybičky plují jen dopředu a nesmí se vracet. Jakmile jsou rybáři čtyři, drží se za ruce a tvoří síť. Když se při chycení rozpojí, síť se protrhne, rybička uplave a chycení neplatí.",
+      "rozviji": "Rychlost, obratnost, orientaci v prostoru, u rybářů spolupráci.",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Molekuly",
+      "popis": "Děti se pohybují po tělocvičně a dělají zadaný pohyb, třeba s míčem, cval stranou nebo něco z běžecké abecedy. Učitel zavolá číslo a děti musí co nejrychleji vytvořit skupinku o tolika lidech. Kdo se do skupinky nedostane, udělá zadaný cvik.",
+      "rozviji": "Reakci, postřeh, orientaci v prostoru, běžeckou abecedu a další pohybové dovednosti.",
+      "pomucky": "podle zadání, třeba míče",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Želvičky",
+      "popis": "Dva chytači s nudlemi chytají po celé tělocvičně, ostatní jsou želvičky. Želvička se může schovat do krunýře: sedne si na paty a lehne si břichem na stehna. Schovanou želvičku nejde chytit. Chycená želvička si lehne na záda, pokrčí nohy a dá ruce nahoru (mrtvý brouk). Vysvobodit ji může kterákoli želvička, která ji zvedne za ruce. Pozor, zachraňující želvička není schovaná, takže ji můžou chytit.",
+      "rozviji": "Rychlost, reakci, orientaci v prostoru, spolupráci při záchraně.",
+      "pomucky": "2 nudle",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Vybíjená - vracečka",
+      "popis": "Klasická vybíjená, varianta vracečka. Vybít se dá jen přímou ranou vzduchem, s míčem se smí udělat nejvýš jeden krok. Když někdo vybije toho, kdo mě vybil, vracím se do hry.",
+      "rozviji": "Házení a chytání, přesnost, postřeh, uhýbání, spolupráci v týmu.",
+      "pomucky": "míč",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Mrazík",
+      "popis": "Klasická honička. Koho chytač chytí, zmrzne: nesmí se hýbat a roztáhne nohy. Vysvobodit ho může jiný hráč, když mu podleze mezi nohama.",
+      "rozviji": "Rychlost, obratnost, orientaci v prostoru, spolupráci při vysvobozování.",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Ocásky",
+      "popis": "Všichni mají ocásky, jeden hráč je chytač. Komu chytač vezme ocásek, stává se chytačem. Vyhrává poslední, komu ocásek zůstane. Pravidla: ocásek se nesmí držet, nesmí se opírat o stěnu ani lehat na zem a ocásek musí být vidět.",
+      "rozviji": "Rychlost, obratnost, postřeh, orientaci v prostoru.",
+      "pomucky": "rozlišky (slouží jako ocásky)",
+      "karta": "https://drive.google.com/file/d/1nfI8znJLnxCgXgT5Pgqy-WkRNgU8YYqz/view",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Přes barevné moře",
+      "popis": "Kužely vyznačí širší pruh, to je barevné moře. Vyvolávač řekne: přes barevné moře smí jen ten, kdo má na sobě [barva]. Kdo tu barvu na sobě má, smí projít, a i když ho chytí, pokračuje dál. Hráči můžou blafovat, že barvu mají (třeba na trenkách nebo tričku), vyvolávač to nevidí. Kdo je chycen a barvu nemá, vezme si klobouček a chytá. Hráči běhají tam a zpět jako u rybiček a chytačů přibývá. Vyvolává pořád jeden hlavní vyvolávač, ostatní mu můžou radit, případně vyvolávání předá jinému.",
+      "rozviji": "Rychlost, obratnost, postřeh, orientaci v prostoru, taktiku a blafování, u mladších barvy.",
+      "pomucky": "kužely, kloboučky",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Černý Petr (bomba)",
+      "popis": "Rozdá se několik barev kloboučků nebo různé druhy míčů. Hráči si předměty předávají dotykem. Po zapískání, třeba po minutě, udělá každý cvik podle toho, jakou barvu kloboučku nebo jaký míč právě drží. Pak další kolo.",
+      "rozviji": "Postřeh, rychlost, obratnost, sílu a kondici při cvicích.",
+      "pomucky": "kloboučky několika barev nebo různé míče",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Chyť čerta",
+      "popis": "Honička. Čert (klidně dva čerti) má 2 hranolky (nudle) a 1 ocásek. Ostatní se snaží čertovi sebrat ocásek. Kdo ho sebere, určí čerta na příští kolo. Koho čert chytí, zmrazí se na 5 až 10 vteřin do posilovacího nebo rovnovážného cviku, třeba do planku.",
+      "rozviji": "Rychlost, obratnost, postřeh, sílu a rovnováhu, odvahu.",
+      "pomucky": "2 hranolky (nudle) a ocásek pro každého čerta",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Nafukovací balonky",
+      "popis": "Hry s balonky jsou v Učebně v materiálu s netradičními pomůckami, který tam dávala Kačka. Popis doplníme.",
+      "pomucky": "balonky",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Semafor",
+      "popis": "Učitel je semafor se třemi barvami (zelená, oranžová, červená) a na každou barvu děti plní zadaný úkol. Příklad: na zelenou běží naplno, na oranžovou driblují s míčem, na červenou se zmrazí. Děti musí mít zvednutou hlavu a sledovat semafor, učitel se může pohybovat po tělocvičně. Hodí se jako trénink ke sportovním hrám: kontrolovat míč a zároveň mít přehled o okolí.",
+      "rozviji": "Reakci, přehled o okolí, vedení míče se zvednutou hlavou, orientaci v prostoru.",
+      "pomucky": "tři barvy pro semafor, míče",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Vítr, voda, oheň, blesk",
+      "popis": "Učitel hlásí živly a do tří vteřin musí všichni splnit úkol. Oheň: běžet doprostřed tělocvičny nebo do modré zóny k vodě. Vítr: přitisknout se ke stěně, je vichřice. Voda: vylézt na vyvýšené místo, lavičky nebo žebřiny. Blesk: lehnout si na břicho. Sluníčko: lehnout si na záda. Duch: učitel je duch a nikdo se nesmí pohnout. Guma: schovat se učiteli z dohledu. Kdo nestihne, připíše si trestný bod. Body si počítají sami a na konci udělají tolik cviků, kolik mají bodů.",
+      "rozviji": "Reakci, postřeh, paměť, orientaci v prostoru, poctivost při počítání bodů.",
+      "pomucky": "lavičky, žebřiny, případně modrá zóna",
+      "pridano": "2026-11-05",
+      "cinnost": "Oheň, voda, vítr"
+    },
+    {
+      "nazev": "Na babu s více míči",
+      "pomucky": "míče",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Tarantule",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Sanitka",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Ponorky a miny",
+      "popis": "Ponorky střílí na lodě a z nich jsou miny.",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Prohazovaná",
+      "pomucky": "míč",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "30s honička",
+      "popis": "Varianty: ocásky, chytač, na týmy.",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Piškvorky s rozliškami",
+      "pomucky": "rozlišky",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Kočka a myš v kruhu",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Mrkvičky",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Hra s velkým míčem",
+      "pomucky": "velký míč",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Rugby s ocásky",
+      "pomucky": "ocásky, míč",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Neběhací házená na celé hřiště",
+      "pomucky": "míč",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Laser",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Honička dvě řady proti sobě",
+      "popis": "Kámen, nůžky, papír, různé polohy, červená a bílá.",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Mrazík chobotnice",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Hlídači pokladu",
+      "popis": "Dva hlídači s nudlemi hlídají poklad (kužílky, tenisáky nebo víčka). Ostatní se samostatně nebo v týmech snaží sebrat co nejvíc kusů pokladu. Chycený hráč doběhne k učiteli, vyskočí a dá mu placáka, případně něco uběhne nebo splní jiný úkol. Hraje se, dokud není poklad vybraný. Pak si hráči spočítají úlovek a v dalším kole se hlídači vymění.",
+      "rozviji": "Rychlost, obratnost, postřeh, taktiku, spolupráci v týmu.",
+      "pomucky": "2 nudle, poklad (kužílky, tenisáky, víčka)",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Postřehovka",
+      "popis": "Spíš na závěr. Kužel nebo pomůcka mezi dvojicí.",
+      "pomucky": "kužely",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Starty",
+      "popis": "Z různých poloh (rovnovážné) nebo z pohybu (pálí, pálí).",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Jeden chytá, druhý utíká",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Kámen, nůžky, papír kolem hřiště",
+      "popis": "Stříhání pomocí těla.",
+      "pridano": "2026-11-05",
+      "cinnost": "Kámen, nůžky, papír"
+    },
+    {
+      "nazev": "Zoo, útěk",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Obrácení kloboučků",
+      "popis": "Krátká rychlá hra. Dva týmy proti sobě, po tělocvičně jsou rozmístěné kloboučky. Jeden tým je obrací na rub, druhý na líc. Na konci se spočítá, kdo jich má kolik otočených.",
+      "rozviji": "Rychlost, obratnost, postřeh, změny směru, spolupráci v týmu.",
+      "pomucky": "kloboučky",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Vlci a zajíci",
+      "popis": "Vlci stojí na úsečkách za sebou a pohybují se jen po nich.",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Tanky",
+      "popis": "Fotbalová.",
+      "pomucky": "míče",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Zombíci, florbalová varianta",
+      "pomucky": "hokejky, míčky",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Fotbalová věž",
+      "popis": "Školka s míčem, fotbalová. Deset pater, každý se svým míčem.",
+      "rozviji": "Práci s míčem nohou, koordinaci, rovnováhu, odhad dopadu.",
+      "pomucky": "fotbalové míče, karty k zalaminování",
+      "karta": "https://drive.google.com/file/d/1WLa7Gv5o-pXIE2t2_e67amAdPAlAJvBh/view",
+      "lamin": "https://drive.google.com/file/d/1lSeVtPM_VzfLhUYkYrS-Hn1V1dLk3BEj/view",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Věž míčového mistra",
+      "popis": "Školka s míčem, házenkářská. Žlutý míček o stěnu, deset pater.",
+      "rozviji": "Házení a chytání, koordinaci, rovnováhu, orientaci.",
+      "pomucky": "žluté míčky, karty k zalaminování",
+      "karta": "https://drive.google.com/file/d/1VILvmBSIcCOGUxc00pzt5AXLpoZylMvU/view",
+      "lamin": "https://drive.google.com/file/d/1QmZLChvEMpDP2neOgSVfTYYD9ohi4uDy/view",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Naháněná",
+      "popis": "Jeden chytač má minutu na chycení všech, pak se role otočí. Přes překážky.",
+      "pomucky": "překážky",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Celebrita, dva bodyguardi a fanoušek",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Hod na cíl",
+      "popis": "Kužele na lavici.",
+      "pomucky": "kužely, lavička, míčky",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Lovci a kořist",
+      "popis": "Rozdělení v kruhu, každý je lovec i kořist.",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Cukr, káva, limonáda s překážkami",
+      "popis": "Pozorovatelé stojí u pikoly (třeba kužel) a chvíli se nedívají: odpočítávají, koukají do bedny, zakryjí si obličej nebo se otočí. Ostatní se k nim plíží a schovávají za překážky. Koho pozorovatel uvidí, jde zpátky na start. Vyhrává, kdo se dotkne pikoly u pozorovatele.",
+      "pomucky": "bedny, duchny, florbalové branky, žíněnky, kužel",
+      "pridano": "2026-11-05"
+    },
+    {
+      "nazev": "Řetězová honička",
+      "popis": "Začínají dva honiči a hrají proti sobě. Koho honič chytí, chytne se ho za ruku a honí s ním dál. Každý honič staví svůj řetěz a řetěz se nesmí roztrhnout. Vyhrává řetěz, který je na konci větší.",
+      "rozviji": "Spolupráci, orientaci v prostoru, rychlost a obratnost.",
+      "pomucky": "žádné",
+      "pridano": "2026-11-06"
+    },
+    {
+      "nazev": "Dráček",
+      "popis": "Nová hra, zatím jsem ji nezkoušel. Děti stojí v zástupu po 5 až 6 a drží se za pas. První je hlava, poslední ocas. Hlava se snaží chytit ocas, zbytek dráčka ocas chrání. Po chycení jde hlava na konec a stane se ocasem.",
+      "rozviji": "Spolupráci ve skupině, reakci a koordinaci.",
+      "varianty": "Víc dráčků, kteří si navzájem kradou ocasy.",
+      "pomucky": "žádné, nebo rozliška jako ocas",
+      "pridano": "2026-11-06"
+    },
+    {
+      "nazev": "Ostrovy",
+      "popis": "Po tělocvičně jsou rozložené obruče. Děti běhají mezi nimi a na signál musí stát v obruči. Postupně ubývají obruče, takže se děti musí na ostrov vejít společně.",
+      "rozviji": "Reakci na signál, spolupráci a rovnováhu.",
+      "varianty": "Místo běhu skoky, poskoky nebo lezení.",
+      "pomucky": "obruče, hudba nebo píšťalka",
+      "pridano": "2026-11-06"
+    },
+    {
+      "nazev": "Evoluce",
+      "popis": "Všichni začínají jako vejce a chodí v podřepu. Potkají jiné vejce a zahrají si kámen, nůžky, papír. Vítěz se změní na kuře, pak na opici a nakonec na člověka. Každý hraje jen se stejným tvorem. Kdo prohraje, vrací se o stupeň níž.",
+      "rozviji": "Sílu nohou, pohybovou představivost a férové jednání.",
+      "pomucky": "žádné",
+      "pridano": "2026-11-06"
+    },
+    {
+      "nazev": "Zrcadlo",
+      "popis": "Dvojice stojí proti sobě. Jeden předvádí pohyby, druhý je přesně opakuje jako v zrcadle. Na signál se role vymění. Hodí se jako příprava na sportovní hry.",
+      "rozviji": "Soustředění, koordinaci, pohybovou paměť a práci s míčem.",
+      "varianty": "S míčem: fotbal (vedení míče nohou) nebo dribling rukama. Zrcadlo v pohybu po tělocvičně.",
+      "pomucky": "žádné, u variant míče",
+      "pridano": "2026-11-06"
+    },
+    {
+      "nazev": "Metro",
+      "popis": "Čtyři týmy stojí v rozích tělocvičny nebo hřiště. Z každého týmu vybíhá jeden hráč a snaží se dostat křížem přes hřiště k protilehlému týmu. Běhá se jen po čarách. Kdo doběhne, získá bod pro svůj tým a vrací se na konec řady svého týmu. Když se hráče dotkne hráč z jiného týmu, zahrají si kámen, nůžky, papír. Vítěz pokračuje, poražený jde na konec řady svého týmu. Další hráč z týmu vybíhá, až ten předchozí doběhne nebo prohraje. Hráči můžou soupeřům zastoupit cestu a vyzvat je na souboj.",
+      "rozviji": "Orientaci v prostoru, plánování trasy, rychlost, taktické myšlení a férové jednání.",
+      "varianty": "Běh bez míče nebo s míčem (dribling). Dva hráči z týmu najednou: víc soubojů a víc taktiky, jeden blokuje a druhý se snaží doběhnout. Stanice: na křižovatkách čar leží kloboučky, kdo na stanici stojí, toho nikdo nesmí vyzvat na souboj, smí tam ale zůstat nejvýš 10 vteřin.",
+      "pomucky": "čáry na hřišti, případně míče",
+      "pridano": "2026-11-06"
+    }
+  ]
+}

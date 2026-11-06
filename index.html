@@ -429,6 +429,8 @@ input[type="password"], input[type="search"] {
 .kn-meta { display: grid; gap: 3px; font-size: 13px; color: var(--ink-2); }
 .kn-meta b { font-weight: 600; color: var(--ink); }
 .kn-nap { font-size: 12px; color: var(--ink-3); margin-top: 6px; }
+.kn-popis.chybi { color: var(--ink-3); font-style: italic; }
+.kn-meta a { color: var(--accent); font-weight: 600; }
 .kn-vyber { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 11px; align-items: center; }
 .kn-vyber .eyebrow { width: 100%; }
 a.btn { display: block; text-align: center; text-decoration: none; }
@@ -799,7 +801,7 @@ a.btn { display: block; text-align: center; text-decoration: none; }
 
 <script>
 "use strict";
-const APP = { ver: "0.16.0", db: null, sync: null, klic: null };
+const APP = { ver: "0.17.0", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -3534,35 +3536,76 @@ async function stZapsat() {
 /* ---------- knihovna priprav (karty her a hodin z hry/index.json) ---------- */
 // Karty lezi na stejnem webu jako Cvicka (slozka hry/). Seznam se stahuje vzdy ze site,
 // posledni stazena verze se drzi v meta pro offline. Nic se tu neposila na server.
+// Uvodni hry jsou v hry/uvodni.json, ten se generuje z tabulky na skolnim Disku
+// (hry/uvodni-z-excelu.py). Do zasobniku se z nich doplni chybejici cinnosti.
 const KN = { karty: null, chyba: "", q: "", typ: "vse", cil: null, cilBack: null, vyber: null };
 const bezDiak = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const knSlug = (x) => bezDiak(x).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+async function knStahni(soubor, klic, pole) {
+  try {
+    const r = await fetch(soubor, { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json();
+    const data = Array.isArray(j[pole]) ? j[pole] : [];
+    await metaSet(klic, data);
+    return { data, offline: false };
+  } catch (e) {
+    return { data: (await metaGet(klic, null)) || [], offline: true };
+  }
+}
 
 async function nactiKnihovnu(znovu) {
   if (KN.karty && !znovu) return KN.karty;
-  try {
-    const r = await fetch("hry/index.json", { cache: "no-store" });
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    const j = await r.json();
-    KN.karty = Array.isArray(j.karty) ? j.karty : [];
-    KN.chyba = "";
-    await metaSet("knihovnaKopie", KN.karty);
-  } catch (e) {
-    KN.karty = (await metaGet("knihovnaKopie", null)) || [];
-    KN.chyba = KN.karty.length ? "Jsi offline, ukazuji naposledy staženou knihovnu." : "Knihovnu se nepodařilo načíst. Zkus to s připojením.";
-  }
+  const [karty, uvodni] = await Promise.all([
+    knStahni("hry/index.json", "knihovnaKopie", "karty"),
+    knStahni("hry/uvodni.json", "uvodniKopie", "hry")
+  ]);
+  const hry = uvodni.data.filter((h) => h && h.nazev).map((h) => ({
+    slug: "u-" + knSlug(h.nazev), nazev: h.nazev, typ: "uvodni", okruh: "Pohybové hry",
+    popis: h.popis || "", rozviji: h.rozviji || "", varianty: h.varianty || "", pomucky: h.pomucky || "",
+    url: h.karta || "", lamin: h.lamin || "", video: h.video || "", cinnost: h.cinnost || ""
+  }));
+  KN.karty = [...karty.data, ...hry];
+  const offline = karty.offline || uvodni.offline;
+  KN.chyba = !offline ? "" : KN.karty.length ? "Jsi offline, ukazuji naposledy staženou knihovnu." : "Knihovnu se nepodařilo načíst. Zkus to s připojením.";
+  await knDoplnZasobnik(hry);
   return KN.karty;
+}
+
+// Klicova slova pro hledani hry ve starych planech: nazev bez zavorek, u „Vybíjená - vracečka“ i „vracečka“.
+function knKlice(nazev) {
+  const zaklad = nazev.toLowerCase().replace(/\s*\(.*?\)\s*/g, " ").replace(/\s+/g, " ").trim();
+  const k = [zaklad];
+  if (zaklad.includes(" - ")) k.push(zaklad.split(" - ").pop().trim());
+  return k.filter(Boolean);
+}
+
+// Uvodni hry z tabulky, ktere v zasobniku jeste nejsou, se tam pridaji. Nic se nemaze ani neprepisuje.
+async function knDoplnZasobnik(hry) {
+  if (!hry.length || !APP.db) return;
+  const stav = await dbAll("cinnosti");
+  const maji = new Set(stav.map((c) => bezDiak(c.nazev)));
+  const nove = [];
+  hry.forEach((h) => {
+    if (maji.has(bezDiak(h.cinnost || h.nazev)) || maji.has(bezDiak(h.nazev))) return;
+    maji.add(bezDiak(h.nazev));
+    nove.push({ id: cinId(h.nazev), nazev: h.nazev, typ: "uvod", okruh: "Pohybové hry", klice: knKlice(h.nazev), vlastni: false, zdroj: "uvodni" });
+  });
+  if (nove.length) await dbPutMany("cinnosti", nove);
 }
 
 // Kdy se karta naposledy objevila v odučené hodine (plan nebo co se delalo).
 async function knNaposledy() {
   const hod = await dbAll("hodiny");
   const dnes = iso(new Date());
-  return (nazev) => {
-    const k = bezDiak(nazev);
+  return (nazev, jinak) => {
+    const k = bezDiak(nazev), k2 = jinak ? bezDiak(jinak) : "";
     let nej = null;
     hod.forEach((h) => {
       if (h.datum > dnes) return;
-      if (!bezDiak((h.plan || "") + " " + (h.napln || "")).includes(k)) return;
+      const t = bezDiak((h.plan || "") + " " + (h.napln || ""));
+      if (!t.includes(k) && !(k2 && t.includes(k2))) return;
       if (!nej || h.datum > nej.datum) nej = h;
     });
     return nej;
@@ -3589,7 +3632,7 @@ async function renderKnihovna() {
   if (cil) $("#knCilTxt").textContent = "Vkládáš do hodiny " + skName(cil.skupinaId) + ", " + cz(cil.datum);
 
   const typy = $("#knTypy"); typy.innerHTML = "";
-  [["vse", "Vše"], ["hra", "Hry"], ["hodina", "Celé hodiny"]].forEach(([k, popis]) => {
+  [["vse", "Vše"], ["uvodni", "Úvodní hry"], ["hra", "Hlavní část"], ["hodina", "Celé hodiny"]].forEach(([k, popis]) => {
     const b = el("button", "chip", popis); b.type = "button";
     b.setAttribute("aria-pressed", String(KN.typ === k));
     b.addEventListener("click", () => { KN.typ = k; renderKnihovna(); });
@@ -3598,38 +3641,46 @@ async function renderKnihovna() {
 
   const q = bezDiak(KN.q).trim();
   const vyber = karty.filter((k) => (KN.typ === "vse" || k.typ === KN.typ) &&
-    (!q || bezDiak([k.nazev, k.popis, k.rozviji, k.pomucky, k.prostor, k.okruh].join(" ")).includes(q)));
+    (!q || bezDiak([k.nazev, k.popis, k.rozviji, k.varianty, k.pomucky, k.prostor, k.okruh].join(" ")).includes(q)));
   const naposledy = await knNaposledy();
   const list = $("#knList"); list.innerHTML = "";
   if (!vyber.length) list.appendChild(el("div", "card", null)).appendChild(el("div", "empty", karty.length ? "Nic neodpovídá hledání." : "Knihovna je zatím prázdná."));
-  vyber.forEach((k) => list.appendChild(knKarta(k, cil, naposledy(k.nazev))));
-  $("#knHint").textContent = KN.chyba || (karty.length ? "Karet v knihovně: " + karty.length + ". Kartu otevřeš i v mobilu bez přihlášení." : "");
+  vyber.forEach((k) => list.appendChild(knKarta(k, cil, naposledy(k.nazev, k.cinnost))));
+  const nUv = karty.filter((k) => k.typ === "uvodni").length;
+  $("#knHint").textContent = KN.chyba || (karty.length ? "Úvodních her: " + nUv + ", karet hlavní části a celých hodin: " + (karty.length - nUv)
+    + ". Úvodní hry jsou ze společné tabulky na školním Disku, jejich karty se otevírají na Disku." : "");
 }
 
 function knKarta(k, cil, napos) {
   const c = el("div", "card kn");
   const h = el("div", "card-h");
-  h.append(el("h3", null, k.nazev), el("span", "eyebrow", k.typ === "hodina" ? "celá hodina" : "hra"));
+  h.append(el("h3", null, k.nazev), el("span", "eyebrow", k.typ === "hodina" ? "celá hodina" : k.typ === "uvodni" ? "úvodní hra" : "hlavní část"));
   c.appendChild(h);
   const b = el("div", "card-b");
   if (k.popis) b.appendChild(el("p", "kn-popis", k.popis));
+  else if (k.typ === "uvodni") b.appendChild(el("p", "kn-popis chybi", "Popis v tabulce zatím chybí."));
   const meta = el("div", "kn-meta");
-  [["Hráči", k.hraci], ["Délka", k.delka], ["Prostor", k.prostor], ["Rozvíjí", k.rozviji], ["Pomůcky", k.pomucky]].forEach(([n, v]) => {
+  [["Hráči", k.hraci], ["Délka", k.delka], ["Prostor", k.prostor], ["Rozvíjí", k.rozviji], ["Varianty", k.varianty], ["Pomůcky", k.pomucky]].forEach(([n, v]) => {
     if (!v) return;
     const r = el("div"); r.append(el("b", null, n + ": "), document.createTextNode(v)); meta.appendChild(r);
+  });
+  [["Karty k laminování", k.lamin], ["Video", k.video]].forEach(([n, u]) => {
+    if (!u) return;
+    const r = el("div"); const l = el("a", null, n); l.href = u; l.target = "_blank"; l.rel = "noopener"; r.appendChild(l); meta.appendChild(r);
   });
   b.appendChild(meta);
   b.appendChild(el("div", "kn-nap", napos ? "Naposledy: " + skName(napos.skupinaId) + ", " + dm(napos.datum) : "Zatím jsi ji nehrál."));
 
-  const btns = el("div", "btns two");
-  const a = el("a", "btn ghost", "Otevřít kartu"); a.href = k.url; a.target = "_blank"; a.rel = "noopener";
+  const btns = el("div", k.url ? "btns two" : "btns");
+  const a = el("a", "btn ghost", k.typ === "uvodni" ? "Karta na Disku" : "Otevřít kartu"); a.href = k.url; a.target = "_blank"; a.rel = "noopener";
   const v = el("button", "btn", cil ? "Vložit do hodiny" : "Do hodiny…"); v.type = "button";
   v.addEventListener("click", async () => {
     if (cil) { await knVloz(k, cil.id); return; }
     KN.vyber = KN.vyber === k.slug ? null : k.slug;
     await renderKnihovna();
   });
-  btns.append(a, v);
+  if (k.url) btns.append(a);
+  btns.append(v);
   b.appendChild(btns);
 
   if (!cil && KN.vyber === k.slug) {
@@ -3652,19 +3703,26 @@ function knKarta(k, cil, napos) {
 async function knVloz(k, hodinaId) {
   const h = await dbGet("hodiny", hodinaId);
   if (!h) { toast("Hodina se nenašla"); return; }
-  const radek = (k.typ === "hodina" ? "Celá hodina: " : "Hra: ") + k.nazev;
+  const uvodni = k.typ === "uvodni";
+  const radek = (k.typ === "hodina" ? "Celá hodina: " : uvodni ? "" : "Hra: ") + k.nazev;
   const uz = bezDiak(h.plan || "").includes(bezDiak(k.nazev));
   if (!uz) {
     const c = rozdelPlan(h.plan);
-    c.hlavni = c.hlavni ? c.hlavni + "\n" + radek : radek;
+    // uvodni hra jde do Uvodni casti za carku jako ze zasobniku, ostatni na novy radek hlavni casti
+    if (uvodni) c.uvod = c.uvod ? c.uvod.replace(/[\s,]+$/, "") + ", " + radek : radek;
+    else c.hlavni = c.hlavni ? c.hlavni + "\n" + radek : radek;
     h.plan = slozPlan(c); h.updatedAt = Date.now();
+    if (uvodni) {
+      const cin = (await dbAll("cinnosti")).find((x) => bezDiak(x.nazev) === bezDiak(k.cinnost || k.nazev));
+      if (cin) h.cinnosti = [...new Set([...(h.cinnosti || []), cin.id])];
+    }
   }
   let zapis = false;
   if (k.typ === "hodina" && k.zapis && !(h.zapis || "").trim()) { h.zapis = k.zapis; zapis = true; }
   if (!uz || zapis) await dbPut("hodiny", h);
   const zpet = KN.cil ? KN.cilBack : "knihovna";
   KN.cil = null; KN.cilBack = null; KN.vyber = null;
-  toast(uz ? "V náplni už je" : zapis ? "Vloženo do hlavní části i se zápisem do ŠOL" : "Vloženo do hlavní části");
+  toast(uz ? "V náplni už je" : zapis ? "Vloženo do hlavní části i se zápisem do ŠOL" : uvodni ? "Vloženo do úvodní části" : "Vloženo do hlavní části");
   await openHodina(h.id, zpet);
 }
 
@@ -4233,6 +4291,7 @@ async function boot() {
   }
   await refreshCache();
   await seedCinnosti();
+  nactiKnihovnu().catch(() => {});
   await rkPrejmenujDiscipliny();
   await odemkni(await metaGet("sifraHeslo", ""));
   if (mig) setTimeout(() => toast("Data převedena na stabilní id (" + mig.zaznamu + " záznamů docházky)"), 900);
