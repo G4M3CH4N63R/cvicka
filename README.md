@@ -604,6 +604,19 @@ Do `hry/index.json` přibyla chybějící karta Paintball.
 na webu Cvičky (`knOdkaz`). Když má úvodní hra kartu v `hry/<slug>.html` (Fotbalová věž, Věž míčového
 mistra), otevírá se ta, bez přihlášení; PDF na Disku zůstává jako odkaz pod hrou.
 
+## v0.18.0: vzhled podle Rekordníku, v modrém
+
+Cvička vypadá jako Rekordník, jen v modrém: modrý pruh nahoře jako atletická dráha, karty s nadpisem
+v Barlow Condensed, text v Barlow, čárkované oddělovače, aktivní záložka a vybrané čipy na modré.
+Světlý a tmavý režim se řídí telefonem, barvy jsou tokeny v `:root` a v `@media (prefers-color-scheme: dark)`
+(`--track` a `--accent` modrá, `--cyan` světlejší modrá pro plán, `--good` zelená pro uzavřené hodiny,
+`--chalk` zlatá; zbytek stejně jako Rekordník). Písma Barlow a Barlow Condensed (SIL Open Font License) jsou vložená přímo
+do `index.html` jako woff2, takže fungují i offline. Čísla a časy jsou v Barlow s ciframi stejné šířky
+místo strojového písma. Každá skupina má svou barvu (`skBarva()` dává `data-sk` 0 až 7 podle abecedy,
+barvy jsou v CSS pro oba režimy): proužek u hodin na Dnes a nahoře na buňkách rozvrhu v Týdnu.
+Úpravy vzhledu jsou v bloku „vzhled podle Rekordniku“ na konci stylů. Ikona a barvy v manifestu
+jsou modré, ikona na ploše iPhonu se ale změní až po novém přidání.
+
 ## Co přijde dál
 
 F3 je hotová.
