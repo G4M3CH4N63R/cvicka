@@ -617,6 +617,20 @@ barvy jsou v CSS pro oba režimy): proužek u hodin na Dnes a nahoře na buňká
 Úpravy vzhledu jsou v bloku „vzhled podle Rekordniku“ na konci stylů. Ikona a barvy v manifestu
 jsou modré, ikona na ploše iPhonu se ale změní až po novém přidání.
 
+**v0.18.1:** oprava skákání stránky a ztracených změn při zápisu. Server při synchronizaci vrací
+i právě odeslané vlastní změny. `prijmi()` je dřív bez rozmyslu zapsal a appka po každé synchronizaci
+překreslila celou obrazovku, takže stránka poskočila a otevřená nabídka docházky se zavřela.
+Horší bylo, že změna udělaná během odesílání (X a hned N u téhož žáka) se ozvěnou přepsala zpět
+a z fronty zmizela, takže se ztratila i na serveru. Teď `prijmi()` přeskočí záznam, který tu je
+ve stejné nebo novější verzi (`updatedAt`), z fronty se maže jen to, co se od odeslání nezměnilo,
+`renderAktualni()` drží pozici stránky a pod otevřenou nabídkou docházky nepřekresluje, seznam
+žáků se skládá bokem a vymění naráz. Nabídka stavu se při rolování a změně velikosti jen posune
+(dřív se zavřela) a fokus dostává jen při ovládání klávesnicí, protože na iPhonu uměl posunout stránku.
+Výjimka je store `sys` (sůl a kontrolní řetězec šifrování): na serveru u něj vyhrává první zápis,
+takže se serverová verze převezme vždy, i když je starší (jinak by druhé zařízení zůstalo u vlastní soli
+a poznámky by si zařízení navzájem neotevřela). Fronta se po odeslání maže, jen když její řádek
+zůstal stejný: smazání nebo obnovení záznamu během odesílání v ní zůstane a odejde v dalším kole.
+
 ## Co přijde dál
 
 F3 je hotová.

@@ -880,7 +880,7 @@ textarea:focus-visible, input:focus-visible, select:focus-visible { outline: 3px
 
 <script>
 "use strict";
-const APP = { ver: "0.18.0", db: null, sync: null, klic: null };
+const APP = { ver: "0.18.1", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -1706,15 +1706,23 @@ function nastavStavTlacitko(btn, radek, stav) {
 // Nabidka stavu se otevira misto prokliknavani, at se na jeden stav neceka pres tri tapnuti.
 let stavCil = null;
 
-function otevriStav(btn, rec, radek, jmeno) {
-  // scroll si pamatujeme, at nabidku nezavre doznivajici setrvacne rolovani z tapnuti
-  stavCil = { btn, rec, radek, scroll: $("main").scrollTop };
+function otevriStav(btn, rec, radek, jmeno, klavesnice) {
+  stavCil = { btn, rec, radek, klavesnice };
   const pop = $("#stavPop");
   pop.hidden = false;
   $("#stavJm").textContent = jmeno || "";
   pop.querySelectorAll(".sv").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.s === rec.stav)));
   btn.setAttribute("aria-expanded", "true");
+  polohaStav();
+  // Fokus jen pri ovladani klavesnici. Na iPhonu by fokus umel posunout stranku.
+  if (klavesnice) (pop.querySelector('.sv[aria-pressed="true"]') || pop.querySelector(".sv")).focus({ preventScroll: true });
+}
 
+// Nabidka drzi u tlacitka, i kdyz se stranka posune nebo zmeni velikost (lista Safari, klavesnice).
+function polohaStav() {
+  if (!stavCil) return;
+  const pop = $("#stavPop"), btn = stavCil.btn;
+  if (!btn.isConnected) { zavriStav(); return; }
   const karta = pop.querySelector(".stavpop-c");
   const r = btn.getBoundingClientRect();
   const w = karta.offsetWidth, h = karta.offsetHeight;
@@ -1725,19 +1733,19 @@ function otevriStav(btn, rec, radek, jmeno) {
   if (top < okraj) top = okraj;
   karta.style.left = Math.round(left) + "px";
   karta.style.top = Math.round(top) + "px";
-  (pop.querySelector('.sv[aria-pressed="true"]') || pop.querySelector(".sv")).focus({ preventScroll: true });
 }
 
 function zavriStav() {
   const pop = $("#stavPop");
   if (pop.hidden) return;
   pop.hidden = true;
-  const btn = stavCil && stavCil.btn;
+  const btn = stavCil && stavCil.btn, klav = stavCil && stavCil.klavesnice;
   stavCil = null;
   if (btn) {
     btn.setAttribute("aria-expanded", "false");
-    btn.focus({ preventScroll: true });
+    if (klav) btn.focus({ preventScroll: true });
   }
+  if (S.prekreslitPotom) { S.prekreslitPotom = false; setTimeout(() => renderAktualni(), 0); }
 }
 
 /* ---------- render: HODINA ---------- */
@@ -1777,8 +1785,9 @@ async function ulozRozepsane() {
 
 async function renderHodina() {
   const h = S.hodinaId ? await dbGet("hodiny", S.hodinaId) : null;
-  const list = $("#pupilList"); list.innerHTML = "";
+  const list = $("#pupilList");
   if (!h) {
+    list.innerHTML = "";
     $("#attSum").textContent = "";
     list.appendChild(el("div", "empty", "Vyber hodinu na obrazovce Dnes nebo Týden."));
     CASTI_HODINY.forEach(([, , sel]) => { $(sel).value = ""; $(sel).style.height = ""; });
@@ -1807,6 +1816,9 @@ async function renderHodina() {
   $("#hNaplnT").textContent = h.napln || "";
 
   const zaci = (S.cache.zaciBySk.get(h.skupinaId) || []);
+  // Radky se skladaji bokem a do stranky jdou naraz, at seznam behem nacitani nezmizi
+  // a stranka neposkoci.
+  const frag = document.createDocumentFragment();
   const zazn = await dbBy("zaznamy", "hodinaId", h.id);
   const mapa = new Map(zazn.map((z) => [z.zakId, z]));
   const poznMapa = new Map();
@@ -1828,7 +1840,7 @@ async function renderHodina() {
     st.setAttribute("aria-haspopup", "true");
     st.setAttribute("aria-expanded", "false");
     nastavStavTlacitko(st, row, rec.stav);
-    st.addEventListener("click", () => otevriStav(st, rec, row, z.prijmeni + " " + z.jmeno));
+    st.addEventListener("click", (e) => otevriStav(st, rec, row, z.prijmeni + " " + z.jmeno, e.detail === 0));
     const ld = el("button", "lead"); ld.type = "button";
     ld.textContent = rec.vedl ? "★" : "☆"; ld.setAttribute("aria-pressed", String(!!rec.vedl));
     ld.setAttribute("aria-label", "vedl rozcvičku: " + z.prijmeni);
@@ -1845,9 +1857,10 @@ async function renderHodina() {
     pz.addEventListener("click", () => otevriZaka(z.id, h.datum));
     row.append(pz, st, ld);
     row.dataset.stav = rec.stav;
-    list.appendChild(row);
+    frag.appendChild(row);
   });
-  if (!zaci.length) list.appendChild(el("div", "empty", "Tahle skupina nemá načtené žáky."));
+  if (!zaci.length) frag.appendChild(el("div", "empty", "Tahle skupina nemá načtené žáky."));
+  list.replaceChildren(frag);
   prepocitejDochazku();
   const seznamCin = await dlouhoNebylo(h.skupinaId);
   await renderHist(h.skupinaId, HIST_HODINA, { ...HIST_HODINA_OPT, krome: h.id });
@@ -2225,7 +2238,17 @@ async function prijmi(zmeny) {
   const staraSul = (await dbGet("sys", "sifraSalt") || {}).v || "";
   for (const z of zmeny) {
     if (!z || !z.store || !SYNC_STORES.includes(z.store)) continue;
-    if (z.data == null) { await dbDel(z.store, z.rid, true); n++; continue; }
+    // Server vraci i nase vlastni prave odeslane zmeny. Kdyz uz tu je stejna nebo novejsi
+    // verze, nic se neprepisuje: jinak by ozvena prepsala zmenu udelanou behem odesilani
+    // a appka by zbytecne prekreslovala obrazovku (skakani pri zapisu dochazky).
+    // Vyjimka je `sys` (sul a kontrolni retezec sifrovani): tam na serveru vyhrava PRVNI zapis,
+    // takze serverova verze se musi prevzit, i kdyz je starsi nez ta, kterou si zarizeni vyrobilo samo.
+    const mistni = await dbGet(z.store, z.rid);
+    const prichozi = Number(z.updatedAt) || 0;
+    if (z.store === "sys") {
+      if (mistni && z.data && JSON.stringify(mistni) === JSON.stringify(z.data)) continue;
+    } else if (mistni && (Number(mistni.updatedAt) || 0) >= prichozi) continue;
+    if (z.data == null) { if (mistni) { await dbDel(z.store, z.rid, true); n++; } continue; }
     let data = z.data;
     if (z.store === "pozn" && data.sifra) {
       const text = APP.klic ? await desifrujKlicem(APP.klic, data.sifra) : null;
@@ -2293,7 +2316,7 @@ async function synchronizuj(rucne) {
         const polozka = await naOdeslani(f.store, f.rid, zaznam, f.kdy);
         if (!polozka) { preskocene.add(f.id); continue; }
         zmeny.push(polozka);
-        odeslaneRadky.push(f);
+        odeslaneRadky.push({ f, u: polozka.updatedAt });
       }
 
       const od = await metaGet("syncKurzor", 0);
@@ -2307,7 +2330,18 @@ async function synchronizuj(rucne) {
       const data = await odp.json();
       if (data.chyba) throw new Error(data.chyba);
 
-      for (const f of odeslaneRadky) await dbDel("fronta", f.id, true);
+      // Co se behem odesilani znovu zmenilo, zustava ve fronte a odejde v dalsim kole:
+      // radek fronty se mezitim prepsal (smazani misto upravy nebo naopak), nebo je zaznam novejsi.
+      for (const { f, u } of odeslaneRadky) {
+        const radek = await dbGet("fronta", f.id);
+        if (!radek) continue;
+        if (!!radek.smazano !== !!f.smazano || (radek.kdy || 0) !== (f.kdy || 0)) continue;
+        if (!f.smazano) {
+          const ted = await dbGet(f.store, f.rid);
+          if (ted && (Number(ted.updatedAt) || 0) > (Number(u) || 0)) continue;
+        }
+        await dbDel("fronta", f.id, true);
+      }
       odeslano += zmeny.length;
       prijato += await prijmi(data.zmeny || []);
       await metaSet("syncKurzor", data.verze || od);
@@ -2332,6 +2366,13 @@ async function synchronizuj(rucne) {
 
 // Po synchronizaci prekreslit to, na co se Karel zrovna diva.
 async function renderAktualni() {
+  // Pod otevrenou nabidkou stavu se neprekresluje, dozene se po jejim zavreni.
+  if (!$("#stavPop").hidden) { S.prekreslitPotom = true; return; }
+  const m = $("main"), y = m.scrollTop;
+  await renderAktualniTed();
+  if (Math.abs(m.scrollTop - y) > 1) m.scrollTop = y;
+}
+async function renderAktualniTed() {
   if (S.tab === "dnes") await renderDnes();
   else if (S.tab === "tyden") await renderTyden();
   else if (S.tab === "hodina") await renderHodina();
@@ -4442,11 +4483,9 @@ async function boot() {
 
   $("#stavBg").addEventListener("click", zavriStav);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#stavPop").hidden) zavriStav(); });
-  // nabidka je ukotvena k tlacitku, pri rolovani by odplula
-  $("main").addEventListener("scroll", () => {
-    if (stavCil && Math.abs($("main").scrollTop - stavCil.scroll) > 4) zavriStav();
-  }, { passive: true });
-  window.addEventListener("resize", () => { if (!$("#stavPop").hidden) zavriStav(); });
+  // nabidka je ukotvena k tlacitku, pri rolovani nebo zmene velikosti se jen posune
+  $("main").addEventListener("scroll", polohaStav, { passive: true });
+  window.addEventListener("resize", polohaStav);
   $("#stavVolby").querySelectorAll(".sv").forEach((b) => b.addEventListener("click", async () => {
     if (!stavCil) return;
     const { btn, rec, radek } = stavCil;
