@@ -657,6 +657,15 @@ když má hodina aspoň jednu známku, a platí pro všechny známky v hodině. 
 v titulku seznam známek, nad 3,5 červeně, řadí od nejhoršího), kopírovaná tabulka má sloupce Známky a Průměr,
 karta žáka ukazuje všechny jeho známky s datem a popisem.
 
+**v0.20.1:** docházka nešla zapsat, když se seznam žáků překreslil (po synchronizaci se změnou z jiného
+zařízení) zrovna ve chvíli, kdy byla otevřená nabídka stavu. Nabídka zůstala u starého, už neexistujícího
+tlačítka, při nejbližším posunu se tiše zavřela a klepnutí na „nepřítomen“ padlo vedle. Teď se nabídka
+(i nabídka známek) po překreslení přesune na nový řádek téhož žáka (`preKotvi()`), všechny změny řádku jdou
+přes aktuální záznam v databázi a aktuální řádek podle žáka (`upravZaznam()`, `radekZaka()`), takže starý
+objekt z dřívějšího vykreslení nic nepřepíše (dřív třeba hvězdička po změně stavu vrátila stav zpět).
+Během překreslování drží obrazovka výšku (`min-height`) místo vracení pozice natvrdo, takže rolování
+během překreslení stránku nevrátí zpět. Nabídka se vždy vejde do obrazovky.
+
 ## Co přijde dál
 
 F3 je hotová.

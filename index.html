@@ -929,7 +929,7 @@ textarea:focus-visible, input:focus-visible, select:focus-visible { outline: 3px
 
 <script>
 "use strict";
-const APP = { ver: "0.20.0", db: null, sync: null, klic: null };
+const APP = { ver: "0.20.1", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -1839,6 +1839,34 @@ function otevriStav(btn, rec, radek, jmeno, klavesnice) {
   if (klavesnice) (pop.querySelector('.sv[aria-pressed="true"]') || pop.querySelector(".sv")).focus({ preventScroll: true });
 }
 
+/* ---------- zapis do dochazky ---------- */
+// Vsechny zmeny radku (stav, vedl, znamka) jdou pres aktualni zaznam v databazi a aktualni radek
+// v seznamu podle zaka. Starsi objekt z driv vykresleneho seznamu tak nic neprepise.
+const radekZaka = (zakId) => $("#pupilList").querySelector('.pupil[data-zak="' + zakId + '"]');
+async function upravZaznam(zakId, zmena) {
+  const row = radekZaka(zakId);
+  const zaklad = row ? row._rec : null;
+  if (!zaklad) return null;
+  const ted = await dbGet("zaznamy", zaklad.id);
+  const rec = ted ? { ...ted } : { ...zaklad };
+  zmena(rec);
+  const r2 = radekZaka(zakId);
+  if (r2) r2._rec = rec;
+  await dbPut("zaznamy", rec);
+  return rec;
+}
+function preKotvi() {
+  if (stavCil && !stavCil.btn.isConnected) {
+    const row = radekZaka(stavCil.rec.zakId);
+    if (row) { stavCil.btn = row.querySelector(".st"); stavCil.radek = row; stavCil.rec = row._rec; stavCil.btn.setAttribute("aria-expanded", "true"); polohaStav(); }
+    else zavriStav();
+  }
+  if (znCil && !znCil.hromadne && !znCil.kotva.isConnected) {
+    const row = radekZaka(znCil.zakId);
+    if (row) { znCil.kotva = row._zn.nm; polohaZn(); } else zavriZnamku();
+  }
+}
+
 /* ---------- znamky za hodinu ---------- */
 // Znamka je v zaznamu dochazky (zaznamy: hodinaId|zakId), za co v hodine (hodiny.znamkaZa).
 function kresliZnamku(znb, n) {
@@ -1857,7 +1885,8 @@ function otevriZnamku(kotva, cil, klavesnice) {
     const b = el("button", "sv"); b.type = "button"; b.dataset.z = k;
     b.append(el("b", "", k), el("span", "", k === "×" ? "smazat" : ["výborně", "chvalitebně", "dobře", "dostatečně", "nedostatečně"][Number(k) - 1]));
     if (k === "×") b.dataset.s = "N";
-    b.setAttribute("aria-pressed", String(!cil.hromadne && String(cil.rec.znamka || "") === k));
+    const row = !cil.hromadne && radekZaka(cil.zakId);
+    b.setAttribute("aria-pressed", String(!!row && String(row._rec.znamka || "") === k));
     b.addEventListener("click", () => vyberZnamku(k === "×" ? null : Number(k)));
     box.appendChild(b);
   });
@@ -1868,13 +1897,13 @@ function otevriZnamku(kotva, cil, klavesnice) {
 function polohaZn() {
   if (!znCil) return;
   const karta = $("#znPop").querySelector(".stavpop-c");
-  if (!znCil.kotva.isConnected) { zavriZnamku(); return; }
+  if (!znCil.kotva.isConnected) { if (znCil.hromadne) zavriZnamku(); else preKotvi(); return; }
   const r = znCil.kotva.getBoundingClientRect();
   const w = karta.offsetWidth, h = karta.offsetHeight, okraj = 8;
   const left = Math.min(Math.max(okraj, r.left), window.innerWidth - w - okraj);
   let top = r.bottom + 6;
   if (top + h > window.innerHeight - okraj) top = r.top - h - 6;
-  if (top < okraj) top = okraj;
+  top = Math.max(okraj, Math.min(top, window.innerHeight - h - okraj));
   karta.style.left = Math.round(left) + "px"; karta.style.top = Math.round(top) + "px";
 }
 function zavriZnamku() {
@@ -1886,26 +1915,27 @@ function zavriZnamku() {
   znCil = null;
   if (k) k.focus({ preventScroll: true });
 }
-async function ulozZnamku(cil, n) {
-  if (n) cil.rec.znamka = n; else delete cil.rec.znamka;
-  kresliZnamku(cil.znb, n);
-  cil.nm.setAttribute("aria-label", cil.jmeno + ", známka" + (n ? " " + n : " zatím žádná"));
-  await dbPut("zaznamy", cil.rec);
+async function ulozZnamku(zakId, n) {
+  const row = radekZaka(zakId);
+  if (!row) return;
+  kresliZnamku(row._zn.znb, n);
+  row._zn.nm.setAttribute("aria-label", row._zn.jmeno + ", známka" + (n ? " " + n : " zatím žádná"));
+  await upravZaznam(zakId, (r) => { if (n) r.znamka = n; else delete r.znamka; });
 }
 async function vyberZnamku(n) {
   const cil = znCil;
   zavriZnamku();
   if (!cil) return;
-  if (!cil.hromadne) { await ulozZnamku(cil, n); }
+  if (!cil.hromadne) { await ulozZnamku(cil.zakId, n); }
   else {
     const radky = [...$("#pupilList").querySelectorAll(".pupil")].filter((r) => r._zn && !["X", "N", "U"].includes(r.dataset.stav));
-    const jine = radky.filter((r) => r._zn.rec.znamka && r._zn.rec.znamka !== n).length;
+    const jine = radky.filter((r) => r._rec.znamka && r._rec.znamka !== n).length;
     const prepsat = !jine || confirm("U " + jine + (jine === 1 ? " žáka" : " žáků") + " už je jiná známka. Přepsat i ty? (Zrušit = dát jen těm, kdo ji ještě nemají)");
     let pocet = 0;
     for (const r of radky) {
-      if (!prepsat && r._zn.rec.znamka) continue;
-      if (r._zn.rec.znamka === n) continue;
-      await ulozZnamku(r._zn, n); pocet++;
+      if (!prepsat && r._rec.znamka) continue;
+      if (r._rec.znamka === n) continue;
+      await ulozZnamku(r.dataset.zak, n); pocet++;
     }
     toast(n ? "Známka " + n + ": " + pocet + (pocet === 1 ? " žák" : pocet < 5 ? " žáci" : " žáků") : "Známky smazány: " + pocet);
   }
@@ -1924,7 +1954,7 @@ function kresliZnZa(h, zazn) {
 function polohaStav() {
   if (!stavCil) return;
   const pop = $("#stavPop"), btn = stavCil.btn;
-  if (!btn.isConnected) { zavriStav(); return; }
+  if (!btn.isConnected) { preKotvi(); return; }
   const karta = pop.querySelector(".stavpop-c");
   const r = btn.getBoundingClientRect();
   const w = karta.offsetWidth, h = karta.offsetHeight;
@@ -1932,7 +1962,7 @@ function polohaStav() {
   let left = Math.min(Math.max(okraj, r.right - w), window.innerWidth - w - okraj);
   let top = r.bottom + 6;
   if (top + h > window.innerHeight - okraj) top = r.top - h - 6;
-  if (top < okraj) top = okraj;
+  top = Math.max(okraj, Math.min(top, window.innerHeight - h - okraj));
   karta.style.left = Math.round(left) + "px";
   karta.style.top = Math.round(top) + "px";
 }
@@ -2034,6 +2064,8 @@ async function renderHodina() {
     // Omluveny zak bez vlastniho zaznamu ma vychozi stav N. Co Karel prepne rucne, plati.
     const rec = mapa.get(z.id) || { id: h.id + "|" + z.id, hodinaId: h.id, zakId: z.id, stav: om ? "N" : "ok", vedl: false };
     const row = el("div", "pupil");
+    row.dataset.zak = z.id;
+    row._rec = rec;
     const nm = el("span", "nm", z.prijmeni + " " + z.jmeno);
     const znb = el("span", "znb"); nm.append(znb);
     kresliZnamku(znb, rec.znamka);
@@ -2041,23 +2073,23 @@ async function renderHodina() {
     // klepnuti na jmeno = znamka za hodinu
     nm.setAttribute("role", "button"); nm.tabIndex = 0;
     nm.setAttribute("aria-label", z.prijmeni + " " + z.jmeno + ", známka" + (rec.znamka ? " " + rec.znamka : " zatím žádná"));
-    const otevriZn = (e) => otevriZnamku(nm, { rec, znb, nm, jmeno: z.prijmeni + " " + z.jmeno }, e.detail === 0);
+    const otevriZn = (e) => otevriZnamku(nm, { zakId: z.id, jmeno: z.prijmeni + " " + z.jmeno }, e.detail === 0);
     nm.addEventListener("click", otevriZn);
-    nm.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); otevriZnamku(nm, { rec, znb, nm, jmeno: z.prijmeni + " " + z.jmeno }, true); } });
+    nm.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); otevriZnamku(nm, { zakId: z.id, jmeno: z.prijmeni + " " + z.jmeno }, true); } });
     row.append(el("span", "n mono", String(i + 1)), nm);
     const st = el("button", "st"); st.type = "button";
     st.dataset.jm = z.prijmeni + " " + z.jmeno;
     st.setAttribute("aria-haspopup", "true");
     st.setAttribute("aria-expanded", "false");
     nastavStavTlacitko(st, row, rec.stav);
-    st.addEventListener("click", (e) => otevriStav(st, rec, row, z.prijmeni + " " + z.jmeno, e.detail === 0));
+    st.addEventListener("click", (e) => otevriStav(st, row._rec, row, z.prijmeni + " " + z.jmeno, e.detail === 0));
     const ld = el("button", "lead"); ld.type = "button";
     ld.textContent = rec.vedl ? "★" : "☆"; ld.setAttribute("aria-pressed", String(!!rec.vedl));
     ld.setAttribute("aria-label", "vedl rozcvičku: " + z.prijmeni);
     ld.addEventListener("click", async () => {
-      rec.vedl = !rec.vedl; ld.textContent = rec.vedl ? "★" : "☆";
-      ld.setAttribute("aria-pressed", String(rec.vedl));
-      await dbPut("zaznamy", rec);
+      const vedl = !row._rec.vedl;
+      ld.textContent = vedl ? "★" : "☆"; ld.setAttribute("aria-pressed", String(vedl));
+      await upravZaznam(z.id, (r) => { r.vedl = vedl; });
     });
     const pz = el("button", "pzn"); pz.type = "button"; pz.dataset.zak = z.id;
     const n = (poznMapa.get(z.id) || []).length;
@@ -2067,11 +2099,14 @@ async function renderHodina() {
     pz.addEventListener("click", () => otevriZaka(z.id, h.datum));
     row.append(pz, st, ld);
     row.dataset.stav = rec.stav;
-    row._zn = { rec, znb, nm, jmeno: z.prijmeni + " " + z.jmeno };
+    row._zn = { znb, nm, jmeno: z.prijmeni + " " + z.jmeno };
     frag.appendChild(row);
   });
   if (!zaci.length) frag.appendChild(el("div", "empty", "Tahle skupina nemá načtené žáky."));
   list.replaceChildren(frag);
+  // Kdyz se seznam prekreslil pod otevrenou nabidkou (synchronizace), nabidka se presune
+  // na novy radek tehoz zaka, misto aby tise zmizela a klepnuti padlo vedle.
+  preKotvi();
   prepocitejDochazku();
   kresliZnZa(h, zazn);
   const seznamCin = await dlouhoNebylo(h.skupinaId);
@@ -2582,9 +2617,13 @@ async function synchronizuj(rucne) {
 async function renderAktualni() {
   // Pod otevrenou nabidkou stavu se neprekresluje, dozene se po jejim zavreni.
   if (!$("#stavPop").hidden || !$("#znPop").hidden) { S.prekreslitPotom = true; return; }
-  const m = $("main"), y = m.scrollTop;
-  await renderAktualniTed();
-  if (Math.abs(m.scrollTop - y) > 1) m.scrollTop = y;
+  // Behem prekreslovani drzi obrazovka svou vysku, aby se stranka nezkratila a neposkocila.
+  // Pozice se nevraci natvrdo: kdyz Karel mezitim sam roluje, zustane, kam dorolal.
+  const scr = document.querySelector(".screen.on");
+  if (scr) scr.style.minHeight = scr.offsetHeight + "px";
+  try { await renderAktualniTed(); }
+  finally { if (scr) scr.style.minHeight = ""; }
+  polohaStav(); polohaZn();
 }
 async function renderAktualniTed() {
   if (S.tab === "dnes") await renderDnes();
@@ -4744,14 +4783,14 @@ async function boot() {
   });
   $("#stavVolby").querySelectorAll(".sv").forEach((b) => b.addEventListener("click", async () => {
     if (!stavCil) return;
-    const { btn, rec, radek } = stavCil;
+    const zakId = stavCil.rec.zakId;
     const novy = b.dataset.s;
     zavriStav();
-    if (rec.stav === novy) return;
-    rec.stav = novy;
-    nastavStavTlacitko(btn, radek, novy);
+    const row = radekZaka(zakId);
+    if (!row || row._rec.stav === novy) return;
+    nastavStavTlacitko(row.querySelector(".st"), row, novy);
     prepocitejDochazku();
-    await dbPut("zaznamy", rec);
+    await upravZaznam(zakId, (r) => { r.stav = novy; });
   }));
   DISCIPLINY.forEach(([nazev]) => { const o = el("option"); o.value = nazev; $("#dlDisc").appendChild(o); });
 
