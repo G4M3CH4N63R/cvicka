@@ -647,6 +647,16 @@ Souhrn nad docházkou ukazuje, kolik žáků je v hodině („přítomno 12 z 14
 
 **Dvojí poklepání** už na iPhonu nepřibližuje (`touch-action: manipulation`), přiblížení dvěma prsty zůstává.
 
+## v0.20.0: známky za hodinu
+
+Klepnutí na jméno žáka v docházce otevře nabídku 1 až 5 (a smazat). Známka je pole `znamka` v záznamu
+docházky (`zaznamy`, hodina × žák), takže se synchronizuje jako docházka a nenese jméno. Ukazuje se jako
+štítek u jména (1 a 2 zeleně, 4 a 5 červeně). „Známka všem“ dá zvolenou známku všem kromě X, N a Ú; když už
+někdo jinou známku má, appka se zeptá, jestli ji přepsat. Pole „Známky za“ (hodiny.`znamkaZa`) se ukáže,
+když má hodina aspoň jednu známku, a platí pro všechny známky v hodině. Přehled má sloupec Ø (průměr za období,
+v titulku seznam známek, nad 3,5 červeně, řadí od nejhoršího), kopírovaná tabulka má sloupce Známky a Průměr,
+karta žáka ukazuje všechny jeho známky s datem a popisem.
+
 ## Co přijde dál
 
 F3 je hotová.

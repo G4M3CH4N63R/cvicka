@@ -317,6 +317,20 @@ textarea { line-height: 1.45; }
 .pzn[data-has="1"] svg { fill: currentColor; stroke: currentColor; }
 .pzn[data-has="1"] svg path.l { stroke: var(--accent-soft); }
 .st[data-s="ok"] { font-size: 21px; line-height: 1; }
+.pupil .nm { cursor: pointer; }
+.pupil .nm .znb { display: inline-grid; place-items: center; min-width: 22px; height: 22px; margin-left: 7px; padding: 0 5px; border-radius: 6px;
+  font-family: var(--fd); font-weight: 700; font-size: 15px; background: var(--chalk-soft); color: var(--chalk); vertical-align: 1px; }
+.pupil .nm .znb.z1, .pupil .nm .znb.z2 { background: var(--good-soft); color: var(--good); }
+.pupil .nm .znb.z4, .pupil .nm .znb.z5 { background: var(--crit-soft); color: var(--crit); }
+.stavpop-v.znv { grid-template-columns: repeat(6, 1fr); }
+.znv .sv b { font-size: 20px; }
+.znza { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; padding: 6px 13px 8px; }
+.znza label { font-size: 13px; color: var(--ink-3); }
+.znza input { padding: 7px 10px; }
+.zn-r { display: grid; grid-template-columns: 54px 30px 1fr; gap: 8px; align-items: baseline; padding: 6px 0; border-top: 1px dashed var(--line); font-size: 14px; }
+.zn-r:first-of-type { border-top: 0; }
+.zn-r .d { font-size: 12px; color: var(--ink-3); }
+.zn-r b { font-family: var(--fd); font-size: 19px; }
 
 .sheet { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; }
 body.zamek main { overflow: hidden; }
@@ -650,9 +664,10 @@ textarea:focus-visible, input:focus-visible, select:focus-visible { outline: 3px
         <div class="btns"><button class="btn ghost" id="bSlib" type="button">Přidat slib</button></div>
       </div>
     </div>    <div class="card">
-      <div class="card-h"><h3>Docházka</h3><span class="eyebrow" id="attSum"></span><button class="iconbtn" id="bMereni" type="button" style="width:auto;height:28px;padding:0 10px;font-size:12px">Měřit</button></div>
+      <div class="card-h"><h3>Docházka</h3><span class="eyebrow" id="attSum"></span><button class="iconbtn" id="bZnVsem" type="button" style="width:auto;height:28px;padding:0 10px;font-size:12px" aria-haspopup="true">Známka všem</button><button class="iconbtn" id="bMereni" type="button" style="width:auto;height:28px;padding:0 10px;font-size:12px">Měřit</button></div>
+      <div class="znza" id="znZaBox" hidden><label for="fZnZa">Známky za</label><input type="text" id="fZnZa" placeholder="např. šplh, přihrávky, kotoul" autocomplete="off"></div>
       <div class="legend">
-        <span><b>ok</b> cvičí</span><span><b>X</b> nepřítomen</span><span><b>N</b> necvičí</span><span><b>Ú</b> bez úboru</span><span>☆ vedl rozcvičku</span><span>✎ zápisy u žáka</span>
+        <span><b>✓</b> cvičí</span><span><b>X</b> nepřítomen</span><span><b>N</b> necvičí</span><span><b>Ú</b> bez úboru</span><span>☆ vedl rozcvičku</span><span>list = zápisy u žáka</span><span>jméno = známka</span>
       </div>
       <div id="pupilList"></div>
     </div>
@@ -815,6 +830,14 @@ textarea:focus-visible, input:focus-visible, select:focus-visible { outline: 3px
   <button type="button" id="updBtn">Načíst</button>
 </div>
 
+<div class="stavpop" id="znPop" hidden>
+  <div class="stavpop-bg" id="znBg"></div>
+  <div class="stavpop-c" role="dialog" aria-label="Známka">
+    <div class="stavpop-jm" id="znJm"></div>
+    <div class="stavpop-v znv" id="znVolby"></div>
+  </div>
+</div>
+
 <div class="stavpop" id="stavPop" hidden>
   <div class="stavpop-bg" id="stavBg"></div>
   <div class="stavpop-c" role="dialog" aria-label="Stav žáka v hodině">
@@ -894,6 +917,7 @@ textarea:focus-visible, input:focus-visible, select:focus-visible { outline: 3px
         <div class="eyebrow" id="zakPocet">Zápisy</div>
         <div id="zakList"></div>
       </div>
+      <div class="sec" id="zakZn" hidden></div>
       <div class="sec" id="zakRk" hidden></div>
     </div>
   </div>
@@ -905,7 +929,7 @@ textarea:focus-visible, input:focus-visible, select:focus-visible { outline: 3px
 
 <script>
 "use strict";
-const APP = { ver: "0.19.0", db: null, sync: null, klic: null };
+const APP = { ver: "0.20.0", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -1095,7 +1119,7 @@ const frontaId = (store, rid) => store + "|" + rid;
 function stojiZaSync(store, z) {
   if (store !== "hodiny") return true;
   if (z.sync) return true;
-  return !!(z.plan || z.napln || z.zapis || z.okruh || (z.cinnosti && z.cinnosti.length) || (z.stav && z.stav !== "plan"));
+  return !!(z.plan || z.napln || z.zapis || z.znamkaZa || z.okruh || (z.cinnosti && z.cinnosti.length) || (z.stav && z.stav !== "plan"));
 }
 
 function dbPut(store, val, tiche) {
@@ -1803,6 +1827,7 @@ function nastavStavTlacitko(btn, radek, stav) {
 let stavCil = null;
 
 function otevriStav(btn, rec, radek, jmeno, klavesnice) {
+  zavriZnamku();
   stavCil = { btn, rec, radek, klavesnice };
   const pop = $("#stavPop");
   pop.hidden = false;
@@ -1812,6 +1837,87 @@ function otevriStav(btn, rec, radek, jmeno, klavesnice) {
   polohaStav();
   // Fokus jen pri ovladani klavesnici. Na iPhonu by fokus umel posunout stranku.
   if (klavesnice) (pop.querySelector('.sv[aria-pressed="true"]') || pop.querySelector(".sv")).focus({ preventScroll: true });
+}
+
+/* ---------- znamky za hodinu ---------- */
+// Znamka je v zaznamu dochazky (zaznamy: hodinaId|zakId), za co v hodine (hodiny.znamkaZa).
+function kresliZnamku(znb, n) {
+  znb.textContent = n ? String(n) : "";
+  znb.className = "znb" + (n ? " z" + n : "");
+  znb.hidden = !n;
+}
+let znCil = null;
+function otevriZnamku(kotva, cil, klavesnice) {
+  zavriStav();
+  znCil = { kotva, klavesnice, ...cil };
+  const pop = $("#znPop");
+  $("#znJm").textContent = cil.hromadne ? "Všem přítomným (bez X, N a Ú)" : "Známka · " + cil.jmeno;
+  const box = $("#znVolby"); box.innerHTML = "";
+  ["1", "2", "3", "4", "5", "×"].forEach((k) => {
+    const b = el("button", "sv"); b.type = "button"; b.dataset.z = k;
+    b.append(el("b", "", k), el("span", "", k === "×" ? "smazat" : ["výborně", "chvalitebně", "dobře", "dostatečně", "nedostatečně"][Number(k) - 1]));
+    if (k === "×") b.dataset.s = "N";
+    b.setAttribute("aria-pressed", String(!cil.hromadne && String(cil.rec.znamka || "") === k));
+    b.addEventListener("click", () => vyberZnamku(k === "×" ? null : Number(k)));
+    box.appendChild(b);
+  });
+  pop.hidden = false;
+  polohaZn();
+  if (klavesnice) box.querySelector(".sv").focus({ preventScroll: true });
+}
+function polohaZn() {
+  if (!znCil) return;
+  const karta = $("#znPop").querySelector(".stavpop-c");
+  if (!znCil.kotva.isConnected) { zavriZnamku(); return; }
+  const r = znCil.kotva.getBoundingClientRect();
+  const w = karta.offsetWidth, h = karta.offsetHeight, okraj = 8;
+  const left = Math.min(Math.max(okraj, r.left), window.innerWidth - w - okraj);
+  let top = r.bottom + 6;
+  if (top + h > window.innerHeight - okraj) top = r.top - h - 6;
+  if (top < okraj) top = okraj;
+  karta.style.left = Math.round(left) + "px"; karta.style.top = Math.round(top) + "px";
+}
+function zavriZnamku() {
+  const pop = $("#znPop");
+  if (pop.hidden) return;
+  pop.hidden = true;
+  if (S.prekreslitPotom) { S.prekreslitPotom = false; setTimeout(() => renderAktualni(), 0); }
+  const k = znCil && znCil.klavesnice && znCil.kotva;
+  znCil = null;
+  if (k) k.focus({ preventScroll: true });
+}
+async function ulozZnamku(cil, n) {
+  if (n) cil.rec.znamka = n; else delete cil.rec.znamka;
+  kresliZnamku(cil.znb, n);
+  cil.nm.setAttribute("aria-label", cil.jmeno + ", známka" + (n ? " " + n : " zatím žádná"));
+  await dbPut("zaznamy", cil.rec);
+}
+async function vyberZnamku(n) {
+  const cil = znCil;
+  zavriZnamku();
+  if (!cil) return;
+  if (!cil.hromadne) { await ulozZnamku(cil, n); }
+  else {
+    const radky = [...$("#pupilList").querySelectorAll(".pupil")].filter((r) => r._zn && !["X", "N", "U"].includes(r.dataset.stav));
+    const jine = radky.filter((r) => r._zn.rec.znamka && r._zn.rec.znamka !== n).length;
+    const prepsat = !jine || confirm("U " + jine + (jine === 1 ? " žáka" : " žáků") + " už je jiná známka. Přepsat i ty? (Zrušit = dát jen těm, kdo ji ještě nemají)");
+    let pocet = 0;
+    for (const r of radky) {
+      if (!prepsat && r._zn.rec.znamka) continue;
+      if (r._zn.rec.znamka === n) continue;
+      await ulozZnamku(r._zn, n); pocet++;
+    }
+    toast(n ? "Známka " + n + ": " + pocet + (pocet === 1 ? " žák" : pocet < 5 ? " žáci" : " žáků") : "Známky smazány: " + pocet);
+  }
+  const h = S.hodinaId ? await dbGet("hodiny", S.hodinaId) : null;
+  if (h) kresliZnZa(h, await dbBy("zaznamy", "hodinaId", h.id));
+}
+// Pole „Známky za“ se ukaze, kdyz ma hodina aspon jednu znamku nebo uz popis.
+function kresliZnZa(h, zazn) {
+  const ma = (zazn || []).some((z) => z.znamka) || !!h.znamkaZa;
+  $("#znZaBox").hidden = !ma;
+  const pole = $("#fZnZa");
+  if (document.activeElement !== pole) pole.value = h.znamkaZa || "";
 }
 
 // Nabidka drzi u tlacitka, i kdyz se stranka posune nebo zmeni velikost (lista Safari, klavesnice).
@@ -1929,7 +2035,15 @@ async function renderHodina() {
     const rec = mapa.get(z.id) || { id: h.id + "|" + z.id, hodinaId: h.id, zakId: z.id, stav: om ? "N" : "ok", vedl: false };
     const row = el("div", "pupil");
     const nm = el("span", "nm", z.prijmeni + " " + z.jmeno);
+    const znb = el("span", "znb"); nm.append(znb);
+    kresliZnamku(znb, rec.znamka);
     if (om) nm.append(el("span", "om", "omluva " + omluvaDo(om) + (om.text ? " · " + om.text : "")));
+    // klepnuti na jmeno = znamka za hodinu
+    nm.setAttribute("role", "button"); nm.tabIndex = 0;
+    nm.setAttribute("aria-label", z.prijmeni + " " + z.jmeno + ", známka" + (rec.znamka ? " " + rec.znamka : " zatím žádná"));
+    const otevriZn = (e) => otevriZnamku(nm, { rec, znb, nm, jmeno: z.prijmeni + " " + z.jmeno }, e.detail === 0);
+    nm.addEventListener("click", otevriZn);
+    nm.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); otevriZnamku(nm, { rec, znb, nm, jmeno: z.prijmeni + " " + z.jmeno }, true); } });
     row.append(el("span", "n mono", String(i + 1)), nm);
     const st = el("button", "st"); st.type = "button";
     st.dataset.jm = z.prijmeni + " " + z.jmeno;
@@ -1953,11 +2067,13 @@ async function renderHodina() {
     pz.addEventListener("click", () => otevriZaka(z.id, h.datum));
     row.append(pz, st, ld);
     row.dataset.stav = rec.stav;
+    row._zn = { rec, znb, nm, jmeno: z.prijmeni + " " + z.jmeno };
     frag.appendChild(row);
   });
   if (!zaci.length) frag.appendChild(el("div", "empty", "Tahle skupina nemá načtené žáky."));
   list.replaceChildren(frag);
   prepocitejDochazku();
+  kresliZnZa(h, zazn);
   const seznamCin = await dlouhoNebylo(h.skupinaId);
   await renderHist(h.skupinaId, HIST_HODINA, { ...HIST_HODINA_OPT, krome: h.id });
   await renderGaps(h.skupinaId, GAPS_HODINA, { kolik: 3, seznam: seznamCin });
@@ -2465,7 +2581,7 @@ async function synchronizuj(rucne) {
 // Po synchronizaci prekreslit to, na co se Karel zrovna diva.
 async function renderAktualni() {
   // Pod otevrenou nabidkou stavu se neprekresluje, dozene se po jejim zavreni.
-  if (!$("#stavPop").hidden) { S.prekreslitPotom = true; return; }
+  if (!$("#stavPop").hidden || !$("#znPop").hidden) { S.prekreslitPotom = true; return; }
   const m = $("main"), y = m.scrollTop;
   await renderAktualniTed();
   if (Math.abs(m.scrollTop - y) > 1) m.scrollTop = y;
@@ -2916,15 +3032,17 @@ async function spocitejPrehled(skupinaId, ob) {
   const mojeIds = new Set(zaci.map((z) => z.id));
   const omluvy = pozn.filter((p) => p.typ === "omluva" && mojeIds.has(p.zakId));
   const radky = zaci.map((z) => {
-    const r = { zak: z, hodin: hodiny.length, ok: 0, X: 0, N: 0, U: 0, vedl: 0 };
+    const r = { zak: z, hodin: hodiny.length, ok: 0, X: 0, N: 0, U: 0, vedl: 0, znamky: [] };
     hodiny.forEach((h) => {
       const rec = (zazMap.get(h.id) || new Map()).get(z.id);
+      if (rec && rec.znamka) r.znamky.push(rec.znamka);
       const om = !rec && omluvy.some((p) => p.zakId === z.id && omluvaPlati(p, h.datum));
       const st = rec ? rec.stav : (om ? "N" : "ok");
       r[st] = (r[st] || 0) + 1;
       if (rec && rec.vedl) r.vedl++;
     });
     r.mimo = r.X + r.N + r.U;
+    r.prumer = r.znamky.length ? r.znamky.reduce((a, b) => a + b, 0) / r.znamky.length : null;
     // poznamky o chovani a volne poznamky v obdobi (vykony, akce a omluvy sem nepatri)
     r.pozn = pozn.filter((p) => p.zakId === z.id && (p.typ === "chovani" || p.typ === "pozn") && p.datum >= ob.od && p.datum <= ob.do).length;
     // Malo podkladu ke znamce: necvicil tretinu a vic hodin (az od sesti odučených).
@@ -2966,7 +3084,7 @@ async function renderPrehled() {
   const t = $("#pxDoch"); t.innerHTML = "";
   if (!d.hodiny.length) {
     t.innerHTML = "";
-    const tr = el("tr"); const td = el("td", "empty", "V tomhle období zatím nejsou zapsané hodiny."); td.colSpan = 7; tr.appendChild(td);
+    const tr = el("tr"); const td = el("td", "empty", "V tomhle období zatím nejsou zapsané hodiny."); td.colSpan = 8; tr.appendChild(td);
     t.appendChild(tr);
     $("#pxPozn").textContent = ""; $("#pxCopy").hidden = true;
   } else {
@@ -2974,7 +3092,7 @@ async function renderPrehled() {
     const th = el("thead"); const hr = el("tr");
     // Klepnuti na sloupec seradi tabulku: zak podle abecedy, cisla od nejvetsiho.
     const raz = S.pxRazeni || "zak";
-    [["zak", "Žák", ""], ["ok", "Cvičil", "cvičil z odučených"], ["X", "X", "nepřítomen"], ["N", "N", "necvičil"], ["U", "Ú", "bez úboru"], ["vedl", "☆", "vedl rozcvičku"], ["pozn", "✎", "poznámky o chování a volné poznámky"]]
+    [["zak", "Žák", ""], ["ok", "Cvičil", "cvičil z odučených"], ["X", "X", "nepřítomen"], ["N", "N", "necvičil"], ["U", "Ú", "bez úboru"], ["vedl", "☆", "vedl rozcvičku"], ["pozn", "✎", "poznámky o chování a volné poznámky"], ["prumer", "Ø", "průměr známek"]]
       .forEach(([klic, k, popis]) => {
         const c = el("th", "razitko" + (klic === raz ? " vybrano" : ""), k + (klic === raz ? (klic === "zak" ? " ▴" : " ▾") : ""));
         if (popis) c.title = popis;
@@ -2992,6 +3110,8 @@ async function renderPrehled() {
       if (raz === "zak") return jmeno(a).localeCompare(jmeno(b), "cs");
       // u Cvicil je nejzajimavejsi, kdo cvicil nejmene
       if (raz === "ok") return a.ok - b.ok || jmeno(a).localeCompare(jmeno(b), "cs");
+      // u prumeru nahoru nejhorsi, zaci bez znamek na konec
+      if (raz === "prumer") return (b.prumer ?? -1) - (a.prumer ?? -1) || jmeno(a).localeCompare(jmeno(b), "cs");
       return (b[raz] || 0) - (a[raz] || 0) || jmeno(a).localeCompare(jmeno(b), "cs");
     });
     radky.forEach((r) => {
@@ -3005,6 +3125,9 @@ async function renderPrehled() {
       tr.appendChild(bunka(r.U, r.U >= 3 ? "warn" : ""));
       tr.appendChild(bunka(r.vedl));
       tr.appendChild(bunka(r.pozn, r.pozn >= 3 ? "warn" : ""));
+      const zn = el("td", r.prumer == null ? "nula" : (r.prumer > 3.5 ? "crit" : ""), r.prumer == null ? "·" : String(Math.round(r.prumer * 100) / 100).replace(".", ","));
+      if (r.znamky.length) zn.title = "známky: " + r.znamky.join(", ");
+      tr.appendChild(zn);
       tr.setAttribute("aria-label", r.zak.prijmeni + " " + r.zak.jmeno + ", cvičil " + r.ok + " z " + r.hodin);
       tr.addEventListener("click", () => otevriZaka(r.zak.id, iso(new Date())));
       tb.appendChild(tr);
@@ -3077,8 +3200,9 @@ async function kopirujPrehled() {
   const pr = S.cache.prehled;
   if (!pr || !pr.d.hodiny.length) return;
   const radky = [[skName(S.pxSk) + " · " + pr.ob.nazev + " (" + dmr(pr.ob.od) + " až " + dmr(pr.d.konec) + ")"],
-    ["Žák", "Cvičil", "Odučeno", "Nepřítomen", "Necvičil", "Bez úboru", "Vedl rozcvičku", "Poznámky"]];
-  pr.d.radky.forEach((r) => radky.push([r.zak.prijmeni + " " + r.zak.jmeno, r.ok, r.hodin, r.X, r.N, r.U, r.vedl, r.pozn]));
+    ["Žák", "Cvičil", "Odučeno", "Nepřítomen", "Necvičil", "Bez úboru", "Vedl rozcvičku", "Poznámky", "Známky", "Průměr"]];
+  pr.d.radky.forEach((r) => radky.push([r.zak.prijmeni + " " + r.zak.jmeno, r.ok, r.hodin, r.X, r.N, r.U, r.vedl, r.pozn,
+    r.znamky.join(" "), r.prumer == null ? "" : String(Math.round(r.prumer * 100) / 100).replace(".", ",")]));
   const text = radky.map((r) => r.join("\t")).join("\n");
   try { await navigator.clipboard.writeText(text); toast("Tabulka zkopírována, vlož ji do Numbers nebo Excelu"); }
   catch { toast("Kopírování se nepovedlo"); }
@@ -3128,6 +3252,7 @@ async function renderZak() {
   if (S.poznUprava && !S.cache.uprava) S.poznUprava = null;
   renderZakForm();
   rkKartaZaka(z).catch(() => {});
+  await kresliZnamkyZaka(z);
 
   const vse = (await dbBy("pozn", "zakId", S.zakId)).slice();
   vse.sort((a, b) => (b.datum || "").localeCompare(a.datum || "") || (b.vytvoreno || "").localeCompare(a.vytvoreno || ""));
@@ -3136,6 +3261,24 @@ async function renderZak() {
   if (!vse.length) { list.appendChild(el("div", "empty", "Zatím tu nic není.")); return; }
   const rek = rekordniIds(vse);
   vse.forEach((z2) => list.appendChild(zakRow(z2, rek.has(z2.id))));
+}
+
+// Znamky zaka za skolni rok z dochazky, nejnovejsi nahore, s popisem hodiny.
+async function kresliZnamkyZaka(z) {
+  const box = $("#zakZn"); box.innerHTML = "";
+  const zazn = (await dbAll("zaznamy")).filter((x) => x.zakId === z.id && x.znamka);
+  if (!zazn.length) { box.hidden = true; return; }
+  const hod = new Map((await dbBy("hodiny", "skupinaId", z.skupinaId)).map((h) => [h.id, h]));
+  const rada = zazn.map((x) => ({ x, h: hod.get(x.hodinaId) })).filter((y) => y.h).sort((a, b) => b.h.datum.localeCompare(a.h.datum));
+  if (!rada.length) { box.hidden = true; return; }
+  const prumer = rada.reduce((a, y) => a + y.x.znamka, 0) / rada.length;
+  box.hidden = false;
+  box.appendChild(el("div", "eyebrow", "Známky · " + rada.length + " · průměr " + String(Math.round(prumer * 100) / 100).replace(".", ",")));
+  rada.forEach(({ x, h }) => {
+    const r = el("div", "zn-r");
+    r.append(el("span", "d", dm(h.datum)), el("b", "", String(x.znamka)), el("span", "", h.znamkaZa || ""));
+    box.appendChild(r);
+  });
 }
 
 function zakRow(p, jeRekord) {
@@ -4584,6 +4727,21 @@ async function boot() {
   // nabidka je ukotvena k tlacitku, pri rolovani nebo zmene velikosti se jen posune
   $("main").addEventListener("scroll", polohaStav, { passive: true });
   window.addEventListener("resize", polohaStav);
+  $("main").addEventListener("scroll", polohaZn, { passive: true });
+  window.addEventListener("resize", polohaZn);
+  $("#znBg").addEventListener("click", zavriZnamku);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#znPop").hidden) zavriZnamku(); });
+  $("#bZnVsem").addEventListener("click", (e) => { if (S.hodinaId) otevriZnamku($("#bZnVsem"), { hromadne: true }, e.detail === 0); });
+  let znZaCas;
+  $("#fZnZa").addEventListener("input", () => {
+    clearTimeout(znZaCas);
+    znZaCas = setTimeout(async () => {
+      const h = S.hodinaId ? await dbGet("hodiny", S.hodinaId) : null;
+      if (!h) return;
+      h.znamkaZa = $("#fZnZa").value.trim();
+      await dbPut("hodiny", h);
+    }, 500);
+  });
   $("#stavVolby").querySelectorAll(".sv").forEach((b) => b.addEventListener("click", async () => {
     if (!stavCil) return;
     const { btn, rec, radek } = stavCil;
