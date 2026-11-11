@@ -53,7 +53,7 @@
     --chalk: #e3b547; --chalk-soft: #3a2e10;
   }
 }
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 [hidden] { display: none !important; }
 html, body { height: 100%; }
 body {
@@ -313,6 +313,10 @@ textarea { line-height: 1.45; }
   font-family: var(--fm); font-size: 13.5px; line-height: 1;
 }
 .pzn[data-has="1"] { border: 1px solid transparent; background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.pzn svg { width: 17px; height: 17px; display: block; margin: 0 auto; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.pzn[data-has="1"] svg { fill: currentColor; stroke: currentColor; }
+.pzn[data-has="1"] svg path.l { stroke: var(--accent-soft); }
+.st[data-s="ok"] { font-size: 21px; line-height: 1; }
 
 .sheet { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; }
 body.zamek main { overflow: hidden; }
@@ -505,6 +509,18 @@ textarea:focus-visible, input:focus-visible, select:focus-visible { outline: 3px
 .rozvrh .bu { font-family: var(--fd); font-weight: 700; font-size: 13.5px; border-radius: 6px; }
 .rozvrh .bu.plan { background: var(--cyan-soft); color: var(--cyan); }
 .rozvrh .bu.sk { box-shadow: inset 0 3px 0 var(--sk); }
+.rozvrh .bu.pohot { font-family: var(--fb); font-weight: 600; font-size: 11px; gap: 3px; }
+.rozvrh .bu.pohot i { width: 14px; height: 14px; border-radius: 3px; display: block; }
+.rozvrh .bu.pohot.cervena { background: var(--crit-soft); color: var(--crit); border: 1px solid var(--crit); }
+.rozvrh .bu.pohot.cervena i { background: var(--crit); }
+.rozvrh .bu.pohot.modra { background: var(--cyan-soft); color: var(--cyan); border: 1px solid var(--cyan); }
+.rozvrh .bu.pohot.modra i { background: var(--cyan); }
+.rozvrh .bu .pq { position: absolute; top: 6px; right: 5px; width: 10px; height: 10px; border-radius: 2px; }
+.rozvrh .bu .pq.cervena { background: var(--crit); } .rozvrh .bu .pq.modra { background: var(--cyan); }
+.rozvrh .dh { display: flex; align-items: center; justify-content: center; min-height: 38px; }
+.rozvrh .dh b { writing-mode: vertical-rl; transform: rotate(180deg); font-family: var(--fd); font-weight: 700; font-size: 11.5px; letter-spacing: .04em;
+  background: var(--chalk-soft); color: var(--chalk); border: 1px solid var(--chalk); border-radius: 5px; padding: 4px 2px; }
+.rozvrh .hh.uz b { font-size: 11px; }
 .rozvrh .hh b, .rozvrh .dn b { font-family: var(--fd); font-size: 15px; }
 .mleg i.plan { background: var(--cyan-soft); border-color: var(--cyan); }
 .st { font-family: var(--fd); font-size: 17px; border-radius: 6px; }
@@ -728,6 +744,15 @@ textarea:focus-visible, input:focus-visible, select:focus-visible { outline: 3px
       </div>
     </div>
     <div class="card">
+      <div class="card-h"><h3>Pohotovosti a dohledy</h3><span class="eyebrow">v Týdnu</span></div>
+      <div class="card-b">
+        <div class="field"><label for="fSluzby">Jeden na řádek: den, hodina nebo ráno či přestávka, co, barva nebo místo</label><textarea id="fSluzby" rows="8"></textarea></div>
+        <div class="btns"><button class="btn ghost" id="bSluzby" type="button">Uložit</button></div>
+        <div class="hint">Příklad: „Po 6 pohotovost červená“, „Čt ráno dohled přízemí“, „Pá přestávka dohled TV“. Ráno je 7:40 až 8:05, přestávka je velká přestávka 10:40 až 11:10. Ukládá se jen v tomhle zařízení.</div>
+        <div class="err" id="sluzbyMsg"></div>
+      </div>
+    </div>
+    <div class="card">
       <div class="card-h"><h3>Synchronizace</h3><span class="eyebrow" id="syncStav"></span></div>
       <div class="card-b">
         <div class="field"><label for="fSyncUrl">Adresa serveru</label><input type="text" id="fSyncUrl" placeholder="https://cvicka-sync.ucet.workers.dev" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
@@ -880,7 +905,7 @@ textarea:focus-visible, input:focus-visible, select:focus-visible { outline: 3px
 
 <script>
 "use strict";
-const APP = { ver: "0.18.1", db: null, sync: null, klic: null };
+const APP = { ver: "0.19.0", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -895,7 +920,7 @@ const DISCIPLINY = [
 ];
 const RK_POCET = 11;
 const JEDNOTKY = ["cm", "m", "s", "min", "počet", "body"];
-const POPIS = { ok: "ok", X: "X", N: "N", U: "Ú" };
+const POPIS = { ok: "✓", X: "X", N: "N", U: "Ú" };
 const POPIS_STAV = { ok: "cvičí", X: "nepřítomen", N: "necvičí", U: "bez úboru" };
 const VOLNO_DEFAULT = [
   "2026-09-28", "2026-10-28..2026-10-30", "2026-11-17",
@@ -1532,19 +1557,31 @@ function stavTrida(h) {
 async function renderMrizka(dny, hodiny) {
   const box = $("#tydenMrizka"); box.innerHTML = "";
   const rozvrh = await dbAll("rozvrh");
-  const cisla = [...rozvrh, ...hodiny].map((x) => Number(x.poradi)).filter((n) => n > 0);
+  const sluzby = parseSluzby(await metaGet("sluzby", SLUZBY_DEFAULT)).sluzby;
+  const volno = parseVolno(await metaGet("volno", VOLNO_DEFAULT.join("\n")));
+  const cisla = [...rozvrh, ...hodiny, ...sluzby.filter((x) => x.hodina)].map((x) => Number(x.poradi || x.hodina)).filter((n) => n > 0);
   if (!cisla.length) { box.appendChild(el("div", "empty", "Zatím není načtený rozvrh.")); return; }
   const od = Math.min(...cisla), az = Math.max(...cisla);
   const dnesI = iso(new Date());
 
-  box.style.gridTemplateColumns = "38px repeat(" + (az - od + 1) + ", minmax(72px, 1fr))";
+  // Uzke sloupce pro dohledy: rano pred prvni hodinou a velka prestavka pred 4. hodinou.
+  const maRano = sluzby.some((x) => x.kdy === "rano");
+  const maPrest = sluzby.some((x) => x.kdy === "prestavka") && od <= 3 && az >= 4;
+  const sloupce = [];
+  if (maRano) sloupce.push({ uz: "rano" });
+  for (let p = od; p <= az; p++) {
+    if (maPrest && p === 4) sloupce.push({ uz: "prestavka" });
+    sloupce.push({ p });
+  }
+  box.style.gridTemplateColumns = "38px " + sloupce.map((c) => c.uz ? "26px" : "minmax(72px, 1fr)").join(" ");
 
   box.appendChild(el("div", "roh"));
-  for (let p = od; p <= az; p++) {
-    const hl = el("div", "hh");
-    hl.append(el("b", "", String(p)), el("span", "", (HODINY_CAS[p] || "").replace(/^0/, "")));
+  sloupce.forEach((c) => {
+    const hl = el("div", "hh" + (c.uz ? " uz" : ""));
+    if (c.uz) { hl.append(el("b", "", c.uz === "rano" ? "R" : "VP"), el("span", "", c.uz === "rano" ? "7:40" : "10:40")); hl.title = c.uz === "rano" ? "ranní dohled 7:40 až 8:05" : "velká přestávka 10:40 až 11:10"; }
+    else hl.append(el("b", "", String(c.p)), el("span", "", (HODINY_CAS[c.p] || "").replace(/^0/, "")));
     box.appendChild(hl);
-  }
+  });
 
   const mapa = new Map();
   hodiny.forEach((h) => {
@@ -1557,8 +1594,31 @@ async function renderMrizka(dny, hodiny) {
     const zah = el("div", "dn" + (d === dnesI ? " dnes" : ""));
     zah.append(el("b", "", DNY[parseISO(d).getDay()].toLowerCase()), el("span", "", parseISO(d).getDate() + "."));
     box.appendChild(zah);
-    for (let p = od; p <= az; p++) {
+    const denTydne = parseISO(d).getDay();
+    const dneska = volno.has(d) ? [] : sluzby.filter((x) => x.den === denTydne);
+    for (const c of sloupce) {
+      if (c.uz) {
+        const dh = dneska.find((x) => x.kdy === c.uz);
+        const bunka = el("div", "dh");
+        if (dh) {
+          bunka.appendChild(el("b", "", dh.misto || "dohled"));
+          bunka.title = (c.uz === "rano" ? "Ranní dohled 7:40 až 8:05" : "Dohled o velké přestávce 10:40 až 11:10") + (dh.misto ? ", " + dh.misto : "");
+          bunka.setAttribute("aria-label", cz(d) + ", " + bunka.title);
+        }
+        box.appendChild(bunka);
+        continue;
+      }
+      const p = c.p;
       const v = (mapa.get(d + "|" + p) || []).sort((a, b) => a.id.localeCompare(b.id));
+      const po = dneska.find((x) => x.kdy === "hodina" && x.hodina === p);
+      if (!v.length && po) {
+        const bunka = el("div", "bu pohot " + po.barva);
+        bunka.append(el("i"), el("span", "", "pohotovost"));
+        bunka.title = "Pohotovost " + (po.barva === "cervena" ? "červená, ve sborovně" : "modrá");
+        bunka.setAttribute("aria-label", cz(d) + ", " + p + ". hodina, " + bunka.title);
+        box.appendChild(bunka);
+        continue;
+      }
       if (!v.length) { box.appendChild(el("div", "bu volno")); continue; }
       const h = v[0];
       const b = el("button", "bu sk " + stavTrida(h)); b.type = "button";
@@ -1568,6 +1628,8 @@ async function renderMrizka(dny, hodiny) {
       const co = naRadek(hlavniText(h) || h.zapis);
       if (co) b.append(el("span", "np", co));
       if (v.length > 1) b.append(el("span", "vic", "+" + (v.length - 1)));
+      // pohotovost ve stejnou hodinu jako hodina TV (napr. po zmene rozvrhu): aspon ctverecek v rohu
+      if (po) { const q = el("i", "pq " + po.barva); q.title = "pohotovost"; b.append(q); b.style.position = "relative"; }
       b.title = jmeno + " · " + p + ". hodina" + (co ? "\n" + co : "");
       b.setAttribute("aria-label", cz(d) + ", " + p + ". hodina, " + jmeno + (co ? ", " + co : ""));
       b.addEventListener("click", () => { S.histSkupina = h.skupinaId; openHodina(h.id, "tyden"); });
@@ -1575,6 +1637,32 @@ async function renderMrizka(dny, hodiny) {
     }
   });
 }
+// Pohotovosti a dohledy z rozvrhu ve SOL (Karel 2026/27). Upravuji se v Nastaveni.
+const SLUZBY_DEFAULT = [
+  "Po 6 pohotovost červená", "St 1 pohotovost červená", "Čt 4 pohotovost modrá",
+  "Čt ráno dohled přízemí", "Pá ráno dohled TV",
+  "Po přestávka dohled TV", "St přestávka dohled TV", "Pá přestávka dohled TV"
+].join("\n");
+const DNY_ZKR = { po: 1, ut: 2, st: 3, ct: 4, pa: 5 };
+function parseSluzby(text) {
+  const sluzby = [], chyby = [];
+  String(text || "").split(/\r?\n/).map((l) => l.trim()).filter(Boolean).forEach((radek) => {
+    const t = radek.split(/\s+/);
+    const den = DNY_ZKR[bezDiak(t[0]).replace(/\.$/, "")];
+    const kdy0 = bezDiak(t[1] || "");
+    const typ = bezDiak(t[2] || "");
+    const zbytek = t.slice(3).join(" ");
+    const hodina = /^\d+\.?$/.test(kdy0) ? parseInt(kdy0, 10) : null;
+    const kdy = hodina ? "hodina" : /^ran/.test(kdy0) ? "rano" : /^(prest|vp)/.test(kdy0) ? "prestavka" : null;
+    if (!den || !kdy || !/^(pohot|dohled|dozor)/.test(typ)) { chyby.push(radek); return; }
+    if (/^pohot/.test(typ)) {
+      if (kdy !== "hodina") { chyby.push(radek); return; }
+      sluzby.push({ den, kdy, hodina, typ: "pohotovost", barva: /^modr/.test(bezDiak(zbytek)) ? "modra" : "cervena" });
+    } else sluzby.push({ den, kdy, hodina, typ: "dohled", misto: zbytek });
+  });
+  return { sluzby, chyby };
+}
+
 async function renderTyden() {
   const konec = addDays(S.tyden, 4);
   $("#tydenTtl").textContent = `${dm(S.tyden)} až ${dm(konec)}`;
@@ -1691,9 +1779,17 @@ async function nastavSbaleni() {
 
 function prepocitejDochazku() {
   const btns = $("#pupilList").querySelectorAll(".st");
-  let ok = 0;
-  btns.forEach((b) => { if (b.dataset.s === "ok") ok++; });
-  $("#attSum").textContent = btns.length ? `cvičí ${ok} / ${btns.length}` : "";
+  // kolik zaku je v hodine: vsichni krome nepritomnych (X), necvicici a bez uboru tu jsou
+  let tu = 0;
+  btns.forEach((b) => { if (b.dataset.s !== "X") tu++; });
+  $("#attSum").textContent = btns.length ? `přítomno ${tu} z ${btns.length}` : "";
+}
+
+// Ikona zapisu u zaka: prazdna, nebo vyplnena, kdyz nejaky zapis ma. Cislo by vypadalo jako znamka.
+const IKONA_ZAPIS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path class="l" d="M9 11h7M9 15h7"/></svg>';
+function znackaPoznamek(b, n) {
+  b.innerHTML = IKONA_ZAPIS;
+  b.dataset.has = n ? "1" : "0";
 }
 
 function nastavStavTlacitko(btn, radek, stav) {
@@ -1851,7 +1947,7 @@ async function renderHodina() {
     });
     const pz = el("button", "pzn"); pz.type = "button"; pz.dataset.zak = z.id;
     const n = (poznMapa.get(z.id) || []).length;
-    pz.textContent = n ? String(n) : "✎";
+    znackaPoznamek(pz, n);
     pz.dataset.has = n ? "1" : "0";
     pz.setAttribute("aria-label", "zápisy u žáka: " + n);
     pz.addEventListener("click", () => otevriZaka(z.id, h.datum));
@@ -1990,6 +2086,8 @@ async function renderNastaveni() {
   $("#fOd").value = await metaGet("od", "2026-09-01");
   $("#fDo").value = await metaGet("do", "2027-06-30");
   $("#fVolno").value = await metaGet("volno", VOLNO_DEFAULT.join("\n"));
+  $("#fSluzby").value = await metaGet("sluzby", SLUZBY_DEFAULT);
+  $("#sluzbyMsg").textContent = "";
   const zapsane = hod.filter(jeUzavrena).length;
   $("#rokLine").textContent = zapsane ? zapsane + " uzavřených" : "";
   $("#fSyncUrl").value = await metaGet("syncUrl", "");
@@ -3492,7 +3590,7 @@ async function obnovZnacku(zakId) {
   const b = document.querySelector('#pupilList .pzn[data-zak="' + zakId + '"]');
   if (!b) return;
   const n = (await dbBy("pozn", "zakId", zakId)).length;
-  b.textContent = n ? String(n) : "✎";
+  znackaPoznamek(b, n);
   b.dataset.has = n ? "1" : "0";
   b.setAttribute("aria-label", "zápisy u žáka: " + n);
 }
@@ -4625,6 +4723,13 @@ async function boot() {
   $("#bZalohaTed").addEventListener("click", doExport);
   $("#bImport").addEventListener("click", doImport);
   $("#bRegen").addEventListener("click", doRegen);
+  $("#bSluzby").addEventListener("click", async () => {
+    const text = $("#fSluzby").value;
+    const { sluzby, chyby } = parseSluzby(text);
+    $("#sluzbyMsg").textContent = chyby.length ? "Těmhle řádkům nerozumím: " + chyby.join(" · ") : "";
+    await metaSet("sluzby", text);
+    toast("Uloženo, " + sluzby.length + (sluzby.length === 1 ? " položka" : sluzby.length < 5 ? " položky" : " položek"));
+  });
   $("#bExport").addEventListener("click", doExport);
   $("#bRestore").addEventListener("click", () => $("#fRestore").click());
   $("#fRestore").addEventListener("change", (e) => { if (e.target.files[0]) doRestore(e.target.files[0]); });

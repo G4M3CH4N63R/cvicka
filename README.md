@@ -631,6 +631,22 @@ takže se serverová verze převezme vždy, i když je starší (jinak by druhé
 a poznámky by si zařízení navzájem neotevřela). Fronta se po odeslání maže, jen když její řádek
 zůstal stejný: smazání nebo obnovení záznamu během odesílání v ní zůstane a odejde v dalším kole.
 
+## v0.19.0: pohotovosti a dohledy, docházka s fajfkou
+
+**Týden:** rozvrh ukazuje pohotovosti a dohledy (podle rozvrhu ve ŠOL). Pohotovost je buňka s červeným
+(ve sborovně) nebo modrým čtverečkem v té hodině, když je ve stejnou hodinu hodina TV, aspoň čtvereček v rohu.
+Dohledy mají úzké sloupce navíc: R (ranní 7:40 až 8:05) před 1. hodinou a VP (velká přestávka 10:40 až 11:10)
+před 4. hodinou, se štítkem místa. O volných dnech se nic neukazuje. Seznam je v Nastavení → Pohotovosti
+a dohledy, jeden na řádek („Po 6 pohotovost červená“, „Čt ráno dohled přízemí“, „Pá přestávka dohled TV“),
+`parseSluzby()`, `SLUZBY_DEFAULT` je Karlův rozvrh 2026/27, ukládá se jen v meta (`sluzby`) zařízení.
+
+**Docházka:** stav „ok“ je zelená fajfka ✓. Místo počtu zápisů u žáka (vypadal jako známka) je ikona listu,
+prázdná bez zápisů a vyplněná se zápisy (`znackaPoznamek()`).
+
+Souhrn nad docházkou ukazuje, kolik žáků je v hodině („přítomno 12 z 14“, všichni kromě X), ne kolik cvičí.
+
+**Dvojí poklepání** už na iPhonu nepřibližuje (`touch-action: manipulation`), přiblížení dvěma prsty zůstává.
+
 ## Co přijde dál
 
 F3 je hotová.
