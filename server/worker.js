@@ -162,6 +162,7 @@ function zapisPokyny() {
     "7. Nepřipisuj dovednost, která v náplni není. Nic si nevymýšlej.",
     "8. V souladu s ŠVP tělesné výchovy, ale řečeno lidsky.",
     "9. Nepoužívej pomlčky ani spojovníky jako interpunkci, jen čárky a spojky.",
+    "10. Spojku nebo použij jen tehdy, když se třída dělila na skupiny s různým programem (z náplně je to poznat). Jinak piš jednu věc, bez nabízení dvou možností.",
     "Vzory dobrých zápisů:",
     "Cvičí přihrávky a spolupráci s týmem v házené.",
     "Popíše pravidla miniházené a dodržuje je ve hře.",
