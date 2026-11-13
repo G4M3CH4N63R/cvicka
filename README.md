@@ -680,6 +680,10 @@ Záznam: `{ id, datum, kdy, hodina, cas, typ, text, misto }`, kde `kdy` je `rano
 (s popisem v titulku), ranní a přestávkový dohled se ukáže červeně ve sloupci R nebo VP.
 Pravidelné pohotovosti a dohledy dál zůstávají v Nastavení.
 
+**v0.21.1:** když přibude nové synchronizované úložiště, zařízení si jednou stáhne všechno ze serveru
+znovu od začátku (`syncStory` v meta). Starší verze appky totiž záznamy z neznámého úložiště přeskočí,
+ale kurzor posune, takže by je po aktualizaci už nedostala. Stejné ani starší záznamy se nepřepisují.
+
 ## Co přijde dál
 
 F3 je hotová.

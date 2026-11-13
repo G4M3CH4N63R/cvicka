@@ -939,7 +939,7 @@ textarea:focus-visible, input:focus-visible, select:focus-visible { outline: 3px
 
 <script>
 "use strict";
-const APP = { ver: "0.21.0", db: null, sync: null, klic: null };
+const APP = { ver: "0.21.1", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -2597,6 +2597,15 @@ async function synchronizuj(rucne) {
     }
 
     const preskocene = new Set();
+    // Kdyz pribylo synchronizovane uloziste (treba `navic` ve v0.21.0), stahne se jednou vsechno
+    // znovu od zacatku. Starsi verze appky zaznamy z neznameho uloziste preskocila, ale kurzor
+    // posunula, takze by je po aktualizaci uz nikdy nedostala. Bezpecne: `prijmi` stejne ani
+    // starsi zaznamy neprepisuje.
+    const znameStory = SYNC_STORES.join(",");
+    if ((await metaGet("syncStory", "")) !== znameStory) {
+      await metaSet("syncKurzor", 0);
+      await metaSet("syncStory", znameStory);
+    }
     for (let kolo = 0; kolo < 60; kolo++) {
       const cela = await dbAll("fronta");
       const davka = cela.filter((f) => !preskocene.has(f.id)).slice(0, SYNC_DAVKA);
