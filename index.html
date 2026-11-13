@@ -532,6 +532,15 @@ textarea:focus-visible, input:focus-visible, select:focus-visible { outline: 3px
 .rozvrh .bu .pq { position: absolute; top: 6px; right: 5px; width: 10px; height: 10px; border-radius: 2px; }
 .rozvrh .bu .pq.cervena { background: var(--crit); } .rozvrh .bu .pq.modra { background: var(--cyan); }
 .rozvrh .dh { display: flex; align-items: center; justify-content: center; min-height: 38px; }
+/* navic: jednorazove dohledy a suply ze SOL na konkretni den (cervene, aby se neprehledly) */
+.rozvrh .bu.navic { background: var(--crit-soft); color: var(--crit); border: 1px solid var(--crit); font-family: var(--fb); font-weight: 600; font-size: 11px; gap: 2px; text-align: center; }
+.rozvrh .dh.navic { background: var(--crit-soft); border: 1px solid var(--crit); border-radius: 6px; }
+.rozvrh .dh.navic b { color: var(--crit); }
+.rozvrh .bu .nq { position: absolute; bottom: 5px; right: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--crit); }
+#dnesNavic:empty { display: none; }
+#dnesNavic { display: grid; gap: 6px; margin-bottom: 10px; }
+#dnesNavic .nv { display: flex; gap: 10px; align-items: baseline; padding: 9px 11px; border-radius: 8px; background: var(--crit-soft); border: 1px solid var(--crit); color: var(--crit); font-weight: 600; }
+#dnesNavic .nv .t { font-family: var(--fm); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rozvrh .dh b { writing-mode: vertical-rl; transform: rotate(180deg); font-family: var(--fd); font-weight: 700; font-size: 11.5px; letter-spacing: .04em;
   background: var(--chalk-soft); color: var(--chalk); border: 1px solid var(--chalk); border-radius: 5px; padding: 4px 2px; }
 .rozvrh .hh.uz b { font-size: 11px; }
@@ -585,6 +594,7 @@ textarea:focus-visible, input:focus-visible, select:focus-visible { outline: 3px
         <button class="iconbtn" id="dToday" aria-label="Dnes" style="width:auto;height:28px;padding:0 9px;font-size:12px">dnes</button>
         <button class="iconbtn" id="dNext" aria-label="Další den" style="width:30px;height:28px">›</button>
       </div>
+      <div id="dnesNavic"></div>
       <div id="dnesList"></div>
     </div>
     <div class="card" id="slibyCard" hidden>
@@ -929,7 +939,7 @@ textarea:focus-visible, input:focus-visible, select:focus-visible { outline: 3px
 
 <script>
 "use strict";
-const APP = { ver: "0.20.1", db: null, sync: null, klic: null };
+const APP = { ver: "0.21.0", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -1075,17 +1085,18 @@ const STORES = {
   sliby: { keyPath: "id", idx: [["skupinaId", "skupinaId"]] },
   pozn: { keyPath: "id", idx: [["zakId", "zakId"]] },
   sys: { keyPath: "id" },
+  navic: { keyPath: "id", idx: [["datum", "datum"]] },
   fronta: { keyPath: "id" }
 };
 
 // Co se synchronizuje. `zaci` tu schválně NENÍ: jmenný seznam nikdy neopustí zařízení,
 // druhé zařízení si ho natáhne z těch samých CSV ze ŠOL a spáruje podle stabilních id.
 // `meta` taky ne, to jsou nastavení konkrétního zařízení. `fronta` je jen lokální výpravka.
-const SYNC_STORES = ["skupiny", "rozvrh", "hodiny", "zaznamy", "cinnosti", "sliby", "pozn", "sys"];
+const SYNC_STORES = ["skupiny", "rozvrh", "hodiny", "zaznamy", "cinnosti", "sliby", "pozn", "sys", "navic"];
 
 function openDB() {
   return new Promise((res, rej) => {
-    const r = indexedDB.open("cvicka", 5);
+    const r = indexedDB.open("cvicka", 6);
     r.onupgradeneeded = () => {
       const db = r.result;
       for (const [name, def] of Object.entries(STORES)) {
@@ -1473,10 +1484,24 @@ async function skocNaNejblizsiDen() {
   }
 }
 
+// Navic: jednorazove polozky na konkretni den (suplovany dohled, supl, porada…), zapisuje je
+// Claude ze SOL na dalsi den. Zaznam: { id, datum, kdy: rano|prestavka|hodina|po, hodina, cas, typ, text }.
+// `po` = po skonceni dane hodiny (napr. dohled ve SJ po 6. hodine).
+const NAVIC_PORADI = (x) => x.kdy === "rano" ? 0 : x.kdy === "prestavka" ? 35 : (Number(x.hodina) || 0) * 10 + (x.kdy === "po" ? 5 : 0);
+const navicKdy = (x) => x.cas || (x.kdy === "rano" ? "ráno" : x.kdy === "prestavka" ? "velká přestávka" : x.kdy === "po" ? "po " + x.hodina + ". hodině" : x.hodina + ". hodina");
+const navicPopis = (x) => navicKdy(x) + " · " + (x.text || x.typ || "");
+
 async function renderDnes() {
   $("#dnesDen").textContent = czFull(S.den);
   await renderZalohaVyzva();
   const list = $("#dnesList"); list.innerHTML = "";
+  const nvBox = $("#dnesNavic"); nvBox.innerHTML = "";
+  (await dbBy("navic", "datum", S.den)).sort((a, b) => NAVIC_PORADI(a) - NAVIC_PORADI(b)).forEach((x) => {
+    const r = el("div", "nv");
+    r.append(el("span", "t", navicKdy(x)), el("span", "", x.text || x.typ || ""));
+    r.setAttribute("role", "note");
+    nvBox.appendChild(r);
+  });
   const hod = (await dbBy("hodiny", "datum", S.den)).sort((a, b) => a.poradi - b.poradi);
   if (!hod.length) {
     list.appendChild(el("div", "empty", "Tenhle den nemáš žádnou hodinu TV."));
@@ -1583,14 +1608,15 @@ async function renderMrizka(dny, hodiny) {
   const rozvrh = await dbAll("rozvrh");
   const sluzby = parseSluzby(await metaGet("sluzby", SLUZBY_DEFAULT)).sluzby;
   const volno = parseVolno(await metaGet("volno", VOLNO_DEFAULT.join("\n")));
-  const cisla = [...rozvrh, ...hodiny, ...sluzby.filter((x) => x.hodina)].map((x) => Number(x.poradi || x.hodina)).filter((n) => n > 0);
+  const navic = (await dbAll("navic")).filter((x) => dny.includes(x.datum));
+  const cisla = [...rozvrh, ...hodiny, ...sluzby.filter((x) => x.hodina), ...navic.filter((x) => x.hodina)].map((x) => Number(x.poradi || x.hodina)).filter((n) => n > 0);
   if (!cisla.length) { box.appendChild(el("div", "empty", "Zatím není načtený rozvrh.")); return; }
   const od = Math.min(...cisla), az = Math.max(...cisla);
   const dnesI = iso(new Date());
 
   // Uzke sloupce pro dohledy: rano pred prvni hodinou a velka prestavka pred 4. hodinou.
-  const maRano = sluzby.some((x) => x.kdy === "rano");
-  const maPrest = sluzby.some((x) => x.kdy === "prestavka") && od <= 3 && az >= 4;
+  const maRano = sluzby.some((x) => x.kdy === "rano") || navic.some((x) => x.kdy === "rano");
+  const maPrest = (sluzby.some((x) => x.kdy === "prestavka") || navic.some((x) => x.kdy === "prestavka")) && od <= 3 && az >= 4;
   const sloupce = [];
   if (maRano) sloupce.push({ uz: "rano" });
   for (let p = od; p <= az; p++) {
@@ -1620,11 +1646,17 @@ async function renderMrizka(dny, hodiny) {
     box.appendChild(zah);
     const denTydne = parseISO(d).getDay();
     const dneska = volno.has(d) ? [] : sluzby.filter((x) => x.den === denTydne);
+    const nvDen = navic.filter((x) => x.datum === d);
     for (const c of sloupce) {
       if (c.uz) {
         const dh = dneska.find((x) => x.kdy === c.uz);
-        const bunka = el("div", "dh");
-        if (dh) {
+        const nv = nvDen.find((x) => x.kdy === c.uz);
+        const bunka = el("div", "dh" + (nv ? " navic" : ""));
+        if (nv) {
+          bunka.appendChild(el("b", "", nv.misto || "!"));
+          bunka.title = navicPopis(nv);
+          bunka.setAttribute("aria-label", cz(d) + ", " + bunka.title);
+        } else if (dh) {
           bunka.appendChild(el("b", "", dh.misto || "dohled"));
           bunka.title = (c.uz === "rano" ? "Ranní dohled 7:40 až 8:05" : "Dohled o velké přestávce 10:40 až 11:10") + (dh.misto ? ", " + dh.misto : "");
           bunka.setAttribute("aria-label", cz(d) + ", " + bunka.title);
@@ -1635,6 +1667,16 @@ async function renderMrizka(dny, hodiny) {
       const p = c.p;
       const v = (mapa.get(d + "|" + p) || []).sort((a, b) => a.id.localeCompare(b.id));
       const po = dneska.find((x) => x.kdy === "hodina" && x.hodina === p);
+      const nvs = nvDen.filter((x) => (x.kdy === "hodina" || x.kdy === "po") && Number(x.hodina) === p).sort((a, b) => NAVIC_PORADI(a) - NAVIC_PORADI(b));
+      if (!v.length && nvs.length) {
+        const bunka = el("div", "bu navic");
+        bunka.append(el("span", "", (nvs[0].kdy === "po" ? "po: " : "") + (nvs[0].text || nvs[0].typ || "")));
+        if (nvs.length > 1) bunka.append(el("span", "vic", "+" + (nvs.length - 1)));
+        bunka.title = nvs.map(navicPopis).join("\n");
+        bunka.setAttribute("aria-label", cz(d) + ", " + bunka.title);
+        box.appendChild(bunka);
+        continue;
+      }
       if (!v.length && po) {
         const bunka = el("div", "bu pohot " + po.barva);
         bunka.append(el("i"), el("span", "", "pohotovost"));
@@ -1654,7 +1696,8 @@ async function renderMrizka(dny, hodiny) {
       if (v.length > 1) b.append(el("span", "vic", "+" + (v.length - 1)));
       // pohotovost ve stejnou hodinu jako hodina TV (napr. po zmene rozvrhu): aspon ctverecek v rohu
       if (po) { const q = el("i", "pq " + po.barva); q.title = "pohotovost"; b.append(q); b.style.position = "relative"; }
-      b.title = jmeno + " · " + p + ". hodina" + (co ? "\n" + co : "");
+      if (nvs.length) { const q = el("i", "nq"); q.title = nvs.map(navicPopis).join("\n"); b.append(q); b.style.position = "relative"; }
+      b.title = jmeno + " · " + p + ". hodina" + (co ? "\n" + co : "") + (nvs.length ? "\n" + nvs.map(navicPopis).join("\n") : "");
       b.setAttribute("aria-label", cz(d) + ", " + p + ". hodina, " + jmeno + (co ? ", " + co : ""));
       b.addEventListener("click", () => { S.histSkupina = h.skupinaId; openHodina(h.id, "tyden"); });
       box.appendChild(b);

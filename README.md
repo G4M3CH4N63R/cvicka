@@ -666,6 +666,20 @@ objekt z dřívějšího vykreslení nic nepřepíše (dřív třeba hvězdička
 Během překreslování drží obrazovka výšku (`min-height`) místo vracení pozice natvrdo, takže rolování
 během překreslení stránku nevrátí zpět. Nabídka se vždy vejde do obrazovky.
 
+## v0.21.0: navíc na konkrétní den (suplované dohledy a suply)
+
+Nový synchronizovaný store `navic` (IndexedDB verze 6). Jsou v něm jednorázové položky na konkrétní
+den, které nejsou v pravidelném rozvrhu: suplovaný dohled (třeba ve školní jídelně po 6. hodině),
+supl v okénku, porada. Zapisuje je Claude ze ŠOL vždy na další školní den, když se zapisují hodiny.
+
+Záznam: `{ id, datum, kdy, hodina, cas, typ, text, misto }`, kde `kdy` je `rano`, `prestavka`,
+`hodina` (v dané hodině) nebo `po` (po skončení dané hodiny). `typ` je `dohled`, `supl` nebo `jine`.
+
+**Dnes:** nahoře v kartě dne červené řádky s časem a popisem.
+**Týden:** supl nebo dohled v hodině bez TV je červená buňka, u hodiny TV červená tečka v rohu
+(s popisem v titulku), ranní a přestávkový dohled se ukáže červeně ve sloupci R nebo VP.
+Pravidelné pohotovosti a dohledy dál zůstávají v Nastavení.
+
 ## Co přijde dál
 
 F3 je hotová.
