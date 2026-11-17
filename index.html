@@ -183,7 +183,7 @@ nav button[aria-selected="true"] { color: var(--accent); border-top-color: var(-
 .rozvrh { display: grid; gap: 3px; min-width: min-content; }
 .rozvrh .hh { text-align: center; line-height: 1.15; padding-bottom: 3px; }
 .rozvrh .hh b { display: block; font-family: var(--fd); font-size: 11.5px; color: var(--ink-2); }
-.rozvrh .hh span { font-family: var(--fm); font-size: 9.5px; color: var(--ink-3); }
+.rozvrh .hh span { font-family: var(--fm); font-size: 9.5px; color: var(--ink-3); white-space: nowrap; }
 /* zahlavi dne drzi u leveho okraje, at je pri posunu porad videt, ktery je radek */
 .rozvrh .roh, .rozvrh .dn { position: sticky; left: 0; background: var(--surface); box-shadow: 3px 0 0 0 var(--surface); }
 .rozvrh .roh { z-index: 2; }
@@ -939,7 +939,7 @@ textarea:focus-visible, input:focus-visible, select:focus-visible { outline: 3px
 
 <script>
 "use strict";
-const APP = { ver: "0.21.1", db: null, sync: null, klic: null };
+const APP = { ver: "0.21.2", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -1601,6 +1601,16 @@ function stavTrida(h) {
   return "bez";
 }
 
+// Cas hodiny od do pro zahlavi mrizky: z rozvrhu (napr. "08:15-09:00"), jinak zacatek z HODINY_CAS + 45 min.
+function casHodiny(p, rozvrh) {
+  const bez0 = (x) => x.trim().replace(/^0/, "");
+  const r = (rozvrh || []).find((x) => Number(x.poradi) === p && /\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}/.test(x.cas || ""));
+  if (r) { const [a, b] = r.cas.split("-"); return bez0(a) + "–" + bez0(b); }
+  const z = HODINY_CAS[p]; if (!z) return "";
+  const [h, m] = z.split(":").map(Number); const k = h * 60 + m + 45;
+  return bez0(z) + "–" + Math.floor(k / 60) + ":" + String(k % 60).padStart(2, "0");
+}
+
 // Rozsah vyucovacich hodin bere z rozvrhu, ne z toho, co zrovna je v tydnu.
 // Diky tomu ma mrizka porad stejny tvar i v tydnu, kde je svatek.
 async function renderMrizka(dny, hodiny) {
@@ -1629,7 +1639,7 @@ async function renderMrizka(dny, hodiny) {
   sloupce.forEach((c) => {
     const hl = el("div", "hh" + (c.uz ? " uz" : ""));
     if (c.uz) { hl.append(el("b", "", c.uz === "rano" ? "R" : "VP"), el("span", "", c.uz === "rano" ? "7:40" : "10:40")); hl.title = c.uz === "rano" ? "ranní dohled 7:40 až 8:05" : "velká přestávka 10:40 až 11:10"; }
-    else hl.append(el("b", "", String(c.p)), el("span", "", (HODINY_CAS[c.p] || "").replace(/^0/, "")));
+    else { const ca = casHodiny(c.p, rozvrh); hl.append(el("b", "", String(c.p)), el("span", "", ca)); if (ca) hl.title = c.p + ". hodina " + ca.replace("–", " až "); }
     box.appendChild(hl);
   });
 

@@ -684,6 +684,9 @@ Pravidelné pohotovosti a dohledy dál zůstávají v Nastavení.
 znovu od začátku (`syncStory` v meta). Starší verze appky totiž záznamy z neznámého úložiště přeskočí,
 ale kurzor posune, takže by je po aktualizaci už nedostala. Stejné ani starší záznamy se nepřepisují.
 
+**v0.21.2:** v Týdnu je v záhlaví každé hodiny čas od do (třeba 8:15–9:00). Bere se z rozvrhu,
+když v něm čas chybí, dopočítá se začátek z `HODINY_CAS` plus 45 minut.
+
 ## Co přijde dál
 
 F3 je hotová.
