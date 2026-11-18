@@ -687,6 +687,15 @@ ale kurzor posune, takže by je po aktualizaci už nedostala. Stejné ani starš
 **v0.21.2:** v Týdnu je v záhlaví každé hodiny čas od do (třeba 8:15–9:00). Bere se z rozvrhu,
 když v něm čas chybí, dopočítá se začátek z `HODINY_CAS` plus 45 minut.
 
+**v0.21.3:** oprava „X nejde zapsat“. Když se seznam docházky překreslil (po synchronizaci) zrovna
+ve chvíli zápisu, řádek ukazoval ✓, ale v paměti už měl X, a další klepnutí na X nic neudělalo.
+Teď se řádek po každém zápisu vykreslí podle toho, co se opravdu ukládá, vlastní neuložený zápis má
+při překreslení přednost (`MISTNI_ZAZN`), starší překreslení seznam nevymění (`renderHodinaGen`)
+a zápisy docházky jdou jeden po druhém. Nový `updatedAt` je vždy vyšší než ten předchozí (`novyCas`),
+takže změnu nezahodí ani záznam s časem z budoucnosti. Nastavení má kartu Diagnostika: posledních
+300 kroků (nabídka, volba, uložení, překreslení, synchronizace, chyby) bez jmen, jen v zařízení
+(meta `diag`), s tlačítkem na zkopírování.
+
 ## Co přijde dál
 
 F3 je hotová.

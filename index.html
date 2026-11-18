@@ -805,6 +805,16 @@ textarea:focus-visible, input:focus-visible, select:focus-visible { outline: 3px
       </div>
     </div>
     <div class="card">
+      <div class="card-h"><h3>Diagnostika</h3><span class="eyebrow" id="diagPocet"></span></div>
+      <div class="card-b">
+        <div class="hint">Když se něco zasekne (třeba nejde zapsat X), hned potom sem přijď, zkopíruj záznam a pošli ho Claudovi. Jsou v něm jen časy, kroky a krátká čísla žáků, žádná jména.</div>
+        <div class="btns two">
+          <button class="btn ghost" id="bDiagKopie" type="button">Zkopírovat záznam</button>
+          <button class="btn ghost" id="bDiagSmaz" type="button">Vymazat záznam</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
       <div class="card-h"><h3>Záloha</h3></div>
       <div class="card-b">
         <div class="btns two">
@@ -939,7 +949,7 @@ textarea:focus-visible, input:focus-visible, select:focus-visible { outline: 3px
 
 <script>
 "use strict";
-const APP = { ver: "0.21.2", db: null, sync: null, klic: null };
+const APP = { ver: "0.21.3", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -1133,10 +1143,14 @@ function stojiZaSync(store, z) {
   return !!(z.plan || z.napln || z.zapis || z.znamkaZa || z.okruh || (z.cinnosti && z.cinnosti.length) || (z.stav && z.stav !== "plan"));
 }
 
+const novyCas = (puvodni) => Math.max(Date.now(), (Number(puvodni) || 0) + 1);
+
 function dbPut(store, val, tiche) {
   if (store === "pozn" && !tiche && val && val.typ === "vykon" && typeof rkNaplanuj === "function") rkNaplanuj();
   if (jeSync(store) && !tiche && stojiZaSync(store, val)) {
-    val.updatedAt = Date.now();
+    // Vzdy novejsi nez verze, ze ktere zmena vychazi. Kdyby nekde lezel zaznam s casem
+    // z budoucnosti (jine zarizeni s posunutymi hodinami), server by Karlovu zmenu jinak tise zahodil.
+    val.updatedAt = novyCas(val.updatedAt);
     if (store === "hodiny") val.sync = 1;
     const t = tx([store, "fronta"], "readwrite");
     t.objectStore(store).put(val);
@@ -1167,7 +1181,7 @@ function dbPutMany(store, items, tiche) {
     const fr = doFronty ? t.objectStore("fronta") : null;
     items.forEach((i) => {
       if (doFronty && stojiZaSync(store, i)) {
-        i.updatedAt = Date.now();
+        i.updatedAt = novyCas(i.updatedAt);
         if (store === "hodiny") i.sync = 1;
         fr.put({ id: frontaId(store, i[kp]), store, rid: i[kp] });
         poslano++;
@@ -1192,6 +1206,34 @@ async function oznacVseKeSync() {
 }
 const metaGet = async (k, dflt) => { const r = await dbGet("meta", k); return r === undefined ? dflt : r.v; };
 const metaSet = (k, v) => dbPut("meta", { k, v });
+
+/* ---------- diagnostika ---------- */
+// Kratky zaznam poslednich kroku (otevreni nabidky, volba, ulozeni, prekresleni, synchronizace,
+// chyby). Lezi jen v tomhle zarizeni (meta, nesynchronizuje se) a jmena v nem nejsou, jen konec id zaka.
+const DIAG = [];
+const DIAG_MAX = 300;
+const kratke = (id) => String(id || "").slice(-5);
+function diag(co, data) {
+  DIAG.push([Date.now(), co, data || {}]);
+  if (DIAG.length > DIAG_MAX) DIAG.splice(0, DIAG.length - DIAG_MAX);
+  clearTimeout(diag.t);
+  diag.t = setTimeout(ulozDiag, 800);
+}
+function ulozDiag() { clearTimeout(diag.t); if (APP.db) metaSet("diag", DIAG.slice()).catch(() => {}); }
+// iPhone umi appku na pozadi rovnou ukoncit, tak se zaznam ulozi hned pri odchodu.
+document.addEventListener("visibilitychange", () => { if (document.hidden) ulozDiag(); });
+window.addEventListener("pagehide", ulozDiag);
+function diagText() {
+  const dvoj = (n) => String(n).padStart(2, "0");
+  const hlava = "Cvička v" + APP.ver + " · " + navigator.userAgent.replace(/^Mozilla\/5\.0 /, "").slice(0, 120);
+  return [hlava].concat(DIAG.map(([t, co, d]) => {
+    const x = new Date(t);
+    return dvoj(x.getDate()) + "." + dvoj(x.getMonth() + 1) + ". " + dvoj(x.getHours()) + ":" + dvoj(x.getMinutes()) + ":" + dvoj(x.getSeconds()) + "." + String(x.getMilliseconds()).padStart(3, "0") +
+      " " + co + (Object.keys(d).length ? " " + JSON.stringify(d) : "");
+  })).join("\n");
+}
+window.addEventListener("error", (e) => diag("chyba", { e: String(e.message || e).slice(0, 200), r: e.lineno || 0 }));
+window.addEventListener("unhandledrejection", (e) => diag("chyba-promise", { e: String(e.reason && e.reason.message || e.reason).slice(0, 200) }));
 
 /* ---------- CSV ---------- */
 function parseCSV(text) {
@@ -1880,6 +1922,7 @@ function nastavStavTlacitko(btn, radek, stav) {
 let stavCil = null;
 
 function otevriStav(btn, rec, radek, jmeno, klavesnice) {
+  diag("nabidka", { z: kratke(rec.zakId), vidi: btn.dataset.s, pamet: rec.stav });
   zavriZnamku();
   stavCil = { btn, rec, radek, klavesnice };
   const pop = $("#stavPop");
@@ -1896,17 +1939,46 @@ function otevriStav(btn, rec, radek, jmeno, klavesnice) {
 // Vsechny zmeny radku (stav, vedl, znamka) jdou pres aktualni zaznam v databazi a aktualni radek
 // v seznamu podle zaka. Starsi objekt z driv vykresleneho seznamu tak nic neprepise.
 const radekZaka = (zakId) => $("#pupilList").querySelector('.pupil[data-zak="' + zakId + '"]');
-async function upravZaznam(zakId, zmena) {
+// Zapisy jdou jeden po druhem. Dva rychle za sebou (X a hned hvezdicka) by si jinak
+// precetly stejny stary zaznam a druhy by prvni prepsal.
+let zapisyZaznamu = Promise.resolve();
+function upravZaznam(zakId, zmena) {
+  const p = zapisyZaznamu.then(() => upravZaznamTed(zakId, zmena));
+  zapisyZaznamu = p.catch((e) => diag("chyba-zapis", { z: kratke(zakId), e: String(e && e.message || e) }));
+  return p;
+}
+// Posledni vlastni zapis kazdeho zaznamu, dokud ho nepotvrdi databaze. Prekresleni, ktere si
+// dochazku nacetlo jeste pred zapisem, ho tak neprepise starsi verzi.
+const MISTNI_ZAZN = new Map();
+async function upravZaznamTed(zakId, zmena) {
   const row = radekZaka(zakId);
   const zaklad = row ? row._rec : null;
-  if (!zaklad) return null;
+  if (!zaklad) { diag("zapis-bez-radku", { z: kratke(zakId) }); return null; }
   const ted = await dbGet("zaznamy", zaklad.id);
-  const rec = ted ? { ...ted } : { ...zaklad };
+  const m = MISTNI_ZAZN.get(zaklad.id);
+  const zdroj = m && (!ted || (Number(m.updatedAt) || 0) > (Number(ted.updatedAt) || 0)) ? m : ted;
+  const rec = zdroj ? { ...zdroj } : { ...zaklad };
   zmena(rec);
+  const ulozeni = dbPut("zaznamy", rec);
+  MISTNI_ZAZN.set(rec.id, rec);
+  // Radek se vzdy prekresli podle toho, co se opravdu uklada. Seznam se mezitim mohl
+  // vykreslit znovu ze starsich dat a ukazoval by ✓, i kdyz v pameti uz je X.
   const r2 = radekZaka(zakId);
-  if (r2) r2._rec = rec;
-  await dbPut("zaznamy", rec);
+  if (r2) kresliRadekZaznamu(r2, rec);
+  await ulozeni;
+  const r3 = radekZaka(zakId);
+  if (r3 && r3 !== r2) kresliRadekZaznamu(r3, rec);
+  diag("ulozeno", { z: kratke(zakId), st: rec.stav, zn: rec.znamka || 0, v: rec.vedl ? 1 : 0, radek: r2 ? (r3 === r2 ? "stejny" : "novy") : "zadny" });
   return rec;
+}
+function kresliRadekZaznamu(row, rec) {
+  row._rec = rec;
+  const st = row.querySelector(".st");
+  if (st && st.dataset.s !== rec.stav) nastavStavTlacitko(st, row, rec.stav);
+  const ld = row.querySelector(".lead");
+  if (ld) { ld.textContent = rec.vedl ? "★" : "☆"; ld.setAttribute("aria-pressed", String(!!rec.vedl)); }
+  if (row._zn) kresliZnamku(row._zn.znb, rec.znamka);
+  prepocitejDochazku();
 }
 function preKotvi() {
   if (stavCil && !stavCil.btn.isConnected) {
@@ -2068,7 +2140,10 @@ async function ulozRozepsane() {
   await saveHodinaPole();
 }
 
+let renderHodinaGen = 0;
 async function renderHodina() {
+  const gen = ++renderHodinaGen, t0 = performance.now();
+  diag("render", { g: gen });
   const h = S.hodinaId ? await dbGet("hodiny", S.hodinaId) : null;
   const list = $("#pupilList");
   if (!h) {
@@ -2104,8 +2179,15 @@ async function renderHodina() {
   // Radky se skladaji bokem a do stranky jdou naraz, at seznam behem nacitani nezmizi
   // a stranka neposkoci.
   const frag = document.createDocumentFragment();
-  const zazn = await dbBy("zaznamy", "hodinaId", h.id);
-  const mapa = new Map(zazn.map((z) => [z.zakId, z]));
+  const zDb = await dbBy("zaznamy", "hodinaId", h.id);
+  const mapa = new Map(zDb.map((z) => [z.zakId, z]));
+  // Vlastni zapis, ktery databaze jeste nepotvrdila, ma prednost pred tim, co se prave nacetlo.
+  MISTNI_ZAZN.forEach((m, id) => {
+    const d = zDb.find((z) => z.id === id);
+    if (d && (Number(d.updatedAt) || 0) >= (Number(m.updatedAt) || 0)) { MISTNI_ZAZN.delete(id); return; }
+    if (m.hodinaId === h.id) mapa.set(m.zakId, m);
+  });
+  const zazn = [...mapa.values()];
   const poznMapa = new Map();
   (await dbAll("pozn")).forEach((p) => {
     if (!poznMapa.has(p.zakId)) poznMapa.set(p.zakId, []);
@@ -2156,7 +2238,10 @@ async function renderHodina() {
     frag.appendChild(row);
   });
   if (!zaci.length) frag.appendChild(el("div", "empty", "Tahle skupina nemá načtené žáky."));
+  // Mezitim zacalo novejsi prekresleni: tohle uz ma starsi data a seznam nevymeni.
+  if (gen !== renderHodinaGen) { diag("render-zahozen", { g: gen }); return; }
   list.replaceChildren(frag);
+  diag("render-hotovo", { g: gen, ms: Math.round(performance.now() - t0), zaku: zaci.length, zazn: zazn.length });
   // Kdyz se seznam prekreslil pod otevrenou nabidkou (synchronizace), nabidka se presune
   // na novy radek tehoz zaka, misto aby tise zmizela a klepnuti padlo vedle.
   preKotvi();
@@ -2291,6 +2376,7 @@ async function renderNastaveni() {
   $("#fDo").value = await metaGet("do", "2027-06-30");
   $("#fVolno").value = await metaGet("volno", VOLNO_DEFAULT.join("\n"));
   $("#fSluzby").value = await metaGet("sluzby", SLUZBY_DEFAULT);
+  $("#diagPocet").textContent = DIAG.length + (DIAG.length === 1 ? " krok" : DIAG.length > 1 && DIAG.length < 5 ? " kroky" : " kroků");
   $("#sluzbyMsg").textContent = "";
   const zapsane = hod.filter(jeUzavrena).length;
   $("#rokLine").textContent = zapsane ? zapsane + " uzavřených" : "";
@@ -2547,6 +2633,7 @@ async function prijmi(zmeny) {
     // takze serverova verze se musi prevzit, i kdyz je starsi nez ta, kterou si zarizeni vyrobilo samo.
     const mistni = await dbGet(z.store, z.rid);
     const prichozi = Number(z.updatedAt) || 0;
+    if (prichozi > Date.now() + 120000) diag("cas-z-budoucnosti", { st: z.store, min: Math.round((prichozi - Date.now()) / 60000) });
     if (z.store === "sys") {
       if (mistni && z.data && JSON.stringify(mistni) === JSON.stringify(z.data)) continue;
     } else if (mistni && (Number(mistni.updatedAt) || 0) >= prichozi) continue;
@@ -2663,10 +2750,12 @@ async function synchronizuj(rucne) {
     ceka = preskocene.size;
     await metaSet("syncKdy", Date.now());
     await metaSet("syncChyba", "");
+    diag("sync", { o: odeslano, p: prijato, c: ceka });
     if (prijato) { await refreshCache(); await renderAktualni(); }
     await renderSyncStav();
     return { odeslano, prijato, ceka };
   } catch (e) {
+    diag("sync-chyba", { e: String(e && e.message || e) });
     await metaSet("syncChyba", String(e && e.message || e));
     await renderSyncStav();
     return { chyba: String(e && e.message || e) };
@@ -2678,7 +2767,7 @@ async function synchronizuj(rucne) {
 // Po synchronizaci prekreslit to, na co se Karel zrovna diva.
 async function renderAktualni() {
   // Pod otevrenou nabidkou stavu se neprekresluje, dozene se po jejim zavreni.
-  if (!$("#stavPop").hidden || !$("#znPop").hidden) { S.prekreslitPotom = true; return; }
+  if (!$("#stavPop").hidden || !$("#znPop").hidden) { S.prekreslitPotom = true; diag("render-odlozen", {}); return; }
   // Behem prekreslovani drzi obrazovka svou vysku, aby se stranka nezkratila a neposkocila.
   // Pozice se nevraci natvrdo: kdyz Karel mezitim sam roluje, zustane, kam dorolal.
   const scr = document.querySelector(".screen.on");
@@ -4759,6 +4848,8 @@ async function switchTab(name) {
 /* ---------- start ---------- */
 async function boot() {
   APP.db = await openDB();
+  try { const st = await metaGet("diag", []); if (Array.isArray(st)) DIAG.unshift(...st.slice(-(DIAG_MAX - DIAG.length))); } catch {}
+  diag("start", { v: APP.ver, sw: navigator.serviceWorker && navigator.serviceWorker.controller ? 1 : 0 });
   const mig = await migraceStabilnichId();
   if (mig) {
     // Migrace prepsala id, takze cokoli uz je na serveru je pod starymi klici.
@@ -4823,7 +4914,7 @@ async function boot() {
   });
   $("#merJed").addEventListener("change", async () => { if (!S.mer) return; S.mer.jed = $("#merJed").value; await osvezMereni(); });
 
-  $("#stavBg").addEventListener("click", zavriStav);
+  $("#stavBg").addEventListener("click", () => { diag("vedle", {}); zavriStav(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#stavPop").hidden) zavriStav(); });
   // nabidka je ukotvena k tlacitku, pri rolovani nebo zmene velikosti se jen posune
   $("main").addEventListener("scroll", polohaStav, { passive: true });
@@ -4844,12 +4935,15 @@ async function boot() {
     }, 500);
   });
   $("#stavVolby").querySelectorAll(".sv").forEach((b) => b.addEventListener("click", async () => {
-    if (!stavCil) return;
+    if (!stavCil) { diag("volba-bez-cile", { s: b.dataset.s }); return; }
     const zakId = stavCil.rec.zakId;
     const novy = b.dataset.s;
     zavriStav();
     const row = radekZaka(zakId);
-    if (!row || row._rec.stav === novy) return;
+    diag("volba", { z: kratke(zakId), s: novy, vidi: row ? row.dataset.stav : "-", pamet: row ? row._rec.stav : "-", sync: syncBezi ? 1 : 0 });
+    if (!row) return;
+    // Nic se nedela jen tehdy, kdyz uz stav sedi na obrazovce i v pameti.
+    if (row._rec.stav === novy && row.dataset.stav === novy) return;
     nastavStavTlacitko(row.querySelector(".st"), row, novy);
     prepocitejDochazku();
     await upravZaznam(zakId, (r) => { r.stav = novy; });
@@ -4990,6 +5084,18 @@ async function boot() {
     toast("Uloženo, " + sluzby.length + (sluzby.length === 1 ? " položka" : sluzby.length < 5 ? " položky" : " položek"));
   });
   $("#bExport").addEventListener("click", doExport);
+  $("#bDiagKopie").addEventListener("click", async () => {
+    const t = diagText();
+    try { await navigator.clipboard.writeText(t); toast("Záznam zkopírován, vlož ho Claudovi"); }
+    catch {
+      // Starsi Safari bez schranky: text se ukaze v poli, at jde oznacit rucne.
+      const pole = el("textarea"); pole.value = t; pole.rows = 10; pole.readOnly = true;
+      $("#bDiagKopie").closest(".card-b").appendChild(pole); pole.select(); toast("Označ text a zkopíruj ručně");
+    }
+  });
+  $("#bDiagSmaz").addEventListener("click", async () => {
+    DIAG.length = 0; await metaSet("diag", []); $("#diagPocet").textContent = "0 kroků"; toast("Záznam vymazán");
+  });
   $("#bRestore").addEventListener("click", () => $("#fRestore").click());
   $("#fRestore").addEventListener("change", (e) => { if (e.target.files[0]) doRestore(e.target.files[0]); });
   $("#bWipe").addEventListener("click", async () => {
