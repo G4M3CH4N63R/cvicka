@@ -949,7 +949,7 @@ textarea:focus-visible, input:focus-visible, select:focus-visible { outline: 3px
 
 <script>
 "use strict";
-const APP = { ver: "0.21.3", db: null, sync: null, klic: null };
+const APP = { ver: "0.21.4", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -958,8 +958,8 @@ const POZN_TYPY = { vykon: "Výkon", akce: "Reprezentace", chovani: "Chování",
 const DISCIPLINY = [
   ["60 m", "s"], ["200 m", "s"], ["400 m", "min"], ["500 m", "min"], ["1000 m", "min"],
   ["Skok z místa", "cm"], ["Skok daleký", "cm"], ["Skok vysoký", "cm"], ["Hod raketkou", "m"], ["Vrh koulí", "m"], ["Šplh", "s"],
-  ["Trojskok z místa", "cm"], ["Sprint 50 m", "s"], ["Vytrvalostní běh 12 min", "m"], ["Hod medicinbalem", "cm"],
-  ["Člunkový běh 4x10 m", "s"], ["Shyby", "počet"], ["Kliky", "počet"], ["Leh sedy za minutu", "počet"],
+  ["Trojskok z místa", "cm"], ["Sprint 50 m", "s"], ["Vytrvalostní běh 12 min", "m"],
+  ["Vytrvalostní člunkový běh", "počet"], ["Hod medicinbalem", "cm"], ["Běh 4×10 m", "s"], ["Shyby", "počet"], ["Kliky", "počet"], ["Leh sedy za minutu", "počet"],
   ["Švihadlo za minutu", "počet"], ["Přeskok přes švihadlo", "počet"], ["Hluboký předklon", "cm"], ["Výskok z místa", "cm"]
 ];
 const RK_POCET = 11;
@@ -4811,16 +4811,20 @@ function rkZnackaRadku(z, disc, jed, hodnota, datum, mp) {
   if (rek && typeof rek.v === "number" && rkLepsi(v, rek.v, d)) mp.appendChild(el("span", "mbd skol", "školní rekord"));
 }
 
+// discVerze 2 (v0.21.4): „Člunkový běh 4x10 m“ je teď „Běh 4×10 m“, aby se nepletl
+// s vytrvalostním člunkovým během (beep test, počet přeběhů po 20 m).
+const DISC_PREJMENOVAT_2 = { "člunkový běh 4x10 m": "Běh 4×10 m", "člunkový běh 4×10 m": "Běh 4×10 m" };
 async function rkPrejmenujDiscipliny() {
-  if ((await metaGet("discVerze", 0)) >= 1) return;
+  const verze = await metaGet("discVerze", 0);
+  if (verze >= 2) return;
   const zmeny = [];
   (await dbAll("pozn")).forEach((p) => {
     if (p.typ !== "vykon") return;
-    const nove = RK_PREJMENOVAT[normDisc(p.disciplina)];
+    const nove = (verze < 1 && RK_PREJMENOVAT[normDisc(p.disciplina)]) || DISC_PREJMENOVAT_2[normDisc(p.disciplina)];
     if (nove && p.disciplina !== nove) { p.disciplina = nove; zmeny.push(p); }
   });
   if (zmeny.length) await dbPutMany("pozn", zmeny);
-  await metaSet("discVerze", 1);
+  await metaSet("discVerze", 2);
 }
 
 /* ---------- navigace ---------- */

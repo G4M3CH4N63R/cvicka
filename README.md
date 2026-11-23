@@ -288,7 +288,7 @@ Dřív se výkon zapisoval jen přes kartu jednoho žáka, což u osmadvaceti d�
 osmadvacetkrát otevřít a zavřít kartu.
 
 Nahoře jsou čipy s tím, co se u téhle skupiny měřilo naposledy, pod nimi výběr disciplíny
-(17 předvolených plus "Jiná…" s vlastním názvem) a jednotka, která se u známé disciplíny
+(24 předvolených plus "Jiná…" s vlastním názvem) a jednotka, která se u známé disciplíny
 doplní sama. Dokud není vybraná disciplína, jsou pole zamčená.
 
 U každého žáka je jeho poslední výkon s datem a osobní rekord, pokud se od posledního liší.
@@ -695,6 +695,10 @@ a zápisy docházky jdou jeden po druhém. Nový `updatedAt` je vždy vyšší n
 takže změnu nezahodí ani záznam s časem z budoucnosti. Nastavení má kartu Diagnostika: posledních
 300 kroků (nabídka, volba, uložení, překreslení, synchronizace, chyby) bez jmen, jen v zařízení
 (meta `diag`), s tlačítkem na zkopírování.
+
+**v0.21.4:** v Měření je nová disciplína „Vytrvalostní člunkový běh“ (beep test, přeběhy po 20 m,
+jednotka počet přeběhů) a „Člunkový běh 4x10 m“ se jmenuje „Běh 4×10 m“. Dřív zapsané výkony
+se při startu jednou přejmenují (`discVerze` 2, `DISC_PREJMENOVAT_2`).
 
 ## Co přijde dál
 
