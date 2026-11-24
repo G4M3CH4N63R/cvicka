@@ -719,6 +719,9 @@ na stejné tlačítko panel zavře, klepnutí u jiného žáka ho přesune. Sync
 panelem počká. Známka všem má panel nad seznamem. Po zavření klávesnice se okno vrací na nulu
 (`okno-posunute` v diagnostice), nabídka zapisuje do diagnostiky i polohu okna.
 
+**v0.22.1:** `konec` už při chybě jednoho zápisu nevolá `preventDefault`, takže se při chybě vrátí
+celá transakce a hromadný zápis se nikdy neuloží jen napůl (upozornění z kontroly 0.22.0).
+
 ## Co přijde dál
 
 F3 je hotová.

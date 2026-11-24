@@ -932,7 +932,7 @@ textarea:focus-visible, input:focus-visible, select:focus-visible { outline: 3px
 
 <script>
 "use strict";
-const APP = { ver: "0.22.0", db: null, sync: null, klic: null };
+const APP = { ver: "0.22.1", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -1155,7 +1155,9 @@ async function sDb(popis, fn, limit) {
 function konec(t, r) {
   return new Promise((res, rej) => {
     t.oncomplete = () => res(r ? r.result : undefined);
-    t.onerror = (ev) => { if (ev) ev.preventDefault(); rej(t.error || (r && r.error) || new DOMException("chyba transakce", "UnknownError")); };
+    // Chyba jednoho zapisu se nezastavuje (zadne preventDefault): prohlizec pak vrati celou
+    // transakci, takze hromadny zapis se ulozi bud cely, nebo vubec.
+    t.onerror = (ev) => rej((ev && ev.target && ev.target.error) || t.error || (r && r.error) || new DOMException("chyba transakce", "UnknownError"));
     t.onabort = () => rej(t.error || new DOMException("transakce přerušena", "AbortError"));
   });
 }
