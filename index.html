@@ -151,16 +151,14 @@ nav button[aria-selected="true"] { color: var(--accent); border-top-color: var(-
 .st[data-s="N"], .sv[data-s="N"] { background: var(--surface-3); border-color: transparent; color: var(--ink-2); }
 .st[data-s="U"], .sv[data-s="U"] { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
 
-/* nabidka stavu nad tlacitkem docházky */
-.stavpop { position: fixed; inset: 0; z-index: 70; }
-.stavpop-bg { position: absolute; inset: 0; }
-.stavpop-c {
-  position: absolute; width: 300px; max-width: calc(100vw - 16px); padding: 8px;
-  background: var(--surface); border: 1px solid var(--line-strong); border-radius: 12px;
-  box-shadow: 0 12px 32px rgba(10, 13, 20, .22);
-}
-.stavpop-jm { font-size: 11.5px; color: var(--ink-3); padding: 1px 3px 7px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.stavpop-v { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+/* volby stavu a znamky primo v seznamu pod radkem zaka */
+.volby { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; padding: 2px 13px 11px; background: var(--surface-2); }
+.volby.zn { grid-template-columns: repeat(6, 1fr); }
+.volby-h { grid-column: 1 / -1; font-size: 11.5px; color: var(--ink-3); padding: 8px 2px 1px; }
+.pupil.otevreny { background: var(--surface-2); }
+.volby .sv { min-height: 50px; }
+.volby .sv:not([data-s]) { background: var(--surface); }
+.volby .sv span { font-size: 10px; }
 .sv {
   appearance: none; cursor: pointer; border-radius: 9px; border: 1px solid var(--line-strong);
   background: var(--surface-2); color: var(--ink-3); padding: 8px 3px 7px; min-width: 0;
@@ -322,8 +320,9 @@ textarea { line-height: 1.45; }
   font-family: var(--fd); font-weight: 700; font-size: 15px; background: var(--chalk-soft); color: var(--chalk); vertical-align: 1px; }
 .pupil .nm .znb.z1, .pupil .nm .znb.z2 { background: var(--good-soft); color: var(--good); }
 .pupil .nm .znb.z4, .pupil .nm .znb.z5 { background: var(--crit-soft); color: var(--crit); }
-.stavpop-v.znv { grid-template-columns: repeat(6, 1fr); }
-.znv .sv b { font-size: 20px; }
+.volby.zn .sv b { font-size: 22px; }
+.volby.zn .sv:not([data-z="×"]) span { display: none; }
+.volby.zn .sv { align-content: center; }
 .znza { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; padding: 6px 13px 8px; }
 .znza label { font-size: 13px; color: var(--ink-3); }
 .znza input { padding: 7px 10px; }
@@ -850,22 +849,6 @@ textarea:focus-visible, input:focus-visible, select:focus-visible { outline: 3px
   <button type="button" id="updBtn">Načíst</button>
 </div>
 
-<div class="stavpop" id="znPop" hidden>
-  <div class="stavpop-bg" id="znBg"></div>
-  <div class="stavpop-c" role="dialog" aria-label="Známka">
-    <div class="stavpop-jm" id="znJm"></div>
-    <div class="stavpop-v znv" id="znVolby"></div>
-  </div>
-</div>
-
-<div class="stavpop" id="stavPop" hidden>
-  <div class="stavpop-bg" id="stavBg"></div>
-  <div class="stavpop-c" role="dialog" aria-label="Stav žáka v hodině">
-    <div class="stavpop-jm" id="stavJm"></div>
-    <div class="stavpop-v" id="stavVolby"></div>
-  </div>
-</div>
-
 <div class="sheet" id="merSheet" hidden>
   <div class="sheet-bg" id="merBg"></div>
   <div class="sheet-c" role="dialog" aria-modal="true" aria-labelledby="merTtl">
@@ -949,7 +932,7 @@ textarea:focus-visible, input:focus-visible, select:focus-visible { outline: 3px
 
 <script>
 "use strict";
-const APP = { ver: "0.21.4", db: null, sync: null, klic: null };
+const APP = { ver: "0.22.0", db: null, sync: null, klic: null };
 const DNY = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
 const HODINY_CAS = { 0: "07:15", 1: "08:15", 2: "09:05", 3: "09:55", 4: "11:10", 5: "12:05", 6: "13:00", 7: "13:55", 8: "14:50", 9: "15:45" };
 const STAVY = ["ok", "X", "N", "U"];
@@ -1115,16 +1098,78 @@ function openDB() {
         (def.idx || []).forEach(([n, kp]) => st.createIndex(n, kp));
       }
     };
-    r.onsuccess = () => res(r.result);
+    r.onsuccess = () => {
+      const db = r.result;
+      // iPhone umi spojeni s databazi po uspani appky zavrit. Pak se pri pristim pouziti otevre znovu.
+      db.onclose = () => { diag("db-zavrena", {}); if (APP.db === db) APP.db = null; };
+      db.onversionchange = () => { db.close(); if (APP.db === db) APP.db = null; };
+      res(db);
+    };
     r.onerror = () => rej(r.error);
+    r.onblocked = () => diag("db-blokovana", {});
   });
+}
+
+/* ---------- databaze, ktera se sama vzpamatuje ---------- */
+// Na iPhonu se po navratu appky z pozadi obcas stane, ze databaze prestane odpovidat:
+// transakce hodi chybu, nebo hur, nikdy neskonci. Docházka se pak „nezapisuje“, dokud
+// se appka nezavre. Proto: kazda operace ma casovy limit, ceka na dokonceni cele transakce
+// (i na jeji preruseni) a pri chybe spojeni se databaze zavre, otevre znovu a operace
+// se zkusi jeste jednou. Zapisy jsou `put`, takze opakovani nic nezdvoji.
+let dbOtevirani = null;
+function zdraveDb() {
+  if (APP.db) return Promise.resolve(APP.db);
+  if (!dbOtevirani) {
+    dbOtevirani = openDB().then((db) => { APP.db = db; diag("db-otevrena-znovu", {}); return db; })
+      .finally(() => { dbOtevirani = null; });
+  }
+  return dbOtevirani;
+}
+function zahodDb() { const db = APP.db; APP.db = null; try { if (db) db.close(); } catch {} }
+const sLimitem = (p, ms) => new Promise((res, rej) => {
+  const t = setTimeout(() => rej(new DOMException("databáze neodpověděla", "TimeoutError")), ms);
+  p.then((v) => { clearTimeout(t); res(v); }, (e) => { clearTimeout(t); rej(e); });
+});
+// Chyby dat (spatny klic, neulozitelna hodnota) se neopakuji, ty by dopadly stejne.
+const chybaDat = (e) => e && ["DataError", "ConstraintError", "DataCloneError", "NotFoundError"].includes(e.name);
+async function sDb(popis, fn, limit) {
+  for (let pokus = 0; ; pokus++) {
+    try {
+      const db = await sLimitem(zdraveDb(), 4000);
+      return await sLimitem(fn(db), limit || 6000);
+    } catch (e) {
+      if (popis !== "diag") diag("db-chyba", { op: popis, e: String(e && (e.name + " " + (e.message || "")) || e).slice(0, 90), pokus });
+      if (pokus >= 1 || chybaDat(e)) {
+        // Ani po novem otevreni to neslo: radsi to rict nahlas nez tise nic neulozit.
+        if (popis !== "diag" && !chybaDat(e) && Date.now() - (sDb.hlaseno || 0) > 8000) {
+          sDb.hlaseno = Date.now();
+          toast("Data v telefonu teď neodpovídají. Zavři Cvičku a otevři ji znovu.");
+        }
+        throw e;
+      }
+      zahodDb();
+    }
+  }
+}
+// Hotovo je az dokoncena transakce. Preruseni (abort) se hlasi jako chyba, ne ticho.
+function konec(t, r) {
+  return new Promise((res, rej) => {
+    t.oncomplete = () => res(r ? r.result : undefined);
+    t.onerror = (ev) => { if (ev) ev.preventDefault(); rej(t.error || (r && r.error) || new DOMException("chyba transakce", "UnknownError")); };
+    t.onabort = () => rej(t.error || new DOMException("transakce přerušena", "AbortError"));
+  });
+}
+// Kontrola po navratu z pozadi: drobne cteni. Kdyz neodpovi rychle, spojeni se otevre znovu.
+async function zkontrolujDb() {
+  try { await sLimitem(new Promise((res, rej) => { const t = APP.db.transaction(["meta"], "readonly"); const r = t.objectStore("meta").get("idVerze"); r.onsuccess = () => res(); r.onerror = () => rej(r.error); t.onabort = () => rej(t.error); }), 1500); }
+  catch (e) { diag("db-kontrola-selhala", { e: String(e && e.name || e) }); zahodDb(); }
 }
 function tx(stores, mode) { return APP.db.transaction(stores, mode); }
 function req(r) { return new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
-const dbAll = (store) => req(tx([store], "readonly").objectStore(store).getAll());
-const dbGet = (store, key) => req(tx([store], "readonly").objectStore(store).get(key));
-const dbBy = (store, index, key) => req(tx([store], "readonly").objectStore(store).index(index).getAll(key));
-const dbClear = (store) => req(tx([store], "readwrite").objectStore(store).clear());
+const dbAll = (store) => sDb("all " + store, (db) => { const t = db.transaction([store], "readonly"); return konec(t, t.objectStore(store).getAll()); });
+const dbGet = (store, key) => sDb("get " + store, (db) => { const t = db.transaction([store], "readonly"); return konec(t, t.objectStore(store).get(key)); });
+const dbBy = (store, index, key) => sDb("by " + store, (db) => { const t = db.transaction([store], "readonly"); return konec(t, t.objectStore(store).index(index).getAll(key)); });
+const dbClear = (store) => sDb("clear " + store, (db) => { const t = db.transaction([store], "readwrite"); return konec(t, t.objectStore(store).clear()); }, 20000);
 
 // Kazdy zapis do synchronizovaneho store dostane razitko updatedAt a radek ve fronte,
 // aby se pri dalsi synchronizaci vedelo, co odeslat. `tiche: true` pouziva sama
@@ -1152,44 +1197,51 @@ function dbPut(store, val, tiche) {
     // z budoucnosti (jine zarizeni s posunutymi hodinami), server by Karlovu zmenu jinak tise zahodil.
     val.updatedAt = novyCas(val.updatedAt);
     if (store === "hodiny") val.sync = 1;
-    const t = tx([store, "fronta"], "readwrite");
-    t.objectStore(store).put(val);
-    t.objectStore("fronta").put({ id: frontaId(store, val[STORES[store].keyPath]), store, rid: val[STORES[store].keyPath] });
-    return new Promise((res, rej) => { t.oncomplete = () => res(); t.onerror = () => rej(t.error); }).then(naplanujSync);
+    return sDb("put " + store, (db) => {
+      const t = db.transaction([store, "fronta"], "readwrite");
+      t.objectStore(store).put(val);
+      t.objectStore("fronta").put({ id: frontaId(store, val[STORES[store].keyPath]), store, rid: val[STORES[store].keyPath] });
+      return konec(t);
+    }).then(naplanujSync);
   }
-  return req(tx([store], "readwrite").objectStore(store).put(val));
+  return sDb("put " + store, (db) => { const t = db.transaction([store], "readwrite"); return konec(t, t.objectStore(store).put(val)); });
 }
 
 function dbDel(store, key, tiche) {
   if (store === "pozn" && !tiche && typeof rkZaradSmazani === "function") rkZaradSmazani(key).then(() => rkNaplanuj()).catch(() => {});
   if (jeSync(store) && !tiche) {
-    const t = tx([store, "fronta"], "readwrite");
-    t.objectStore(store).delete(key);
-    t.objectStore("fronta").put({ id: frontaId(store, key), store, rid: key, smazano: true, kdy: Date.now() });
-    return new Promise((res, rej) => { t.oncomplete = () => res(); t.onerror = () => rej(t.error); }).then(naplanujSync);
+    const kdy = Date.now();
+    return sDb("del " + store, (db) => {
+      const t = db.transaction([store, "fronta"], "readwrite");
+      t.objectStore(store).delete(key);
+      t.objectStore("fronta").put({ id: frontaId(store, key), store, rid: key, smazano: true, kdy });
+      return konec(t);
+    }).then(naplanujSync);
   }
-  return req(tx([store], "readwrite").objectStore(store).delete(key));
+  return sDb("del " + store, (db) => { const t = db.transaction([store], "readwrite"); return konec(t, t.objectStore(store).delete(key)); });
 }
 
 function dbPutMany(store, items, tiche) {
   const doFronty = jeSync(store) && !tiche;
   const kp = STORES[store].keyPath;
   let poslano = 0;
-  return new Promise((res, rej) => {
-    const t = tx(doFronty ? [store, "fronta"] : [store], "readwrite");
+  // razitka se daji jednou predem, at je pripadne opakovani stejne
+  const doFrontyIds = [];
+  items.forEach((i) => {
+    if (doFronty && stojiZaSync(store, i)) {
+      i.updatedAt = novyCas(i.updatedAt);
+      if (store === "hodiny") i.sync = 1;
+      doFrontyIds.push(i[kp]);
+      poslano++;
+    }
+  });
+  return sDb("putMany " + store, (db) => {
+    const t = db.transaction(doFronty ? [store, "fronta"] : [store], "readwrite");
     const os = t.objectStore(store);
-    const fr = doFronty ? t.objectStore("fronta") : null;
-    items.forEach((i) => {
-      if (doFronty && stojiZaSync(store, i)) {
-        i.updatedAt = novyCas(i.updatedAt);
-        if (store === "hodiny") i.sync = 1;
-        fr.put({ id: frontaId(store, i[kp]), store, rid: i[kp] });
-        poslano++;
-      }
-      os.put(i);
-    });
-    t.oncomplete = () => res(); t.onerror = () => rej(t.error);
-  }).then((v) => { if (poslano) naplanujSync(); return v; });
+    items.forEach((i) => os.put(i));
+    if (doFronty) { const fr = t.objectStore("fronta"); doFrontyIds.forEach((rid) => fr.put({ id: frontaId(store, rid), store, rid })); }
+    return konec(t);
+  }, 30000).then((v) => { if (poslano) naplanujSync(); return v; });
 }
 
 // Po migraci id nebo po obnove ze zalohy uz fronta nesedi, takze se posle vsechno znovu.
@@ -1219,7 +1271,11 @@ function diag(co, data) {
   clearTimeout(diag.t);
   diag.t = setTimeout(ulozDiag, 800);
 }
-function ulozDiag() { clearTimeout(diag.t); if (APP.db) metaSet("diag", DIAG.slice()).catch(() => {}); }
+function ulozDiag() {
+  clearTimeout(diag.t);
+  const zaznam = { k: "diag", v: DIAG.slice() };
+  sDb("diag", (db) => { const t = db.transaction(["meta"], "readwrite"); return konec(t, t.objectStore("meta").put(zaznam)); }).catch(() => {});
+}
 // iPhone umi appku na pozadi rovnou ukoncit, tak se zaznam ulozi hned pri odchodu.
 document.addEventListener("visibilitychange", () => { if (document.hidden) ulozDiag(); });
 window.addEventListener("pagehide", ulozDiag);
@@ -1918,21 +1974,111 @@ function nastavStavTlacitko(btn, radek, stav) {
   btn.setAttribute("aria-label", (btn.dataset.jm ? btn.dataset.jm + ", " : "") + "stav: " + POPIS_STAV[stav]);
 }
 
-// Nabidka stavu se otevira misto prokliknavani, at se na jeden stav neceka pres tri tapnuti.
-let stavCil = null;
+// Volby (stav nebo znamka) se otviraji primo v seznamu pod radkem zaka, ne v plovouci nabidce.
+// Plovouci nabidka (position: fixed) na iPhonu obcas lezela jinde, nez kam slo klepnout:
+// klepnuti na volbu padlo „vedle“ a nic se nezapsalo, dokud se appka nezavrela. Panel v seznamu
+// je obycejna soucast stranky, roluje s ni a nema zadne pozadi, ktere by klepnuti spolklo.
+let PANEL = null; // { typ: "stav" | "zn" | "vsem", zakId, hodinaId, el, klav }
+const ZN_POPIS = ["výborně", "chvalitebně", "dobře", "dostatečně", "nedostatečně"];
+// Poloha okna a priblizeni, at se v diagnostice pozna, kdyz je stranka posunuta (po klavesnici).
+const okno = () => ({ sy: Math.round(window.scrollY), vt: Math.round(window.visualViewport ? visualViewport.offsetTop : 0), sc: window.visualViewport ? Math.round(visualViewport.scale * 100) / 100 : 1 });
 
 function otevriStav(btn, rec, radek, jmeno, klavesnice) {
-  diag("nabidka", { z: kratke(rec.zakId), vidi: btn.dataset.s, pamet: rec.stav });
-  zavriZnamku();
-  stavCil = { btn, rec, radek, klavesnice };
-  const pop = $("#stavPop");
-  pop.hidden = false;
-  $("#stavJm").textContent = jmeno || "";
-  pop.querySelectorAll(".sv").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.s === rec.stav)));
-  btn.setAttribute("aria-expanded", "true");
-  polohaStav();
-  // Fokus jen pri ovladani klavesnici. Na iPhonu by fokus umel posunout stranku.
-  if (klavesnice) (pop.querySelector('.sv[aria-pressed="true"]') || pop.querySelector(".sv")).focus({ preventScroll: true });
+  if (PANEL && PANEL.typ === "stav" && PANEL.zakId === rec.zakId) { zavriPanel(); return; }
+  diag("nabidka", { z: kratke(rec.zakId), vidi: btn.dataset.s, pamet: rec.stav, ...okno() });
+  otevriPanel("stav", rec.zakId, klavesnice);
+}
+function otevriZnamku(kotva, cil, klavesnice) {
+  const typ = cil.hromadne ? "vsem" : "zn", zakId = cil.hromadne ? null : cil.zakId;
+  if (PANEL && PANEL.typ === typ && PANEL.zakId === zakId) { zavriPanel(); return; }
+  diag("nabidka-zn", { z: kratke(zakId || "vsem"), ...okno() });
+  otevriPanel(typ, zakId, klavesnice);
+}
+const zavriStav = () => zavriPanel();
+const zavriZnamku = () => zavriPanel();
+
+function stavPanel(typ, zakId) {
+  const box = el("div", "volby" + (typ === "stav" ? "" : " zn"));
+  box.setAttribute("role", "group");
+  const row = zakId ? radekZaka(zakId) : null;
+  if (typ === "vsem") {
+    box.setAttribute("aria-label", "Známka všem přítomným");
+    box.appendChild(el("div", "volby-h", "Známka všem přítomným (bez X, N a Ú)"));
+  } else box.setAttribute("aria-label", (typ === "stav" ? "Stav: " : "Známka: ") + (row ? row._zn.jmeno : ""));
+  if (typ === "stav") {
+    STAVY.forEach((k) => {
+      const b = el("button", "sv"); b.type = "button"; b.dataset.s = k;
+      b.append(el("b", "", POPIS[k]), el("span", "", POPIS_STAV[k]));
+      b.setAttribute("aria-pressed", String(!!row && row._rec.stav === k));
+      b.addEventListener("click", () => vyberStav(zakId, k));
+      box.appendChild(b);
+    });
+  } else {
+    ["1", "2", "3", "4", "5", "×"].forEach((k) => {
+      const b = el("button", "sv"); b.type = "button"; b.dataset.z = k;
+      b.append(el("b", "", k), el("span", "", k === "×" ? "smazat" : ZN_POPIS[Number(k) - 1]));
+      if (k === "×") b.dataset.s = "N";
+      b.setAttribute("aria-label", k === "×" ? "smazat známku" : k + ", " + ZN_POPIS[Number(k) - 1]);
+      b.setAttribute("aria-pressed", String(!!row && String(row._rec.znamka || "") === k));
+      b.addEventListener("click", () => vyberZnamku(typ, zakId, k === "×" ? null : Number(k)));
+      box.appendChild(b);
+    });
+  }
+  return box;
+}
+function otevriPanel(typ, zakId, klav) {
+  zavriPanel(true);
+  const box = stavPanel(typ, zakId);
+  if (typ === "vsem") $("#pupilList").before(box);
+  else {
+    const row = radekZaka(zakId);
+    if (!row) return;
+    row.after(box); row.classList.add("otevreny");
+    const t = row.querySelector(typ === "stav" ? ".st" : ".nm"); if (t) t.setAttribute("aria-expanded", "true");
+  }
+  PANEL = { typ, zakId, hodinaId: S.hodinaId, el: box, klav };
+  // Kdyz je panel pod spodnim okrajem, seznam se posune jen o tolik, aby byl cely videt.
+  const m = $("main"), r = box.getBoundingClientRect(), mr = m.getBoundingClientRect();
+  if (r.bottom > mr.bottom - 6) m.scrollTop += r.bottom - mr.bottom + 6;
+  if (klav) (box.querySelector('.sv[aria-pressed="true"]') || box.querySelector(".sv")).focus({ preventScroll: true });
+}
+function zavriPanel(bezPrekresleni) {
+  if (PANEL) {
+    const p = PANEL; PANEL = null;
+    p.el.remove();
+    const row = p.zakId ? radekZaka(p.zakId) : null;
+    if (row) {
+      row.classList.remove("otevreny");
+      const t = row.querySelector(p.typ === "stav" ? ".st" : ".nm");
+      if (t) { t.setAttribute("aria-expanded", "false"); if (p.klav) t.focus({ preventScroll: true }); }
+    } else if (p.typ === "vsem" && p.klav) $("#bZnVsem").focus({ preventScroll: true });
+  }
+  if (!bezPrekresleni && S.prekreslitPotom) { S.prekreslitPotom = false; setTimeout(() => renderAktualni(), 0); }
+}
+// Po prekresleni seznamu (jina cesta nez synchronizace, ta pod otevrenym panelem ceka)
+// se panel vrati pod novy radek tehoz zaka. Jina hodina nebo chybejici zak panel zavre.
+function preKotvi() {
+  if (!PANEL) return;
+  if (PANEL.hodinaId !== S.hodinaId) { zavriPanel(true); return; }
+  if (PANEL.typ === "vsem") return;
+  const row = radekZaka(PANEL.zakId);
+  if (!row) { zavriPanel(true); return; }
+  if (PANEL.el.previousElementSibling === row) return;
+  const nove = stavPanel(PANEL.typ, PANEL.zakId);
+  PANEL.el.remove(); PANEL.el = nove;
+  row.after(nove); row.classList.add("otevreny");
+}
+
+async function vyberStav(zakId, novy) {
+  zavriPanel();
+  const row = radekZaka(zakId);
+  diag("volba", { z: kratke(zakId), s: novy, vidi: row ? row.dataset.stav : "-", pamet: row ? row._rec.stav : "-", sync: syncBezi ? 1 : 0 });
+  if (!row) return;
+  // Nic se nedela jen tehdy, kdyz uz stav sedi na obrazovce i v pameti.
+  if (row._rec.stav === novy && row.dataset.stav === novy) return;
+  nastavStavTlacitko(row.querySelector(".st"), row, novy);
+  prepocitejDochazku();
+  await upravZaznam(zakId, (r) => { r.stav = novy; });
 }
 
 /* ---------- zapis do dochazky ---------- */
@@ -1943,8 +2089,15 @@ const radekZaka = (zakId) => $("#pupilList").querySelector('.pupil[data-zak="' +
 // precetly stejny stary zaznam a druhy by prvni prepsal.
 let zapisyZaznamu = Promise.resolve();
 function upravZaznam(zakId, zmena) {
-  const p = zapisyZaznamu.then(() => upravZaznamTed(zakId, zmena));
-  zapisyZaznamu = p.catch((e) => diag("chyba-zapis", { z: kratke(zakId), e: String(e && e.message || e) }));
+  const p = zapisyZaznamu.then(() => upravZaznamTed(zakId, zmena)).catch((e) => {
+    diag("chyba-zapis", { z: kratke(zakId), e: String(e && (e.name + " " + (e.message || "")) || e).slice(0, 90) });
+    // Neulozilo se: radek se vrati na posledni ulozeny stav, at obrazovka nelze, a Karel to vi.
+    const r = radekZaka(zakId);
+    if (r) kresliRadekZaznamu(r, r._rec);
+    if (Date.now() - (sDb.hlaseno || 0) > 8000) toast("Nepovedlo se uložit, klepni prosím znovu");
+    return null;
+  });
+  zapisyZaznamu = p;
   return p;
 }
 // Posledni vlastni zapis kazdeho zaznamu, dokud ho nepotvrdi databaze. Prekresleni, ktere si
@@ -1965,7 +2118,13 @@ async function upravZaznamTed(zakId, zmena) {
   // vykreslit znovu ze starsich dat a ukazoval by ✓, i kdyz v pameti uz je X.
   const r2 = radekZaka(zakId);
   if (r2) kresliRadekZaznamu(r2, rec);
-  await ulozeni;
+  try { await ulozeni; }
+  catch (e) {
+    if (MISTNI_ZAZN.get(rec.id) === rec) MISTNI_ZAZN.delete(rec.id);
+    const puvodni = zdroj || zaklad, r = radekZaka(zakId);
+    if (r) r._rec = puvodni;
+    throw e;
+  }
   const r3 = radekZaka(zakId);
   if (r3 && r3 !== r2) kresliRadekZaznamu(r3, rec);
   diag("ulozeno", { z: kratke(zakId), st: rec.stav, zn: rec.znamka || 0, v: rec.vedl ? 1 : 0, radek: r2 ? (r3 === r2 ? "stejny" : "novy") : "zadny" });
@@ -1980,65 +2139,12 @@ function kresliRadekZaznamu(row, rec) {
   if (row._zn) kresliZnamku(row._zn.znb, rec.znamka);
   prepocitejDochazku();
 }
-function preKotvi() {
-  if (stavCil && !stavCil.btn.isConnected) {
-    const row = radekZaka(stavCil.rec.zakId);
-    if (row) { stavCil.btn = row.querySelector(".st"); stavCil.radek = row; stavCil.rec = row._rec; stavCil.btn.setAttribute("aria-expanded", "true"); polohaStav(); }
-    else zavriStav();
-  }
-  if (znCil && !znCil.hromadne && !znCil.kotva.isConnected) {
-    const row = radekZaka(znCil.zakId);
-    if (row) { znCil.kotva = row._zn.nm; polohaZn(); } else zavriZnamku();
-  }
-}
-
 /* ---------- znamky za hodinu ---------- */
 // Znamka je v zaznamu dochazky (zaznamy: hodinaId|zakId), za co v hodine (hodiny.znamkaZa).
 function kresliZnamku(znb, n) {
   znb.textContent = n ? String(n) : "";
   znb.className = "znb" + (n ? " z" + n : "");
   znb.hidden = !n;
-}
-let znCil = null;
-function otevriZnamku(kotva, cil, klavesnice) {
-  zavriStav();
-  znCil = { kotva, klavesnice, ...cil };
-  const pop = $("#znPop");
-  $("#znJm").textContent = cil.hromadne ? "Všem přítomným (bez X, N a Ú)" : "Známka · " + cil.jmeno;
-  const box = $("#znVolby"); box.innerHTML = "";
-  ["1", "2", "3", "4", "5", "×"].forEach((k) => {
-    const b = el("button", "sv"); b.type = "button"; b.dataset.z = k;
-    b.append(el("b", "", k), el("span", "", k === "×" ? "smazat" : ["výborně", "chvalitebně", "dobře", "dostatečně", "nedostatečně"][Number(k) - 1]));
-    if (k === "×") b.dataset.s = "N";
-    const row = !cil.hromadne && radekZaka(cil.zakId);
-    b.setAttribute("aria-pressed", String(!!row && String(row._rec.znamka || "") === k));
-    b.addEventListener("click", () => vyberZnamku(k === "×" ? null : Number(k)));
-    box.appendChild(b);
-  });
-  pop.hidden = false;
-  polohaZn();
-  if (klavesnice) box.querySelector(".sv").focus({ preventScroll: true });
-}
-function polohaZn() {
-  if (!znCil) return;
-  const karta = $("#znPop").querySelector(".stavpop-c");
-  if (!znCil.kotva.isConnected) { if (znCil.hromadne) zavriZnamku(); else preKotvi(); return; }
-  const r = znCil.kotva.getBoundingClientRect();
-  const w = karta.offsetWidth, h = karta.offsetHeight, okraj = 8;
-  const left = Math.min(Math.max(okraj, r.left), window.innerWidth - w - okraj);
-  let top = r.bottom + 6;
-  if (top + h > window.innerHeight - okraj) top = r.top - h - 6;
-  top = Math.max(okraj, Math.min(top, window.innerHeight - h - okraj));
-  karta.style.left = Math.round(left) + "px"; karta.style.top = Math.round(top) + "px";
-}
-function zavriZnamku() {
-  const pop = $("#znPop");
-  if (pop.hidden) return;
-  pop.hidden = true;
-  if (S.prekreslitPotom) { S.prekreslitPotom = false; setTimeout(() => renderAktualni(), 0); }
-  const k = znCil && znCil.klavesnice && znCil.kotva;
-  znCil = null;
-  if (k) k.focus({ preventScroll: true });
 }
 async function ulozZnamku(zakId, n) {
   const row = radekZaka(zakId);
@@ -2047,11 +2153,10 @@ async function ulozZnamku(zakId, n) {
   row._zn.nm.setAttribute("aria-label", row._zn.jmeno + ", známka" + (n ? " " + n : " zatím žádná"));
   await upravZaznam(zakId, (r) => { if (n) r.znamka = n; else delete r.znamka; });
 }
-async function vyberZnamku(n) {
-  const cil = znCil;
-  zavriZnamku();
-  if (!cil) return;
-  if (!cil.hromadne) { await ulozZnamku(cil.zakId, n); }
+async function vyberZnamku(typ, zakId, n) {
+  zavriPanel();
+  diag("volba-zn", { z: kratke(zakId || "vsem"), n: n || 0 });
+  if (typ !== "vsem") { await ulozZnamku(zakId, n); }
   else {
     const radky = [...$("#pupilList").querySelectorAll(".pupil")].filter((r) => r._zn && !["X", "N", "U"].includes(r.dataset.stav));
     const jine = radky.filter((r) => r._rec.znamka && r._rec.znamka !== n).length;
@@ -2073,36 +2178,6 @@ function kresliZnZa(h, zazn) {
   $("#znZaBox").hidden = !ma;
   const pole = $("#fZnZa");
   if (document.activeElement !== pole) pole.value = h.znamkaZa || "";
-}
-
-// Nabidka drzi u tlacitka, i kdyz se stranka posune nebo zmeni velikost (lista Safari, klavesnice).
-function polohaStav() {
-  if (!stavCil) return;
-  const pop = $("#stavPop"), btn = stavCil.btn;
-  if (!btn.isConnected) { preKotvi(); return; }
-  const karta = pop.querySelector(".stavpop-c");
-  const r = btn.getBoundingClientRect();
-  const w = karta.offsetWidth, h = karta.offsetHeight;
-  const okraj = 8;
-  let left = Math.min(Math.max(okraj, r.right - w), window.innerWidth - w - okraj);
-  let top = r.bottom + 6;
-  if (top + h > window.innerHeight - okraj) top = r.top - h - 6;
-  top = Math.max(okraj, Math.min(top, window.innerHeight - h - okraj));
-  karta.style.left = Math.round(left) + "px";
-  karta.style.top = Math.round(top) + "px";
-}
-
-function zavriStav() {
-  const pop = $("#stavPop");
-  if (pop.hidden) return;
-  pop.hidden = true;
-  const btn = stavCil && stavCil.btn, klav = stavCil && stavCil.klavesnice;
-  stavCil = null;
-  if (btn) {
-    btn.setAttribute("aria-expanded", "false");
-    if (klav) btn.focus({ preventScroll: true });
-  }
-  if (S.prekreslitPotom) { S.prekreslitPotom = false; setTimeout(() => renderAktualni(), 0); }
 }
 
 /* ---------- render: HODINA ---------- */
@@ -2767,14 +2842,13 @@ async function synchronizuj(rucne) {
 // Po synchronizaci prekreslit to, na co se Karel zrovna diva.
 async function renderAktualni() {
   // Pod otevrenou nabidkou stavu se neprekresluje, dozene se po jejim zavreni.
-  if (!$("#stavPop").hidden || !$("#znPop").hidden) { S.prekreslitPotom = true; diag("render-odlozen", {}); return; }
+  if (PANEL) { S.prekreslitPotom = true; diag("render-odlozen", {}); return; }
   // Behem prekreslovani drzi obrazovka svou vysku, aby se stranka nezkratila a neposkocila.
   // Pozice se nevraci natvrdo: kdyz Karel mezitim sam roluje, zustane, kam dorolal.
   const scr = document.querySelector(".screen.on");
   if (scr) scr.style.minHeight = scr.offsetHeight + "px";
   try { await renderAktualniTed(); }
   finally { if (scr) scr.style.minHeight = ""; }
-  polohaStav(); polohaZn();
 }
 async function renderAktualniTed() {
   if (S.tab === "dnes") await renderDnes();
@@ -4879,13 +4953,6 @@ async function boot() {
     if (!$("#merSheet").hidden) zavriMereni();
   });
 
-  STAVY.forEach((k) => {
-    const b = el("button", "sv"); b.type = "button"; b.dataset.s = k;
-    b.append(el("b", "", POPIS[k]), el("span", "", POPIS_STAV[k]));
-    b.setAttribute("aria-label", POPIS_STAV[k]);
-    $("#stavVolby").appendChild(b);
-  });
-
   $("#bMereni").addEventListener("click", otevriMereni);
   $("#bKnih").addEventListener("click", knZHodiny);
   $("#knCilZrus").addEventListener("click", async () => { const id = KN.cil, zpet = KN.cilBack; KN.cil = null; if (id) await openHodina(id, zpet); });
@@ -4918,15 +4985,7 @@ async function boot() {
   });
   $("#merJed").addEventListener("change", async () => { if (!S.mer) return; S.mer.jed = $("#merJed").value; await osvezMereni(); });
 
-  $("#stavBg").addEventListener("click", () => { diag("vedle", {}); zavriStav(); });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#stavPop").hidden) zavriStav(); });
-  // nabidka je ukotvena k tlacitku, pri rolovani nebo zmene velikosti se jen posune
-  $("main").addEventListener("scroll", polohaStav, { passive: true });
-  window.addEventListener("resize", polohaStav);
-  $("main").addEventListener("scroll", polohaZn, { passive: true });
-  window.addEventListener("resize", polohaZn);
-  $("#znBg").addEventListener("click", zavriZnamku);
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#znPop").hidden) zavriZnamku(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && PANEL) zavriPanel(); });
   $("#bZnVsem").addEventListener("click", (e) => { if (S.hodinaId) otevriZnamku($("#bZnVsem"), { hromadne: true }, e.detail === 0); });
   let znZaCas;
   $("#fZnZa").addEventListener("input", () => {
@@ -4938,20 +4997,6 @@ async function boot() {
       await dbPut("hodiny", h);
     }, 500);
   });
-  $("#stavVolby").querySelectorAll(".sv").forEach((b) => b.addEventListener("click", async () => {
-    if (!stavCil) { diag("volba-bez-cile", { s: b.dataset.s }); return; }
-    const zakId = stavCil.rec.zakId;
-    const novy = b.dataset.s;
-    zavriStav();
-    const row = radekZaka(zakId);
-    diag("volba", { z: kratke(zakId), s: novy, vidi: row ? row.dataset.stav : "-", pamet: row ? row._rec.stav : "-", sync: syncBezi ? 1 : 0 });
-    if (!row) return;
-    // Nic se nedela jen tehdy, kdyz uz stav sedi na obrazovce i v pameti.
-    if (row._rec.stav === novy && row.dataset.stav === novy) return;
-    nastavStavTlacitko(row.querySelector(".st"), row, novy);
-    prepocitejDochazku();
-    await upravZaznam(zakId, (r) => { r.stav = novy; });
-  }));
   DISCIPLINY.forEach(([nazev]) => { const o = el("option"); o.value = nazev; $("#dlDisc").appendChild(o); });
 
  $("#bNavrh").addEventListener("click", ukazNavrhy);
@@ -5118,7 +5163,22 @@ async function boot() {
 
   // Automaticka synchronizace: pri startu, pri navratu do popredi a s odstupem po zapisu.
   synchronizuj().catch(() => {});
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) synchronizuj().catch(() => {}); });
+  // iPhone po zavreni klavesnice obcas nechá cele okno posunute, i kdyz se roluje jen hlavni cast.
+  // Pak plovouci prvky (listy, nabidky) sedi jinde, nez kam jde klepnout. Okno se vrati na nulu.
+  document.addEventListener("focusout", () => setTimeout(() => {
+    const a = document.activeElement;
+    if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+    const zoom = window.visualViewport && visualViewport.scale > 1.05;
+    if (!zoom && (Math.round(window.scrollY) !== 0 || (window.visualViewport && Math.round(visualViewport.offsetTop) !== 0))) {
+      diag("okno-posunute", okno());
+      window.scrollTo(0, 0);
+    }
+  }, 350));
+  // Po navratu z pozadi se nejdriv overi, ze databaze odpovida, a az pak se synchronizuje.
+  document.addEventListener("visibilitychange", () => {
+    diag(document.hidden ? "pozadi" : "popredi", {});
+    if (!document.hidden) zkontrolujDb().then(() => synchronizuj()).catch(() => {});
+  });
   window.addEventListener("online", () => { synchronizuj().catch(() => {}); });
 
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {

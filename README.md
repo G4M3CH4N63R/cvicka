@@ -700,6 +700,25 @@ takže změnu nezahodí ani záznam s časem z budoucnosti. Nastavení má kartu
 jednotka počet přeběhů) a „Člunkový běh 4x10 m“ se jmenuje „Běh 4×10 m“. Dřív zapsané výkony
 se při startu jednou přejmenují (`discVerze` 2, `DISC_PREJMENOVAT_2`).
 
+**v0.21.5:** databáze, která se sama vzpamatuje. Na iPhonu po návratu appky z pozadí IndexedDB
+občas přestane odpovídat (spojení zavřené, nebo transakce nikdy neskončí) a zápisy pak tiše
+nefungují, dokud se appka nezavře. Teď každá operace jde přes `sDb`: čeká na dokončení celé
+transakce včetně přerušení (`konec`), má časový limit (`sLimitem`, 6 s, hromadné zápisy 30 s)
+a při chybě spojení se databáze zavře, otevře znovu (`zdraveDb`) a operace se zopakuje.
+Po návratu z pozadí se spojení nejdřív ověří drobným čtením (`zkontrolujDb`, 1,5 s).
+Když zápis docházky nejde ani napodruhé, řádek se vrátí na uložený stav a ukáže se hláška,
+nic se netváří uložené, když není. Diagnostika zapisuje `db-chyba`, `db-otevrena-znovu`,
+`popredi` a `pozadi`.
+
+**v0.22.0:** volba stavu (✓ X N Ú) a známky se otevírá přímo v seznamu pod řádkem žáka, ne
+v plovoucí nabídce. Diagnostika z iPhonu ukázala, že klepnutí na volbu v plovoucí nabídce
+(`position: fixed` s pozadím přes celou obrazovku) občas padlo na pozadí („vedle“), takže se nic
+nezapsalo, a jednou se zapsala sousední volba. Pomohlo až zavření appky. Panel v seznamu
+(`PANEL`, `otevriPanel`, `zavriPanel`) je obyčejná součást stránky bez pozadí. Druhé klepnutí
+na stejné tlačítko panel zavře, klepnutí u jiného žáka ho přesune. Synchronizace pod otevřeným
+panelem počká. Známka všem má panel nad seznamem. Po zavření klávesnice se okno vrací na nulu
+(`okno-posunute` v diagnostice), nabídka zapisuje do diagnostiky i polohu okna.
+
 ## Co přijde dál
 
 F3 je hotová.
